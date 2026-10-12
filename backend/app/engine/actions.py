@@ -2,7 +2,10 @@
 
 import secrets
 
+from pydantic import ValidationError
+
 from .cards import Card, make_deck, new_card_id
+from .protocol import ACTION_ADAPTER, FlipCard, MoveCard, ToHand, ToPile, ToPlayer, ToTable
 from .state import Pile, TableState
 
 _rng = secrets.SystemRandom()
@@ -46,3 +49,100 @@ def remove_player(state: TableState, player_id: str) -> None:
     if cards:
         _add_center_pile(state, _shuffled_face_down(cards))
     state.version += 1
+
+
+def _clamp(v: float) -> float:
+    return min(1.0, max(0.0, v))
+
+
+def _pile(state: TableState, pile_id: str) -> Pile:
+    pile = state.piles.get(pile_id)
+    if pile is None:
+        raise ActionRejected("That pile is gone")
+    return pile
+
+
+def _locate(state: TableState, card_id: str) -> tuple[Pile | None, str | None]:
+    """(pile, None) if the card is on the table, (None, owner) if in a hand."""
+    for pile in state.piles.values():
+        if any(c.id == card_id for c in pile.cards):
+            return pile, None
+    for owner, hand in state.hands.items():
+        if any(c.id == card_id for c in hand):
+            return None, owner
+    return None, None
+
+
+def apply_action(state: TableState, player_id: str, raw: object) -> None:
+    if player_id not in state.hands:
+        raise ActionRejected("You are not seated at this table")
+    try:
+        action = ACTION_ADAPTER.validate_python(raw)
+    except ValidationError:
+        raise ActionRejected("Invalid action") from None
+    match action:
+        case MoveCard():
+            _move_card(state, player_id, action)
+        case FlipCard():
+            _flip_card(state, action)
+        case _:
+            raise ActionRejected("Unsupported action")
+    state.version += 1
+
+
+def _move_card(state: TableState, actor: str, a: MoveCard) -> None:
+    source_pile, owner = _locate(state, a.card_id)
+    if source_pile is not None:
+        if source_pile.cards[-1].id != a.card_id:
+            raise ActionRejected("Only the top card of a pile can be moved")
+    elif owner != actor:
+        # Covers "already gone" and "in someone else's hand" without revealing which.
+        raise ActionRejected("That card is no longer there")
+
+    to = a.to
+    target: Pile | None = None
+    if isinstance(to, ToPile):
+        target = _pile(state, to.pile_id)
+        if target is source_pile:
+            raise ActionRejected("The card is already on that pile")
+    elif isinstance(to, ToPlayer) and to.player_id not in state.hands:
+        raise ActionRejected("That player has left")
+
+    # Validation done; from here on nothing can fail.
+    from_hand = source_pile is None
+    if source_pile is not None:
+        card = source_pile.cards.pop()
+        if not source_pile.cards:
+            del state.piles[source_pile.id]
+    else:
+        hand = state.hands[actor]
+        card = hand.pop(next(i for i, c in enumerate(hand) if c.id == a.card_id))
+
+    if isinstance(to, ToHand):
+        if not from_hand:
+            card.id = new_card_id()
+        hand = state.hands[actor]
+        index = len(hand) if to.index is None else max(0, min(to.index, len(hand)))
+        hand.insert(index, card)
+    elif isinstance(to, ToPlayer):
+        if not (from_hand and to.player_id == actor):
+            card.id = new_card_id()
+        state.hands[to.player_id].append(card)
+    else:
+        if a.face_up is not None:
+            card.face_up = a.face_up
+        elif from_hand:
+            card.face_up = True
+        if target is not None:
+            target.cards.append(card)
+        else:
+            assert isinstance(to, ToTable)
+            pile = Pile(new_pile_id(), _clamp(to.x), _clamp(to.y), cards=[card])
+            state.piles[pile.id] = pile
+
+
+def _flip_card(state: TableState, a: FlipCard) -> None:
+    pile, _ = _locate(state, a.card_id)
+    if pile is None or pile.cards[-1].id != a.card_id:
+        raise ActionRejected("Only the top card of a pile can be flipped")
+    pile.cards[-1].face_up = not pile.cards[-1].face_up
