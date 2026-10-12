@@ -3,10 +3,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Action, CardView } from '../protocol';
+import type { Action } from '../protocol';
 import { colors } from '../theme';
 import { useRoom } from '../useRoom';
 import { CardFace } from '../table/CardFace';
+import { endMatches, sourceGone, type Drag } from '../table/dragLogic';
 import { toAction } from '../table/dropAction';
 import { cardSize, HAND_TOP, handIndexAt, resolveDrop, type DragSource, type Rect } from '../table/geometry';
 import { HandCardGestures, TopCardGestures, type DragHandlers } from '../table/gestures';
@@ -14,8 +15,6 @@ import { HandView } from '../table/HandView';
 import { PileView } from '../table/PileView';
 import { PileMenu, TableMenu, Toast } from '../table/menus';
 import { measure, PlayersBar } from '../table/PlayersBar';
-
-type Drag = { gesture: 'card' | 'pile'; source: DragSource; card: CardView; settling: boolean };
 
 export default function TableScreen({ code, name, onExit }: { code: string; name: string; onExit: () => void }) {
   const room = useRoom(code, name);
@@ -37,37 +36,46 @@ export default function TableScreen({ code, name, onExit }: { code: string; name
   const rootY = useSharedValue(0);
   const dragX = useSharedValue(0);
   const dragY = useSharedValue(0);
-  const [drag, setDrag] = useState<Drag | null>(null);
+  const [drag, setDragState] = useState<Drag | null>(null);
+  // Gesture events arrive faster than React renders, so the live drag is kept in a
+  // ref that updates immediately; state only drives rendering.
+  const dragRef = useRef<Drag | null>(null);
+  const setDrag = useCallback((next: Drag | null) => {
+    dragRef.current = next;
+    setDragState(next);
+  }, []);
   const [menuPileId, setMenuPileId] = useState<string | null>(null);
   const [tableMenu, setTableMenu] = useState(false);
 
   // Gesture callbacks must be stable (they're captured by memoized gestures), so
   // they read the latest values through refs.
-  const latest = useRef({ view, playerId, players, drag, send: room.send });
-  latest.current = { view, playerId, players, drag, send: room.send };
+  const latest = useRef({ view, playerId, players, send: room.send });
+  latest.current = { view, playerId, players, send: room.send };
 
   const send = useCallback((action: Action) => latest.current.send(action), []);
 
-  // A dropped card stays where it landed until the server's answer arrives.
+  // A dropped card stays where it landed until the server's answer arrives; a drag
+  // whose card another player just took away is abandoned (its gesture may never end).
   useEffect(() => {
-    setDrag((d) => (d?.settling ? null : d));
-  }, [view]);
+    const d = dragRef.current;
+    if (d && view && (d.settling || sourceGone(d, view))) setDrag(null);
+  }, [view, setDrag]);
   useEffect(() => {
     if (!drag?.settling) return;
     const t = setTimeout(() => setDrag(null), 800);
     return () => clearTimeout(t);
-  }, [drag?.settling]);
+  }, [drag?.settling, setDrag]);
 
   const handlers: DragHandlers = useMemo(() => ({
     dragX,
     dragY,
     onCardStart: (pileId, cardId) => {
       const v = latest.current.view;
-      if (!v || latest.current.drag) return;
+      if (!v || dragRef.current) return;
       if (pileId === null) {
         const c = v.hand.find((h) => h.id === cardId);
         if (!c) return;
-        setDrag({ gesture: 'card', source: { kind: 'card', cardId, fromPileId: null }, card: c, settling: false });
+        setDrag({ gesture: 'card', key: cardId, source: { kind: 'card', cardId, fromPileId: null }, card: c, settling: false });
       } else {
         const pile = v.piles.find((p) => p.id === pileId);
         if (!pile) return;
@@ -76,21 +84,22 @@ export default function TableScreen({ code, name, onExit }: { code: string; name
         const source: DragSource = pile.cards.length === 1
           ? { kind: 'pile', pileId }
           : { kind: 'card', cardId, fromPileId: pileId };
-        setDrag({ gesture: 'card', source, card: top, settling: false });
+        setDrag({ gesture: 'card', key: cardId, source, card: top, settling: false });
       }
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     onPileStart: (pileId) => {
       const v = latest.current.view;
       const pile = v?.piles.find((p) => p.id === pileId);
-      if (!pile || latest.current.drag) return;
-      setDrag({ gesture: 'pile', source: { kind: 'pile', pileId }, card: pile.cards[pile.cards.length - 1], settling: false });
+      if (!pile || dragRef.current) return;
+      setDrag({ gesture: 'pile', key: pileId, source: { kind: 'pile', pileId }, card: pile.cards[pile.cards.length - 1], settling: false });
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     },
-    onEnd: (kind, x, y, success, moved) => {
-      const { drag: d, view: v, playerId: self, players: ps } = latest.current;
+    onEnd: (kind, key, x, y, success, moved) => {
+      const d = dragRef.current;
+      if (!endMatches(d, kind, key)) return;
+      const { view: v, playerId: self, players: ps } = latest.current;
       const { table, hand, avatars } = regions.current;
-      if (!d || d.settling || d.gesture !== kind) return;
       if (!success || !v || !table || !hand) {
         setDrag(null);
         return;
@@ -123,7 +132,7 @@ export default function TableScreen({ code, name, onExit }: { code: string; name
       send({ type: 'flip_card', card_id: cardId });
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
-  }), [dragX, dragY, send]);
+  }), [dragX, dragY, send, setDrag]);
 
   const overlayStyle = useAnimatedStyle(() => ({
     transform: [

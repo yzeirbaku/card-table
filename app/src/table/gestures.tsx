@@ -7,7 +7,7 @@ export type DragHandlers = {
   dragY: SharedValue<number>;
   onCardStart: (pileId: string | null, cardId: string) => void;
   onPileStart: (pileId: string) => void;
-  onEnd: (kind: 'card' | 'pile', x: number, y: number, success: boolean, moved: number) => void;
+  onEnd: (kind: 'card' | 'pile', key: string, x: number, y: number, success: boolean, moved: number) => void;
   onFlip: (cardId: string) => void;
 };
 
@@ -27,7 +27,7 @@ function cardPan(h: DragHandlers, pileId: string | null, cardId: string) {
       dragY.value = e.absoluteY;
     })
     .onEnd((e, success) => {
-      runOnJS(onEnd)('card', e.absoluteX, e.absoluteY, success, Math.hypot(e.translationX, e.translationY));
+      runOnJS(onEnd)('card', cardId, e.absoluteX, e.absoluteY, success, Math.hypot(e.translationX, e.translationY));
     });
 }
 
@@ -49,7 +49,7 @@ export function TopCardGestures({
         dragY.value = e.absoluteY;
       })
       .onEnd((e, success) => {
-        runOnJS(onEnd)('pile', e.absoluteX, e.absoluteY, success, Math.hypot(e.translationX, e.translationY));
+        runOnJS(onEnd)('pile', pileId, e.absoluteX, e.absoluteY, success, Math.hypot(e.translationX, e.translationY));
       });
     const tap = Gesture.Tap()
       .maxDuration(250)
