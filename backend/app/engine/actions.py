@@ -5,7 +5,24 @@ import secrets
 from pydantic import ValidationError
 
 from .cards import Card, make_deck, new_card_id
-from .protocol import ACTION_ADAPTER, FlipCard, MoveCard, ToHand, ToPile, ToPlayer, ToTable
+from .protocol import (
+    ACTION_ADAPTER,
+    Deal,
+    FlipCard,
+    FlipPile,
+    Gather,
+    MergePile,
+    MoveCard,
+    MovePile,
+    NewDeck,
+    SetLayout,
+    Shuffle,
+    TakePile,
+    ToHand,
+    ToPile,
+    ToPlayer,
+    ToTable,
+)
 from .state import Pile, TableState
 
 _rng = secrets.SystemRandom()
@@ -85,8 +102,35 @@ def apply_action(state: TableState, player_id: str, raw: object) -> None:
             _move_card(state, player_id, action)
         case FlipCard():
             _flip_card(state, action)
-        case _:
-            raise ActionRejected("Unsupported action")
+        case MovePile():
+            pile = _pile(state, action.pile_id)
+            pile.x, pile.y = _clamp(action.x), _clamp(action.y)
+        case MergePile():
+            _merge_pile(state, action)
+        case Shuffle():
+            _shuffled_face_down(_pile(state, action.pile_id).cards)
+        case FlipPile():
+            pile = _pile(state, action.pile_id)
+            pile.cards.reverse()
+            for c in pile.cards:
+                c.face_up = not c.face_up
+        case SetLayout():
+            _pile(state, action.pile_id).layout = action.layout
+        case Deal():
+            _deal(state, action)
+        case TakePile():
+            pile = _pile(state, action.pile_id)
+            for c in pile.cards:
+                c.id = new_card_id()
+            state.hands[player_id].extend(pile.cards)
+            del state.piles[pile.id]
+        case Gather():
+            _gather(state)
+        case NewDeck():
+            state.piles.clear()
+            for hand in state.hands.values():
+                hand.clear()
+            _add_center_pile(state, _shuffled_face_down(make_deck(action.jokers)))
     state.version += 1
 
 
@@ -146,3 +190,34 @@ def _flip_card(state: TableState, a: FlipCard) -> None:
     if pile is None or pile.cards[-1].id != a.card_id:
         raise ActionRejected("Only the top card of a pile can be flipped")
     pile.cards[-1].face_up = not pile.cards[-1].face_up
+
+
+def _merge_pile(state: TableState, a: MergePile) -> None:
+    if a.pile_id == a.onto_pile_id:
+        raise ActionRejected("Can't stack a pile onto itself")
+    source = _pile(state, a.pile_id)
+    target = _pile(state, a.onto_pile_id)
+    target.cards.extend(source.cards)
+    del state.piles[source.id]
+
+
+def _deal(state: TableState, a: Deal) -> None:
+    pile = _pile(state, a.pile_id)
+    for _ in range(a.count):
+        for seat in state.hands:
+            if not pile.cards:
+                break
+            card = pile.cards.pop()
+            card.id = new_card_id()
+            state.hands[seat].append(card)
+    if not pile.cards:
+        del state.piles[pile.id]
+
+
+def _gather(state: TableState) -> None:
+    cards = [c for pile in state.piles.values() for c in pile.cards]
+    for hand in state.hands.values():
+        cards.extend(hand)
+        hand.clear()
+    state.piles.clear()
+    _add_center_pile(state, _shuffled_face_down(cards))
