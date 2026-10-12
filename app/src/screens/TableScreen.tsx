@@ -12,6 +12,7 @@ import { cardSize, HAND_TOP, handIndexAt, resolveDrop, type DragSource, type Rec
 import { HandCardGestures, TopCardGestures, type DragHandlers } from '../table/gestures';
 import { HandView } from '../table/HandView';
 import { PileView } from '../table/PileView';
+import { PileMenu, TableMenu, Toast } from '../table/menus';
 import { measure, PlayersBar } from '../table/PlayersBar';
 
 type Drag = { gesture: 'card' | 'pile'; source: DragSource; card: CardView; settling: boolean };
@@ -38,7 +39,7 @@ export default function TableScreen({ code, name, onExit }: { code: string; name
   const dragY = useSharedValue(0);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [menuPileId, setMenuPileId] = useState<string | null>(null);
-  void menuPileId;
+  const [tableMenu, setTableMenu] = useState(false);
 
   // Gesture callbacks must be stable (they're captured by memoized gestures), so
   // they read the latest values through refs.
@@ -135,6 +136,11 @@ export default function TableScreen({ code, name, onExit }: { code: string; name
   const hiddenCardId = drag?.source.kind === 'card' ? drag.source.cardId : null;
   const hiddenPileId = drag?.source.kind === 'pile' ? drag.source.pileId : null;
 
+  const leaveRoom = () => {
+    room.leave();
+    onExit();
+  };
+
   if (room.fatal) {
     return (
       <SafeAreaView style={[styles.screen, styles.centered]}>
@@ -153,9 +159,11 @@ export default function TableScreen({ code, name, onExit }: { code: string; name
       >
         <View style={styles.header}>
           <Text style={styles.code}>{code}</Text>
-          <Text style={styles.status}>{room.status === 'reconnecting' ? 'Reconnecting…' : ''}</Text>
-          <Pressable onPress={() => { room.leave(); onExit(); }}>
-            <Text style={styles.link}>Leave</Text>
+          <Text style={styles.status}>
+            {room.status === 'reconnecting' ? 'Reconnecting…' : room.status === 'connecting' ? 'Connecting…' : ''}
+          </Text>
+          <Pressable onPress={() => setTableMenu(true)} hitSlop={12}>
+            <Text style={styles.link}>☰</Text>
           </Pressable>
         </View>
         <PlayersBar players={players} selfId={playerId} onAvatarRect={onAvatarRect} />
@@ -205,6 +213,13 @@ export default function TableScreen({ code, name, onExit }: { code: string; name
             <CardFace card={drag.card} size={card} />
           </Animated.View>
         )}
+        <Toast error={room.lastError} />
+        <PileMenu
+          pile={view?.piles.find((p) => p.id === menuPileId) ?? null}
+          onAction={send}
+          onClose={() => setMenuPileId(null)}
+        />
+        <TableMenu visible={tableMenu} onAction={send} onLeave={leaveRoom} onClose={() => setTableMenu(false)} />
       </View>
     </SafeAreaView>
   );
