@@ -26,7 +26,7 @@ export type Destination =
   | { kind: 'player'; player_id: string };
 
 export type Action =
-  | { type: 'move_card'; card_id: string; to: Destination; face_up?: boolean }
+  | { type: 'move_card'; card_id: string; to: Destination; face_up?: boolean; from_pile_id?: string | null }
   | { type: 'flip_card'; card_id: string }
   | { type: 'move_pile'; pile_id: string; x: number; y: number }
   | { type: 'merge_pile'; pile_id: string; onto_pile_id: string }

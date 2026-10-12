@@ -12,15 +12,16 @@ export function toAction(
 
   if (source.kind === 'card') {
     const card_id = source.cardId;
+    const from_pile_id = source.fromPileId;
     switch (target.kind) {
       case 'hand':
-        return { type: 'move_card', card_id, to: { kind: 'hand', index: handIndex } };
+        return { type: 'move_card', card_id, from_pile_id, to: { kind: 'hand', index: handIndex } };
       case 'player':
-        return { type: 'move_card', card_id, to: { kind: 'player', player_id: target.playerId } };
+        return { type: 'move_card', card_id, from_pile_id, to: { kind: 'player', player_id: target.playerId } };
       case 'pile':
-        return { type: 'move_card', card_id, to: { kind: 'pile', pile_id: target.pileId } };
+        return { type: 'move_card', card_id, from_pile_id, to: { kind: 'pile', pile_id: target.pileId } };
       case 'table':
-        return { type: 'move_card', card_id, to: { kind: 'table', x: target.x, y: target.y } };
+        return { type: 'move_card', card_id, from_pile_id, to: { kind: 'table', x: target.x, y: target.y } };
     }
   }
 
@@ -31,10 +32,10 @@ export function toAction(
   switch (target.kind) {
     case 'hand':
       return lone
-        ? { type: 'move_card', card_id: lone, to: { kind: 'hand', index: handIndex } }
+        ? { type: 'move_card', card_id: lone, from_pile_id: pile.id, to: { kind: 'hand', index: handIndex } }
         : { type: 'take_pile', pile_id: pile.id };
     case 'player':
-      return lone ? { type: 'move_card', card_id: lone, to: { kind: 'player', player_id: target.playerId } } : null;
+      return lone ? { type: 'move_card', card_id: lone, from_pile_id: pile.id, to: { kind: 'player', player_id: target.playerId } } : null;
     case 'pile':
       return { type: 'merge_pile', pile_id: pile.id, onto_pile_id: target.pileId };
     case 'table':

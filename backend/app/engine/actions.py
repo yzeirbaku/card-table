@@ -142,6 +142,10 @@ def _move_card(state: TableState, actor: str, a: MoveCard) -> None:
     elif owner != actor:
         # Covers "already gone" and "in someone else's hand" without revealing which.
         raise ActionRejected("That card is no longer there")
+    if "from_pile_id" in a.model_fields_set:
+        current = source_pile.id if source_pile is not None else None
+        if current != a.from_pile_id:
+            raise ActionRejected("Someone else moved that card first")
 
     to = a.to
     target: Pile | None = None

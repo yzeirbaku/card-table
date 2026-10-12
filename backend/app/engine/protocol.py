@@ -40,6 +40,9 @@ class MoveCard(_Msg):
     card_id: Id
     to: Destination
     face_up: bool | None = None
+    # Where the client saw the card: a pile id, or null for "my hand". When sent,
+    # the move is rejected if the card has since moved (someone else got there first).
+    from_pile_id: Id | None = None
 
 
 class FlipCard(_Msg):

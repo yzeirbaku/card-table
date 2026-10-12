@@ -183,3 +183,19 @@ def test_malformed_actions_rejected(table, bad):
 def test_player_without_a_seat_is_rejected(table):
     with pytest.raises(ActionRejected):
         apply_action(table, "zed", {"type": "flip_card", "card_id": deck(table).cards[-1].id})
+
+
+def test_second_grab_after_card_landed_on_table_is_rejected(table):
+    d = deck(table)
+    top_id = d.cards[-1].id
+    apply_action(table, "ana", {**move(top_id, kind="table", x=0.1, y=0.1), "from_pile_id": d.id})
+    with pytest.raises(ActionRejected):
+        apply_action(table, "ben", {**move(top_id, kind="table", x=0.9, y=0.9), "from_pile_id": d.id})
+    landed = next(p for p in table.piles.values() if p.cards[-1].id == top_id)
+    assert (landed.x, landed.y) == (0.1, 0.1)
+
+
+def test_card_claimed_from_hand_must_be_in_hand(table):
+    top_id = deck(table).cards[-1].id
+    with pytest.raises(ActionRejected):
+        apply_action(table, "ana", {**move(top_id, kind="table", x=0.1, y=0.1), "from_pile_id": None})
