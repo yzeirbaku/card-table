@@ -89,6 +89,10 @@ function updateRotation() {
   syncTableRotated();
 }
 
+// iOS Safari ignores user-scalable=no: stop pinch zoom by hand. Two fingers never scroll here anyway.
+for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, (event) => event.preventDefault());
+document.addEventListener('touchmove', (event) => { if (event.touches.length > 1) event.preventDefault(); }, { passive: false });
+
 applySettings(store.getSettings());
 initMain({ store, enterRoom, applySettings });
 initLobby({ onLeave: leaveRoom, send });

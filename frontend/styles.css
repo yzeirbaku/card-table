@@ -1,6 +1,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 [hidden] { display: none !important; }
 html, body { height: 100%; }
+/* No pinch or double-tap zoom (scrolling still works); iOS also needs the gesture guard in app.js. */
+html { touch-action: pan-x pan-y; }
 body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #123d25; color: #f3e6c4; overflow: hidden; -webkit-tap-highlight-color: transparent; }
 button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 input { font: inherit; }
@@ -151,7 +153,7 @@ input { font: inherit; }
 /* Sizes follow the table box (cq units), so they're right when the table is turned on a portrait phone. */
 .table { container-type: size; --card-w: min(12cqh, 7.4cqw); }
 .plate.turn { background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; font-weight: 700;
-              box-shadow: 0 0 0 2px #fff3cf, 0 0 14px 4px rgba(240,199,94,.7); animation: turn-glow 1.4s ease-in-out infinite alternate; }
+              box-shadow: 0 0 0 2px #fff3cf, 0 0 10px 3px rgba(240,199,94,.7); animation: turn-glow 1.4s ease-in-out infinite alternate; }
 .plate.turn .count { color: #3a2a08; }
 @keyframes turn-glow { from { box-shadow: 0 0 0 2px #fff3cf, 0 0 6px 1px rgba(240,199,94,.45); } }
 /* "Pass" sits beside the name (inward on the right seat), so a seat never gets taller. */

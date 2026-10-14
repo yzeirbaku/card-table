@@ -19,7 +19,7 @@ let lastRound = null; // the round of the last render: a new round starts with n
 let waiting = false; // a move is out: ignore taps until the next state arrives
 let hadEmptyHand = null; // whether the last render had no cards in your hand: cards arriving after that are a deal
 let lastPlay; // the newest play on the pile at the last render (null: empty), so only a new one lands
-let lastPassed = []; // who had passed at the last render, so only a new Pass pops in
+let lastPassed = []; // the passes (pile + player) at the last render, so only a new Pass pops in
 
 /** Send a move once; further taps are ignored until the server answers with a state. */
 function sendOnce(message) {
@@ -39,21 +39,30 @@ export function initTable({ onLeave, send: sendMessage }) {
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     menu.hidden = true;
-    ask.hidden = true;
+    if (ask.hidden) return;
+    showLeaveConfirm(false);
+    menuButton.focus();
   });
   document.getElementById('btn-table-leave').addEventListener('click', () => {
     menu.hidden = true;
     const game = current?.game;
     if (!game || game.phase === 'game_over') return onLeave(); // nothing to end
-    ask.hidden = false;
+    showLeaveConfirm(true);
     document.getElementById('btn-leave-stay').focus();
   });
-  document.getElementById('btn-leave-stay').addEventListener('click', () => { ask.hidden = true; });
+  document.getElementById('btn-leave-stay').addEventListener('click', () => {
+    showLeaveConfirm(false);
+    menuButton.focus();
+  });
   document.getElementById('btn-leave-go').addEventListener('click', () => {
-    ask.hidden = true;
+    showLeaveConfirm(false);
     onLeave();
   });
-  ask.addEventListener('click', (event) => { if (event.target === ask) ask.hidden = true; }); // tap outside: stay
+  ask.addEventListener('click', (event) => { // tap outside: stay
+    if (event.target !== ask) return;
+    showLeaveConfirm(false);
+    menuButton.focus();
+  });
   document.getElementById('btn-play').addEventListener('click', () => {
     const game = current?.game;
     if (!game) return;
@@ -70,6 +79,13 @@ export function initTable({ onLeave, send: sendMessage }) {
   });
 }
 
+/** The leave popup; while it's up, the rest of the table can't be tabbed to or tapped. */
+function showLeaveConfirm(open) {
+  const ask = document.getElementById('leave-confirm');
+  ask.hidden = !open;
+  for (const el of document.querySelector('.table').children) if (el !== ask) el.inert = open;
+}
+
 /** Forget the selection and the remembered phase and round (table left or no game). */
 export function resetTable() {
   selected = [];
@@ -78,7 +94,7 @@ export function resetTable() {
   hadEmptyHand = null;
   lastPlay = undefined;
   lastPassed = [];
-  document.getElementById('leave-confirm').hidden = true;
+  showLeaveConfirm(false);
   stopDeal();
 }
 
@@ -90,6 +106,7 @@ export function renderTable(state, meId) {
     resetTable();
     return;
   }
+  if (game.phase === 'game_over') showLeaveConfirm(false); // leaving no longer ends anything
   if (game.phase !== lastPhase || game.round !== lastRound) selected = [];
   lastPhase = game.phase;
   lastRound = game.round;
@@ -99,8 +116,10 @@ export function renderTable(state, meId) {
   const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name
   for (const p of state.players) names[p.id] = p.name;
   const seated = game.seats.map((id) => byId[id] ?? { id, name: '?', connected: false });
-  const newPasses = game.passed.filter((id) => !lastPassed.includes(id));
-  lastPassed = [...game.passed];
+  // A pass is new if this player hadn't passed on this pile; nothing pops on the first render.
+  const passes = game.passed.map((id) => `${pileKey(game)}|${id}`);
+  const newPasses = lastPlay === undefined ? [] : game.passed.filter((id, i) => !lastPassed.includes(passes[i]));
+  lastPassed = passes;
   const seatEls = new Map(); // player id -> their seat, where their plays come from
   document.querySelector('.seats').replaceChildren(...seatPositions(seated, meId).map(({ player, position }) => {
     const el = seat(player, position, game, newPasses);
@@ -167,11 +186,17 @@ function renderScores(game, names) {
   document.querySelector('.score-round').textContent = roundLabel(game);
 }
 
+/** Names the newest play on the pile (null: empty), to tell a new play from a redraw. */
+function pileKey(game) {
+  const top = game.pile.at(-1);
+  return top ? `${game.round}:${game.pile.length}:${top.player_id}:${top.cards.join()}` : null;
+}
+
 /** The trick so far as a messy stack: each play a little turned on the one before, the newest on top. */
 function renderPile(game, names, seatEls) {
   const pile = document.querySelector('.pile');
   const top = game.pile.at(-1);
-  const key = top ? `${game.round}:${game.pile.length}:${top.player_id}:${top.cards.join()}` : null;
+  const key = pileKey(game);
   if (!top) {
     lastPlay = key;
     return pile.replaceChildren();
@@ -184,7 +209,7 @@ function renderPile(game, names, seatEls) {
     cards.style.setProperty('--n', String(play.cards.length));
     cards.style.setProperty('--dx', `${dx}px`);
     cards.style.setProperty('--dy', `${dy}px`);
-    cards.style.setProperty('--rot', `${rot}deg`);
+    cards.style.setProperty('--rot', `${play.cards.length >= 5 ? rot / 3 : rot}deg`); // long plays lie flatter
     cards.append(...play.cards.map((code) => face(code)));
     return cards;
   });
