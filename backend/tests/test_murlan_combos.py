@@ -1,3 +1,6 @@
+import random
+from itertools import combinations
+
 import pytest
 
 from app.murlan.cards import DECK, card_name, is_card, power, rank_of, sort_cards, suit_of
@@ -140,9 +143,6 @@ def test_can_beat(hand, top, expected):
 
 def test_can_beat_agrees_with_trying_every_play():
     """Brute force: a hand can beat the pile exactly when some subset of it does."""
-    from itertools import combinations
-    import random
-
     rng = random.Random(11)
     deck = list(DECK)
     by_kind: dict[str, set[Play]] = {}
@@ -161,13 +161,17 @@ def test_can_beat_agrees_with_trying_every_play():
                 by_kind.setdefault(play.kind, set()).add(play)
     assert set(by_kind) == set(KIND_NAMES)
     tops = [play for plays in by_kind.values() for play in sorted(plays, key=repr)[:40]]
+    hits = 0
     for _ in range(300):
         top = rng.choice(tops)
         hand = rng.sample(deck, 8)
-        if top.kind in STRAIGHTS and rng.random() < .5:  # often hold the run one higher, or most of it
-            step = [ranks[(top.rank + k) % 14] for k in range(top.length)]
+        if top.kind in ("straight", "double_straight") and top.length == 5 and rng.random() < .5:
+            # often hold the run one higher (or most of it) plus a little else, to test the yes side
+            step = [ranks[top.rank + k] for k in range(5) if top.rank + k < len(ranks)]
             wanted = [r + s for r in step for s in "CDHS"[:STRAIGHTS.index(top.kind) + 1]]
-            hand = list(dict.fromkeys(wanted[: len(wanted) - rng.choice([0, 0, 1])] + hand))[:10]
+            hand = list(dict.fromkeys(wanted[: len(wanted) - rng.choice([0, 0, 1])] + hand[:2]))
+        hits += can_beat(hand, top)
         brute = any((p := classify(list(c))) is not None and beats(p, top)
                     for n in range(1, len(hand) + 1) for c in combinations(hand, n))
         assert can_beat(hand, top) is brute, (hand, top)
+    assert hits > 50  # plenty of hands that can beat, not just ones that can't
