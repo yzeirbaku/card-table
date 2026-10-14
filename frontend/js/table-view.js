@@ -33,6 +33,7 @@ export function initTable({ onLeave, send: sendMessage }) {
   document.addEventListener('pointerdown', (event) => { // a tap anywhere else closes the menu
     if (!menu.hidden && !menu.contains(event.target) && !menuButton.contains(event.target)) menu.hidden = true;
   });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') menu.hidden = true; });
   document.getElementById('btn-table-leave').addEventListener('click', () => {
     menu.hidden = true;
     const game = current?.game;
@@ -151,7 +152,7 @@ function renderPile(game, names) {
   const plays = game.pile.slice(start).map((play, j) => {
     const i = start + j; // where this play is in the trick, so it keeps the same lie as more land on it
     const [dx, dy, rot] = LIE[i % LIE.length];
-    const cards = div(play === top ? 'pile-cards' : 'pile-cards under');
+    const cards = div(play === top && !game.pile_won ? 'pile-cards' : 'pile-cards under'); // a won trick is all dimmed
     cards.style.setProperty('--n', String(play.cards.length));
     cards.style.setProperty('--dx', `${dx}px`);
     cards.style.setProperty('--dy', `${dy}px`);
