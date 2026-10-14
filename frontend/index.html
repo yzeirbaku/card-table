@@ -36,7 +36,7 @@
     <p class="lobby-game"></p>
     <div class="lobby-code-row">
       <span class="lobby-code"></span>
-      <button id="btn-copy" class="small-btn" type="button">Copy</button>
+      <button id="btn-copy" class="small-btn" type="button"><span class="on">Copy</span><span>Copied ✓</span><span>Tap the code</span></button>
     </div>
     <p class="lobby-hint">Share this code, then tap a seat. The game starts when every seat is taken.</p>
     <p class="lobby-count"></p>
@@ -82,7 +82,7 @@
     <h2 class="sheet-title">Pick a game</h2>
     <div class="sheet-step" data-step="game"><div class="choice-list" id="game-list"></div></div>
     <div class="sheet-step" data-step="players" hidden>
-      <div class="choice-row" id="player-counts"></div>
+      <div class="choice-row" id="player-counts" role="group" aria-label="Number of players"></div>
     </div>
   </section>
 

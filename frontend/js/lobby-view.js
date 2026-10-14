@@ -9,8 +9,9 @@ export function initLobby({ onLeave, send: sendMessage }) {
   const copyButton = document.getElementById('btn-copy');
   copyButton.addEventListener('click', async () => {
     const ok = await copyText(document.querySelector('.lobby-code').textContent);
-    copyButton.textContent = ok ? 'Copied ✓' : 'Tap the code';
-    setTimeout(() => { copyButton.textContent = 'Copy'; }, 1500);
+    const show = (i) => [...copyButton.children].forEach((label, j) => label.classList.toggle('on', i === j));
+    show(ok ? 1 : 2); // labels: Copy, Copied ✓, Tap the code
+    setTimeout(() => show(0), 1500);
   });
   document.getElementById('btn-lobby-leave').addEventListener('click', onLeave);
 }

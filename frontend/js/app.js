@@ -1,5 +1,6 @@
 import { fetchGames, socketUrl } from './api.js';
 import { RoomConnection } from './connection.js';
+import { stopDeal } from './deal.js';
 import { initLobby, renderLobby, showLobbyLoading } from './lobby-view.js';
 import { initMain } from './main-view.js';
 import { shouldRotate } from './orientation.js';
@@ -81,7 +82,10 @@ function leaveRoom() {
 }
 
 function updateRotation() {
-  document.getElementById('view-table').classList.toggle('rotated', shouldRotate(innerWidth, innerHeight));
+  const table = document.getElementById('view-table');
+  const rotated = shouldRotate(innerWidth, innerHeight);
+  if (rotated !== table.classList.contains('rotated')) stopDeal(); // the deal's positions no longer hold
+  table.classList.toggle('rotated', rotated);
   syncTableRotated();
 }
 
