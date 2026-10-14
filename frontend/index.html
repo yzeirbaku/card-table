@@ -57,9 +57,17 @@
           <button id="btn-table-leave" type="button">Leave table</button>
         </div>
         <div class="seats"></div>
-        <div class="play-area"></div>
-        <div class="hand-area"><span class="hand-hint">Your hand</span></div>
+        <div class="scoreboard"></div>
+        <div class="play-area"><div class="pile"></div></div>
+        <p class="turn-note"></p>
+        <div class="hand"></div>
+        <div class="actions" hidden>
+          <button id="btn-pass" class="btn ghost" type="button">Pass</button>
+          <button id="btn-play" class="btn primary" type="button">Play</button>
+        </div>
         <div class="seat seat-me"></div>
+        <div class="reveal" hidden></div>
+        <div class="overlay" hidden></div>
       </div>
     </div>
   </section>

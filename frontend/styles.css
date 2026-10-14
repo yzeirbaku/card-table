@@ -134,8 +134,59 @@ input { font: inherit; }
 .card-back { width: 22px; height: 32px; margin-left: -14px; border-radius: 3px; background: var(--card-back); border: 1.5px solid var(--card-back-edge); box-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .card-back:first-child { margin-left: 0; }
 .play-area { position: absolute; left: 50%; top: 42%; z-index: 3; width: 34%; height: 30%; transform: translate(-50%, -50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
-.hand-area { position: absolute; left: 22%; right: 22%; bottom: 12px; z-index: 3; height: 26%; display: grid; place-items: center; border-radius: 14px; border: 1.5px dashed var(--zone-line); }
-.hand-hint { font-size: 12px; color: var(--zone-line); }
+
+/* ---------- murlan table ---------- */
+/* Sizes follow the table box (cq units), so they're right when the table is turned on a portrait phone. */
+.table { container-type: size; --card-w: min(12cqh, 7.4cqw); }
+.plate.turn { box-shadow: 0 0 0 2px #f0c75e, 0 1px 3px rgba(0,0,0,.35); }
+.bubble { padding: 2px 9px; border-radius: 999px; background: #fffdf7; color: #1a1a1a; font-size: 12px; font-weight: 700; }
+.scoreboard { position: absolute; top: 12px; right: 14px; z-index: 5; display: grid; gap: 2px; min-width: 130px; padding: 7px 11px; border-radius: 10px;
+              background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
+.score-head { opacity: .75; }
+.score-row { display: flex; justify-content: space-between; gap: 12px; }
+.score-row .score { font-weight: 700; color: var(--plate-count); }
+.pile { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.pile-cards { display: flex; --w: calc(var(--card-w) * .85);
+              --gap: min(calc(var(--w) * -.45), calc((30cqw - var(--n, 1) * var(--w)) / max(1, var(--n, 1) - 1))); }
+.pile-cards .card-face { flex: none; width: var(--w); margin-left: var(--gap); }
+.pile-cards .card-face:first-child { margin-left: 0; }
+.pile-who { padding: 2px 9px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
+.hand { position: absolute; left: 16%; right: 16%; bottom: 3cqh; z-index: 4; display: flex; justify-content: center;
+        --gap: min(4px, calc((68cqw - var(--n, 1) * var(--card-w)) / max(1, var(--n, 1) - 1))); }
+.hand-card { flex: none; width: var(--card-w); margin-left: var(--gap); transition: translate .12s; }
+.hand-card:first-child { margin-left: 0; }
+.hand-card.selected { translate: 0 -26%; }
+.hand-card.dim { filter: brightness(.55); }
+.turn-note { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 + 10px); z-index: 4; transform: translateX(-50%); white-space: nowrap;
+             padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
+.turn-note:empty { display: none; }
+.actions { position: absolute; right: 2.5cqw; bottom: 4cqh; z-index: 5; display: flex; flex-direction: column; gap: 8px; width: 92px; }
+.actions .btn { padding: 10px; font-size: 14px; }
+.actions .btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
+.reveal { position: absolute; left: 50%; top: 10px; z-index: 7; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 12px;
+          padding: 8px 14px; border-radius: 14px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
+.reveal-title { align-self: center; font-weight: 700; }
+.reveal-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.reveal-item .card-face { width: calc(var(--card-w) * .7); }
+.overlay { position: absolute; left: 50%; top: 45%; z-index: 8; transform: translate(-50%, -50%); width: max-content; max-width: 86cqw; max-height: 80cqh; overflow-y: auto;
+           display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 22px; border-radius: 16px;
+           background: #fffdf7; color: #1a1a1a; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.overlay h2 { font-family: Georgia, serif; font-size: 20px; }
+.overlay p { font-size: 14px; color: #4a4030; }
+.overlay .choice-row { min-width: 220px; }
+.overlay button.on { background: linear-gradient(#f3d27a, #d4a640); border-color: #d4a640; color: #3a2a08; }
+.overlay-buttons { display: grid; gap: 8px; width: 240px; }
+.overlay-buttons button { padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-weight: 700; }
+.overlay .countdown { font-family: Georgia, serif; font-size: 34px; font-weight: 700; }
+.score-list { display: grid; gap: 3px; min-width: 200px; font-size: 14px; }
+.score-list div { display: flex; justify-content: space-between; gap: 16px; }
+.score-list div span:last-child { font-weight: 700; }
+.score-target { font-size: 12px; color: #6b5f4a; }
+.cut-deck { display: flex; flex-wrap: wrap; justify-content: center; row-gap: 8px; max-width: 64cqw; padding-left: 2.4cqw; }
+.cut-card { flex: none; width: 4.8cqw; aspect-ratio: 320 / 466; margin-left: -2.4cqw; border-radius: 3px; transition: translate .1s;
+            background: var(--card-back); border: 1.5px solid var(--card-back-edge); box-shadow: 0 1px 2px rgba(0,0,0,.45); }
+.cut-card:hover { translate: 0 -5px; }
+.overlay .cut-pick { width: var(--card-w); }
 
 /* ---------- toast & banner ---------- */
 .toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); z-index: 40; max-width: 90vw; transform: translateX(-50%);
