@@ -1,7 +1,7 @@
 import pytest
 
 from app.murlan.cards import DECK
-from app.murlan.game import REVEAL_SECONDS, Game, Rejected
+from app.murlan.game import PAUSE_SECONDS, REVEAL_SECONDS, Game, Rejected
 from tests.murlan_helpers import (
     FakeClock, Reverse, Rotate, later_round, new_game, rig, swap_ready,
 )
@@ -317,3 +317,130 @@ def test_two_players_swap_the_same_way():
     assert g.swap_giver() == "p0" and g.hands["p0"] == ["4C", "9H", "KS"]
     g.give("p0", "9H")
     assert g.hands["p1"] == ["3D", "9H"] and g.turn == "p1"
+
+
+def test_a_drop_pauses_and_a_return_resumes_exactly():
+    clock = FakeClock()
+    g = new_game(3, clock=clock)
+    g.choose_target("p0", 13)
+    turn, hands = g.turn, {p: list(h) for p, h in g.hands.items()}
+    g.disconnect("p1")
+    assert g.pause.deadline == clock.now + PAUSE_SECONDS
+    assert g.deadline() == clock.now + PAUSE_SECONDS
+    with pytest.raises(Rejected, match="paused"):
+        g.play(turn, [g.must_include])
+    clock.now += PAUSE_SECONDS - 1
+    g.tick()
+    assert not g.pause.timed_out
+    g.reconnect("p1")
+    assert g.pause is None and g.phase == "playing"
+    assert g.turn == turn and g.hands == hands
+
+
+def test_timeout_cancels_the_round_then_keep_waiting_deals_a_fresh_one():
+    clock = FakeClock()
+    g = new_game(2, clock=clock)
+    rig(g, {"p0": ["3S", "9H"], "p1": ["4S", "5S"]}, "p0")
+    g.scores = [5, 3]
+    g.disconnect("p1")
+    clock.now += PAUSE_SECONDS
+    g.tick()
+    assert g.phase == "round_cancelled"
+    assert g.pause.timed_out and g.pause.deadline is None and g.deadline() is None
+    assert all(h == [] for h in g.hands.values()) and g.scores == [5, 3]
+    assert g.decider() == "p0"
+    with pytest.raises(Rejected, match="decides"):
+        g.decide("p1", "keep_waiting")
+    with pytest.raises(Rejected, match="paused"):
+        g.play("p0", ["3S"])
+    g.decide("p0", "keep_waiting")
+    assert g.pause.keep_waiting
+    with pytest.raises(Rejected, match="nothing to decide"):
+        g.decide("p0", "end_game")
+    g.reconnect("p1")
+    assert g.pause is None and g.phase == "playing"  # no completed round yet: a first-round deal
+    assert len(g.hands["p0"]) == 18 and g.rounds_played == 0
+
+
+def test_end_game_after_a_timeout_uses_the_current_scores():
+    clock = FakeClock()
+    g = new_game(4, clock=clock)
+    rig(g, {"p0": ["3S"], "p1": ["4S"], "p2": ["5S"], "p3": ["6S"]}, "p0")
+    g.scores = [7, 4]
+    g.disconnect("p0")  # the creator is the one who's gone
+    clock.now += PAUSE_SECONDS
+    g.tick()
+    assert g.decider() == "p1"
+    with pytest.raises(Rejected, match="Keep waiting or end"):
+        g.decide("p1", "shrug")
+    g.decide("p1", "end_game")
+    assert g.phase == "game_over" and g.winner_side == 0 and g.pause is None
+
+
+def test_ending_on_a_tie_is_a_draw():
+    clock = FakeClock()
+    g = new_game(2, clock=clock)
+    rig(g, {"p0": ["3S"], "p1": ["4S"]}, "p0")
+    g.scores = [6, 6]
+    g.disconnect("p1")
+    clock.now += PAUSE_SECONDS
+    g.tick()
+    g.decide("p0", "end_game")
+    assert g.phase == "game_over" and g.winner_side is None
+
+
+def test_creator_drops_during_the_target_pick_and_comes_back():
+    clock = FakeClock()
+    g = new_game(3, clock=clock)
+    g.disconnect("p0")
+    clock.now += PAUSE_SECONDS
+    g.tick()
+    assert g.phase == "round_cancelled" and g.decider() == "p1"
+    g.reconnect("p0")
+    assert g.phase == "choosing_target" and g.pause is None
+    g.choose_target("p0", 13)
+    assert g.phase == "playing"
+
+
+def test_a_cancelled_later_round_restarts_with_the_cut():
+    clock = FakeClock()
+    g = later_round(clock=clock)
+    g.disconnect("p2")
+    clock.now += PAUSE_SECONDS
+    g.tick()
+    g.reconnect("p2")
+    assert g.phase == "cutting" and len(g.deck) == 54
+
+
+def test_reveals_expire_on_tick():
+    clock = FakeClock()
+    g = later_round(clock=clock)
+    g.cut("p3", 0)
+    g.take_cut("p3", True)
+    assert g.deadline() == clock.now + REVEAL_SECONDS
+    clock.now += REVEAL_SECONDS
+    g.tick()
+    assert g.reveal is None and g.deadline() is None
+
+
+def test_a_second_drop_keeps_the_first_countdown():
+    clock = FakeClock()
+    g = new_game(3, clock=clock)
+    g.choose_target("p0", 13)
+    g.disconnect("p1")
+    first_deadline = g.pause.deadline
+    clock.now += 30
+    g.disconnect("p2")
+    assert g.pause.deadline == first_deadline
+    g.reconnect("p1")
+    assert g.pause is not None  # p2 is still away
+    g.reconnect("p2")
+    assert g.pause is None
+
+
+def test_no_pause_once_the_game_is_over():
+    g = new_game(2)
+    g.phase = "game_over"
+    g.disconnect("p1")
+    assert g.pause is None and g.disconnected == ["p1"]
+    assert g.decider() == "p0"

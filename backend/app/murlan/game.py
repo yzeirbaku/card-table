@@ -24,6 +24,7 @@ TARGETS = (13, 21)
 PLACE_POINTS = {2: (1, 0), 3: (2, 1, 0), 4: (3, 2, 1, 0)}
 DEALT = {2: 36, 3: 54, 4: 54}  # 2 players: 18 each, the other 18 are out of play
 REVEAL_SECONDS = 5  # how long public reveals (first cards, partners' swap) stay up
+PAUSE_SECONDS = 120  # how long a dropped player has to come back before the round is cancelled
 SWAP_BACK_RANKS = frozenset({"3", "4", "5", "6", "7", "8", "9", "10"})
 
 Phase = Literal[
@@ -59,6 +60,13 @@ class Reveal:
     until: float
 
 
+@dataclass
+class Pause:
+    deadline: float | None  # None once the countdown has run out
+    timed_out: bool = False  # the round was cancelled; the decider picks what's next
+    keep_waiting: bool = False  # decided: wait with no countdown
+
+
 class Game:
     def __init__(
         self,
@@ -83,7 +91,7 @@ class Game:
         self.last_result: RoundResult | None = None
         self.winner_side: int | None = None
         self.disconnected: list[str] = []
-        self.pause = None  # set while someone is disconnected
+        self.pause: Pause | None = None  # set while someone is disconnected
         self.reveal: Reveal | None = None  # cards everyone may see for a few seconds
         self._clear_round()
 
@@ -220,6 +228,73 @@ class Game:
             raise Rejected("Give back a card from 3 to 10, or your lowest card if you have none")
         self._give(card)
         self._auto_give()
+
+    # ---- disconnects and time ----
+
+    def disconnect(self, player_id: str) -> None:
+        if player_id not in self.seats or player_id in self.disconnected:
+            return
+        self.disconnected.append(player_id)
+        if self.pause is None and self.phase != "game_over":
+            self.pause = Pause(deadline=self.clock() + PAUSE_SECONDS)
+
+    def reconnect(self, player_id: str) -> None:
+        if player_id not in self.disconnected:
+            return
+        self.disconnected.remove(player_id)
+        if self.disconnected or self.pause is None:
+            return
+        timed_out = self.pause.timed_out
+        self.pause = None
+        if timed_out:  # the round was cancelled: start a fresh one
+            if self.target is None:
+                self.phase = "choosing_target"
+            else:
+                self._start_round()
+
+    def decide(self, player_id: str, choice: str) -> None:
+        if player_id not in self.seats:
+            raise Rejected("You're not playing in this game")
+        if not (self.pause and self.pause.timed_out and not self.pause.keep_waiting):
+            raise Rejected("There's nothing to decide right now")
+        if player_id != self.decider():
+            raise Rejected("The room creator decides")
+        if choice == "keep_waiting":
+            self.pause.keep_waiting = True
+        elif choice == "end_game":
+            self.pause = None
+            self.phase = "game_over"
+            best = max(self.scores)
+            self.winner_side = self.scores.index(best) if self.scores.count(best) == 1 else None
+        else:
+            raise Rejected("Keep waiting or end the game")
+
+    def decider(self) -> str | None:
+        """Who chooses for the table: the creator, or if they're away the next
+        connected player clockwise."""
+        start = self.seats.index(self.creator)
+        for k in range(len(self.seats)):
+            player = self.seats[(start + k) % len(self.seats)]
+            if player not in self.disconnected:
+                return player
+        return None
+
+    def deadline(self) -> float | None:
+        """When tick() next has something to do."""
+        times = [self.reveal.until if self.reveal else None,
+                 self.pause.deadline if self.pause else None]
+        return min((t for t in times if t is not None), default=None)
+
+    def tick(self) -> None:
+        now = self.clock()
+        if self.reveal and now >= self.reveal.until:
+            self.reveal = None
+        if self.pause and self.pause.deadline is not None and now >= self.pause.deadline:
+            self.pause.deadline = None
+            self.pause.timed_out = True
+            self._clear_round()  # the round is cancelled; scores stay as they were
+            self.reveal = None
+            self.phase = "round_cancelled"
 
     # ---- checks ----
 
