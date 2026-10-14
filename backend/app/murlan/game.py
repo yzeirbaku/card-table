@@ -261,7 +261,9 @@ class Game:
     def decide(self, player_id: str, choice: str) -> None:
         if player_id not in self.seats:
             raise Rejected("You're not playing in this game")
-        if not (self.pause and self.pause.timed_out and not self.pause.keep_waiting):
+        if not (self.pause and self.pause.timed_out):
+            raise Rejected("There's nothing to decide right now")
+        if choice == "keep_waiting" and self.pause.keep_waiting:
             raise Rejected("There's nothing to decide right now")
         if player_id != self.decider():
             raise Rejected("The room creator decides")

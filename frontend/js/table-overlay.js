@@ -86,7 +86,13 @@ function paused({ game, meId, names, act }) {
       button('End game', () => act({ type: 'decide', choice: 'end_game' })),
     )];
   }
-  if (pause.seconds_left === null) return [title('Paused'), text(`Waiting for ${who} to come back…`)];
+  if (pause.seconds_left === null) {
+    const items = [title('Paused'), text(`Waiting for ${who} to come back…`)];
+    if (pause.keep_waiting && game.decider === meId) {
+      items.push(row(button('End game', () => act({ type: 'decide', choice: 'end_game' }))));
+    }
+    return items;
+  }
   const clock = span(formatClock(pause.seconds_left), 'countdown');
   const ends = Date.now() + pause.seconds_left * 1000;
   countdown = setInterval(() => { clock.textContent = formatClock((ends - Date.now()) / 1000); }, 500);

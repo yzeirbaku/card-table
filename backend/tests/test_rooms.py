@@ -166,11 +166,11 @@ def test_an_unseated_creator_hands_over_to_whoever_has_been_here_longest():
     assert room.creator_id == ben.id
 
 
-def test_an_unseated_player_who_drops_in_the_lobby_is_removed():
+def test_an_unseated_player_who_drops_in_the_lobby_stays():
     room, (ana, ben, cleo) = room_with(3, "Ana", "Ben", "Cleo")
-    room.sit(ana.id, 0)
+    cleo.socket = None
     room.mark_disconnected(cleo.id)
-    assert [p.id for p in room.players] == [ana.id, ben.id]
+    assert [p.id for p in room.players] == [ana.id, ben.id, cleo.id]
 
 
 def test_a_seated_player_who_drops_in_the_lobby_stays():
@@ -182,11 +182,56 @@ def test_a_seated_player_who_drops_in_the_lobby_stays():
     assert room.players_view()[0]["connected"] is False
 
 
-def test_the_creator_hands_over_when_an_unseated_creator_drops():
-    room, (ana, ben, cleo) = room_with(3, "Ana", "Ben", "Cleo")
-    room.sit(cleo.id, 1)
+def test_a_creator_whose_socket_drops_in_the_lobby_keeps_the_role():
+    room, (ana, ben) = room_with(3, "Ana", "Ben")
+    ana.socket = None
     room.mark_disconnected(ana.id)
-    assert room.creator_id == ben.id and ana not in room.players  # longest here
+    assert room.creator_id == ana.id and ana in room.players
+    assert room.join("Ana", ana.token) is ana
+
+
+def test_a_full_lobby_evicts_the_longest_present_offline_unseated_player():
+    room, (ana, ben, cleo) = room_with(3, "Ana", "Ben", "Cleo")
+    ben.socket = cleo.socket = None
+    dea = room.join("Dea", None)
+    assert [p.id for p in room.players] == [ana.id, cleo.id, dea.id]  # Ben was here longest
+
+
+def test_an_evicted_creator_hands_off_the_role():
+    room, (ana, ben, cleo) = room_with(3, "Ana", "Ben", "Cleo")
+    ana.socket = None
+    dea = room.join("Dea", None)
+    assert ana not in room.players and dea in room.players
+    assert room.creator_id == ben.id
+
+
+def test_a_full_lobby_with_nobody_evictable_still_rejects():
+    room, (ana, ben, cleo) = room_with(3, "Ana", "Ben", "Cleo")
+    with pytest.raises(JoinRejected) as e:  # everyone online
+        room.join("Dea", None)
+    assert e.value.code == 4409 and e.value.message == "This table is full"
+    ana.socket = None
+    room.sit(ana.id, 0)  # offline but seated
+    with pytest.raises(JoinRejected) as e:
+        room.join("Dea", None)
+    assert e.value.code == 4409 and len(room.players) == 3
+
+
+def test_back_to_the_lobby_then_a_newcomer_replaces_the_offline_player():
+    room, (ana, ben) = full_room(2)
+    room.game.phase = "game_over"
+    ben.socket = None
+    room.mark_disconnected(ben.id)
+    room.after_game(ana.id, "lobby")
+    assert ben in room.players
+    cleo = room.join("Cleo", None)
+    assert [p.id for p in room.players] == [ana.id, cleo.id]
+
+
+def test_non_ascii_tokens_are_just_unknown_tokens():
+    room, (ana,) = room_with(3, "Ana")
+    ben = room.join("Ben", "tökén-é")
+    assert ben is not ana and len(room.players) == 2
 
 
 def test_last_player_leaving_clears_the_creator():

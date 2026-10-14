@@ -263,3 +263,87 @@ def test_a_socket_that_dies_during_a_broadcast_pauses_the_game():
         assert state(lead)["game"]["pause"] is not None  # the re-run: already paused
         assert victim.socket is None
         assert room.game.disconnected == [other_id] and room.game.pause is not None
+
+
+def test_a_dead_socket_is_closed_and_a_broadcast_reruns_until_clean():
+    manager = RoomManager()
+    client = TestClient(create_app(manager, use_timers=False))
+    code = new_room(client, 3)
+    with connect(client, code, "Ana") as ana:
+        join(ana)
+        room = manager.get(code)
+        closed = []
+
+        class Dead:
+            async def send_json(self, _):
+                raise RuntimeError("gone")
+
+            async def close(self, *a):
+                closed.append(1)
+
+        extra = [room.join(n, None) for n in ("Ben", "Cleo")]
+        for p in extra:
+            p.socket = Dead()
+        send(ana, type="sit", seat=0)
+        state(ana)
+        assert closed == [1, 1] and all(p.socket is None for p in extra)
+
+
+def test_a_creator_who_drops_in_the_lobby_comes_back_as_creator(client):
+    code = new_room(client, 2)
+    with connect(client, code, "Ana") as ana:
+        a, _ = join(ana)
+    with connect(client, code, "Ana", a["token"]) as ana:
+        again, s = join(ana)
+        assert again["player_id"] == a["player_id"] and s["players"][0]["is_creator"] is True
+
+
+def test_a_newcomer_evicts_an_offline_player_from_a_full_lobby(client):
+    code = new_room(client, 2)
+    with connect(client, code, "Ana") as ana:
+        join(ana)
+        with connect(client, code, "Ben") as ben:
+            b, _ = join(ben)
+            state(ana)
+        state(ana)  # Ben dropped
+        with connect(client, code, "Cleo") as cleo:
+            _, s = join(cleo)
+            assert [p["name"] for p in s["players"]] == ["Ana", "Cleo"]
+
+
+def test_a_failed_welcome_clears_the_socket():
+    manager = RoomManager()
+    client = TestClient(create_app(manager, use_timers=False))
+    code = new_room(client, 2)
+    room = manager.get(code)
+    original = None
+    from starlette.websockets import WebSocket
+
+    original = WebSocket.send_json
+
+    async def flaky(self, data, *a, **k):
+        if isinstance(data, dict) and data.get("type") == "welcome":
+            raise RuntimeError("gone")
+        return await original(self, data, *a, **k)
+
+    WebSocket.send_json = flaky
+    try:
+        with contextlib.suppress(Exception):
+            with connect(client, code, "Ana") as ws:
+                ws.receive_json()
+    finally:
+        WebSocket.send_json = original
+    assert room.players and room.players[0].socket is None
+
+
+def test_a_removed_player_s_socket_is_closed_on_its_next_message():
+    manager = RoomManager()
+    client = TestClient(create_app(manager, use_timers=False))
+    code = new_room(client, 2)
+    with connect(client, code, "Ana") as ana:
+        join(ana)
+        room = manager.get(code)
+        room.players.clear()
+        send(ana, type="sit", seat=0)
+        with pytest.raises(WebSocketDisconnect):
+            ana.receive_json()

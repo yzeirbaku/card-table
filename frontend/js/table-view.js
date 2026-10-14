@@ -9,6 +9,15 @@ const MAX_BACKS = 7; // card backs drawn per opponent; the count shows the real 
 let send = () => {};
 let selected = []; // card codes picked in your hand
 let current = null; // the last state drawn, to redraw the hand after a tap
+let lastPhase = null; // the phase of the last render: a new phase starts with nothing selected
+let waiting = false; // a move is out: ignore taps until the next state arrives
+
+/** Send a move once; further taps are ignored until the server answers with a state. */
+function sendOnce(message) {
+  if (waiting) return;
+  waiting = true;
+  send(message);
+}
 
 export function initTable({ onLeave, send: sendMessage }) {
   send = sendMessage;
@@ -25,23 +34,28 @@ export function initTable({ onLeave, send: sendMessage }) {
     if (!game) return;
     if (game.phase === 'swapping') {
       if (selected.length !== 1) return toast('Pick the card to give');
-      send({ type: 'action', action: { type: 'give', card: selected[0] } });
+      sendOnce({ type: 'action', action: { type: 'give', card: selected[0] } });
     } else {
       if (!selected.length) return toast('Pick the cards to play');
-      send({ type: 'action', action: { type: 'play', cards: selected } });
+      sendOnce({ type: 'action', action: { type: 'play', cards: selected } });
     }
   });
   document.getElementById('btn-pass').addEventListener('click', () => {
-    send({ type: 'action', action: { type: 'pass' } });
+    sendOnce({ type: 'action', action: { type: 'pass' } });
   });
 }
 
 export function renderTable(state, meId) {
   const game = state.game;
+  waiting = false;
   if (!game) {
     stopCountdown();
+    selected = [];
+    lastPhase = null;
     return;
   }
+  if (game.phase !== lastPhase) selected = [];
+  lastPhase = game.phase;
   current = state;
   const byId = Object.fromEntries(state.players.map((p) => [p.id, p]));
   const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name
@@ -58,7 +72,7 @@ export function renderTable(state, meId) {
   renderActions(game, meId);
   document.querySelector('.turn-note').textContent = turnNote(game, meId, names);
   renderReveal(document.querySelector('.reveal'), game, names);
-  renderOverlay(document.querySelector('.overlay'), game, meId, names, send);
+  renderOverlay(document.querySelector('.overlay'), game, meId, names, sendOnce);
 }
 
 function seat(player, position, game) {

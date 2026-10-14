@@ -357,10 +357,25 @@ def test_timeout_cancels_the_round_then_keep_waiting_deals_a_fresh_one():
     g.decide("p0", "keep_waiting")
     assert g.pause.keep_waiting
     with pytest.raises(Rejected, match="nothing to decide"):
-        g.decide("p0", "end_game")
+        g.decide("p0", "keep_waiting")
     g.reconnect("p1")
     assert g.pause is None and g.phase == "playing"  # no completed round yet: a first-round deal
     assert len(g.hands["p0"]) == 18 and g.rounds_played == 0
+
+
+def test_end_game_is_still_possible_while_keeping_waiting():
+    clock = FakeClock()
+    g = new_game(2, clock=clock)
+    rig(g, {"p0": ["3S"], "p1": ["4S"]}, "p0")
+    g.scores = [5, 3]
+    g.disconnect("p1")
+    clock.now += PAUSE_SECONDS
+    g.tick()
+    g.decide("p0", "keep_waiting")
+    with pytest.raises(Rejected, match="decides"):
+        g.decide("p1", "end_game")
+    g.decide("p0", "end_game")
+    assert g.phase == "game_over" and g.pause is None and g.winner_side == 0
 
 
 def test_end_game_after_a_timeout_uses_the_current_scores():

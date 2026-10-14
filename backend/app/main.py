@@ -55,7 +55,9 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
         try:
             await player.socket.send_json(message)
         except Exception:  # a dead socket must not break the broadcast
-            player.socket = None
+            sock, player.socket = player.socket, None
+            with suppress(Exception):  # a half-open client then reconnects
+                await sock.close()
             room.mark_disconnected(player.id)
             return False
         return True
@@ -63,7 +65,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
     async def broadcast(room: Room) -> None:
         # A socket that dies mid-broadcast changes the state (the game pauses), so
         # the players already sent to get another round with the new state.
-        for _ in range(2):
+        for _ in range(len(room.players) + 1):
             results = [await send_state(room, p) for p in list(room.players)]
             if all(results):
                 break
@@ -71,6 +73,8 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
             schedule(room)
 
     def schedule(room: Room) -> None:
+        if rooms.get(room.code) is not room:  # purged: no timers for it
+            return
         timer = timers.setdefault(id(room), RoomTimer(rooms.clock))
         timer.set(room.game.deadline() if room.game else None, lambda: wake(room))
 
@@ -94,6 +98,12 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
 
     async def handle(room: Room, player: Player, ws: WebSocket, text: str) -> bool:
         """Process one client message. Returns True when the player left."""
+        if player not in room.players:  # removed (e.g. evicted): this socket is stale
+            if player.socket is ws:
+                player.socket = None
+            with suppress(Exception):
+                await ws.close(1000, "Removed from the room")
+            return True
         try:
             msg = json.loads(text)
         except ValueError:
@@ -165,10 +175,19 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
                     await old.close(4000, "Opened on another connection")
             room.mark_connected(player.id)
             rooms.touch(room)
-            await ws.send_json(
-                {"type": "welcome", "player_id": player.id, "token": player.token,
-                 "code": room.code}
-            )
+            try:
+                await ws.send_json(
+                    {"type": "welcome", "player_id": player.id, "token": player.token,
+                     "code": room.code}
+                )
+            except Exception:  # same cleanup as a disconnect
+                if player.socket is ws:
+                    player.socket = None
+                    room.mark_disconnected(player.id)
+                    await broadcast(room)
+                with suppress(Exception):
+                    await ws.close()
+                return
             await broadcast(room)
         try:
             while True:

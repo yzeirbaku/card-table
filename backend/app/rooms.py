@@ -62,13 +62,20 @@ class Room:
     def join(self, name: str, token: str | None) -> Player:
         if token:
             for p in self.players:
-                if secrets.compare_digest(p.token, token):
+                if secrets.compare_digest(p.token.encode(), token.encode()):
                     return p
         name = name.strip()
         if not 1 <= len(name) <= MAX_NAME_LENGTH:
             raise JoinRejected(4400, f"Name must be 1-{MAX_NAME_LENGTH} characters")
-        if self.game is not None or len(self.players) >= self.seats:
+        if self.game is not None:
             raise JoinRejected(4409, "This table is full")
+        if len(self.players) >= self.seats:
+            # Make room by dropping whoever has been offline and unseated the longest.
+            stale = next((p for p in self.players
+                          if p.socket is None and self.seat_of(p.id) is None), None)
+            if stale is None:
+                raise JoinRejected(4409, "This table is full")
+            self.leave(stale.id)
         player = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16))
         self.players.append(player)
         if self.creator_id is None:
@@ -131,8 +138,6 @@ class Room:
     def mark_disconnected(self, player_id: str) -> None:
         if self.game is not None:
             self.game.disconnect(player_id)
-        elif self.seat_of(player_id) is None:  # an unseated lobby visitor who left
-            self.leave(player_id)
 
     def _new_game(self) -> None:
         self.game = Game(list(self.seating), self.creator_id, rng=self.rng, clock=self.clock)

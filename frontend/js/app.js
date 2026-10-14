@@ -33,6 +33,7 @@ function render(state) {
     showView('table');
     renderTable(state, meId);
   } else {
+    stopCountdown();
     showView('lobby');
     renderLobby(state, meId, gameName(state.room.game));
   }
