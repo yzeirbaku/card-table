@@ -9,8 +9,8 @@ const MAX_BACKS = 7; // card backs drawn per opponent; the count shows the real 
 let send = () => {};
 let selected = []; // card codes picked in your hand
 let current = null; // the last state drawn, to redraw the hand after a tap
-let lastPhase = null;
-let lastRound = null; // and the round: a new one starts with nothing selected // the phase of the last render: a new phase starts with nothing selected
+let lastPhase = null; // the phase of the last render: a new phase starts with nothing selected
+let lastRound = null; // the round of the last render: a new round starts with nothing selected
 let waiting = false; // a move is out: ignore taps until the next state arrives
 
 /** Send a move once; further taps are ignored until the server answers with a state. */

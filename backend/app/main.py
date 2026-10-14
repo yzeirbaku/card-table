@@ -191,11 +191,14 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
             await broadcast(room)
         try:
             while True:
-                text = await ws.receive_text()
+                try:
+                    text = await ws.receive_text()
+                except RuntimeError:  # receiving on a socket that already closed
+                    break
                 async with room.lock:
                     if await handle(room, player, ws, text):
                         break
-        except (WebSocketDisconnect, RuntimeError):
+        except WebSocketDisconnect:
             pass
         finally:
             async with room.lock:

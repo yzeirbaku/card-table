@@ -349,15 +349,18 @@ def test_a_removed_player_s_socket_is_closed_on_its_next_message():
             ana.receive_json()
 
 
-def test_a_message_on_a_replaced_socket_is_not_applied(client):
+def test_a_message_on_a_replaced_socket_is_not_applied():
+    manager = RoomManager()
+    client = TestClient(create_app(manager, use_timers=False))
     code = new_room(client, 2)
-    with connect(client, code, "Ana") as first:
-        a, _ = join(first)
-        with connect(client, code, "Ana", a["token"]) as second:
-            join(second)
-            send(first, type="sit", seat=0)
-            with pytest.raises(WebSocketDisconnect):
-                while True:
-                    first.receive_json()
-            send(second, type="sit", seat=1)
-            assert state(second)["players"][0]["seat"] == 1  # never moved to seat 0
+    with connect(client, code, "Ana") as ws:
+        welcome, _ = join(ws)
+        room = manager.get(code)
+        player = next(p for p in room.players if p.id == welcome["player_id"])
+        newer = object()  # the player now has another live socket; `ws` is stale
+        player.socket = newer
+        send(ws, type="sit", seat=0)
+        with pytest.raises(WebSocketDisconnect):  # the stale socket is closed
+            ws.receive_json()
+        assert room.seat_of(player.id) is None  # and the message was not applied
+        assert player.socket is newer
