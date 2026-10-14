@@ -25,12 +25,13 @@ function memoryStorage() {
   return { getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => map.set(k, String(v)) };
 }
 
-function setup() {
+function setup({ deferWait = false } = {}) {
   FakeSocket.all = [];
   const store = createStore(memoryStorage());
   store.setName('Ana');
   const events = [];
   const delays = [];
+  const pending = [];
   const conn = new RoomConnection({
     code: 'ABCD',
     store,
@@ -41,10 +42,10 @@ function setup() {
     onReconnecting: (on) => events.push(['reconnecting', on]),
     onClosed: (m) => events.push(['closed', m]),
     WebSocketImpl: FakeSocket,
-    wait: (fn, ms) => { delays.push(ms); fn(); },
+    wait: (fn, ms) => { delays.push(ms); if (deferWait) pending.push(fn); else fn(); },
   });
   conn.connect();
-  return { conn, store, events, delays, socket: () => FakeSocket.all.at(-1) };
+  return { conn, store, events, delays, pending, socket: () => FakeSocket.all.at(-1) };
 }
 
 test('welcome saves the seat token and current room', () => {
@@ -136,6 +137,52 @@ test('leave sends leave, forgets the seat and does not reconnect', () => {
   assert.equal(FakeSocket.all.length, 1);
   assert.equal(store.getToken('ABCD'), null);
   assert.equal(store.getCurrentRoom(), null);
+});
+
+test('leave while connecting sends leave once the socket opens', () => {
+  const { conn, store, events, socket } = setup();
+  store.setToken('ABCD', 'tok');
+  const ws = socket();
+  conn.leave();
+  assert.deepEqual(ws.sent, []);
+  ws.open();
+  assert.deepEqual(ws.sent, [{ type: 'leave' }]);
+  assert.equal(FakeSocket.all.length, 1);
+  assert.equal(store.getToken('ABCD'), null);
+  assert.deepEqual(events, []);
+});
+
+test('leave while a retry is pending opens a socket with the old token and leaves', () => {
+  const { conn, store, events, pending, socket } = setup({ deferWait: true });
+  socket().open();
+  socket().message({ type: 'welcome', player_id: 'p1', token: 'tok', code: 'ABCD' });
+  socket().drop(1006);
+  assert.equal(pending.length, 1);
+  const before = events.length;
+  conn.leave();
+  assert.equal(FakeSocket.all.length, 2);
+  const last = socket();
+  assert.match(last.url, /token=tok/);
+  last.open();
+  assert.deepEqual(last.sent, [{ type: 'leave' }]);
+  last.message({ type: 'state', code: 'ABCD' });
+  last.drop(1000);
+  pending[0]();
+  assert.equal(FakeSocket.all.length, 2);
+  assert.equal(store.getToken('ABCD'), null);
+  assert.equal(store.getCurrentRoom(), null);
+  assert.equal(events.length, before);
+});
+
+test('no callbacks reach the app after leave', () => {
+  const { conn, events, socket } = setup();
+  socket().open();
+  const ws = socket();
+  conn.leave();
+  const before = events.length;
+  ws.message({ type: 'state', code: 'ABCD' });
+  ws.message({ type: 'welcome', player_id: 'p1', token: 'x', code: 'ABCD' });
+  assert.equal(events.length, before);
 });
 
 test('close stops quietly and keeps the seat', () => {

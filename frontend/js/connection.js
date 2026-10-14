@@ -25,11 +25,15 @@ export class RoomConnection {
     const ws = new this.WebSocketImpl(this.urlFor(this.code, this.store.getName(), this.store.getToken(this.code)));
     this.ws = ws;
     ws.onopen = () => {
+      if (this.stopped || ws !== this.ws) return;
       this.opened = true;
       this.attempt = 0;
       this.onReconnecting(false);
     };
-    ws.onmessage = (event) => this.handle(event.data);
+    ws.onmessage = (event) => {
+      if (this.stopped || ws !== this.ws) return;
+      this.handle(event.data);
+    };
     ws.onclose = (event) => {
       if (this.stopped || ws !== this.ws) return;
       const final = FINAL[event.code];
@@ -61,9 +65,29 @@ export class RoomConnection {
     }
   }
 
+  /** Give up the seat for good. The server must hear it even if our socket isn't open right now. */
   leave() {
-    if (this.ws?.readyState === this.WebSocketImpl.OPEN) this.ws.send(JSON.stringify({ type: 'leave' }));
-    this.close();
+    const token = this.store.getToken(this.code); // read before forgetting
+    const ws = this.ws;
+    this.stopped = true; // also turns any pending retry into a no-op
+    const sendLeave = (socket) => {
+      socket.send(JSON.stringify({ type: 'leave' }));
+      socket.close();
+    };
+    if (ws?.readyState === this.WebSocketImpl.OPEN) {
+      sendLeave(ws);
+    } else if (ws?.readyState === 0) {
+      // Still connecting: keep this socket, say goodbye once it opens.
+      ws.onmessage = null;
+      ws.onclose = null;
+      ws.onopen = () => sendLeave(ws);
+    } else if (token) {
+      // Closed, retry pending: open one last socket just to leave.
+      const last = new this.WebSocketImpl(this.urlFor(this.code, this.store.getName(), token));
+      last.onopen = () => sendLeave(last);
+      last.onmessage = () => {};
+      last.onclose = () => {};
+    }
     this.forget();
   }
 
