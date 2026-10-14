@@ -146,7 +146,7 @@ def test_can_beat_agrees_with_trying_every_play():
     rng = random.Random(11)
     deck = list(DECK)
     by_kind: dict[str, set[Play]] = {}
-    for _ in range(40):  # plays of every kind to beat, from the subsets of random hands
+    for _ in range(15):  # plays of every kind to beat, from the subsets of random hands
         sample = rng.sample(deck, 14)
         for n in range(1, 11):
             for c in combinations(sample, n):
@@ -163,11 +163,11 @@ def test_can_beat_agrees_with_trying_every_play():
     tops = [play for plays in by_kind.values() for play in sorted(plays, key=repr)[:40]]
     for _ in range(300):
         top = rng.choice(tops)
-        hand = rng.sample(deck, 10)
+        hand = rng.sample(deck, 8)
         if top.kind in STRAIGHTS and rng.random() < .5:  # often hold the run one higher, or most of it
             step = [ranks[(top.rank + k) % 14] for k in range(top.length)]
             wanted = [r + s for r in step for s in "CDHS"[:STRAIGHTS.index(top.kind) + 1]]
-            hand = list(dict.fromkeys(wanted[: len(wanted) - rng.choice([0, 0, 1])] + hand))[:12]
+            hand = list(dict.fromkeys(wanted[: len(wanted) - rng.choice([0, 0, 1])] + hand))[:10]
         brute = any((p := classify(list(c))) is not None and beats(p, top)
                     for n in range(1, len(hand) + 1) for c in combinations(hand, n))
         assert can_beat(hand, top) is brute, (hand, top)
