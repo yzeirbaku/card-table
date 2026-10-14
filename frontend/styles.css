@@ -154,10 +154,11 @@ input { font: inherit; }
 /* "Pass" sits beside the name (inward on the right seat), so a seat never gets taller. */
 .seat .bubble { position: absolute; bottom: 3px; left: calc(100% + 6px); }
 .seat-right .bubble { left: auto; right: calc(100% + 6px); }
+.seat-me .bubble { left: 0; bottom: calc(100% + 4px); } /* beside it would cover your first card */
 .bubble { padding: 2px 9px; border-radius: 999px; background: #fffdf7; color: #1a1a1a; font-size: 12px; font-weight: 700; }
-.scoreboard { max-width: 60cqw; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scoreboard { max-width: 50cqw; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scoreboard b { margin: 0 4px; font-size: 15px; color: var(--plate-count); }
-.score-round { justify-self: end; white-space: nowrap; font-size: 12px; opacity: .7; }
+.score-round { justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; opacity: .7; }
 /* The pile: this trick's plays stacked, each a little turned, the newest on top. */
 .pile { position: absolute; inset: 0; }
 .pile-cards { position: absolute; left: 50%; top: 46%; display: flex; --w: calc(var(--card-w) * .85);

@@ -24,6 +24,7 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
         "turn": game.turn,
         "pile": [{"player_id": p, "cards": list(cards), "kind": play.kind}
                  for p, cards, play in game.trick],
+        "pile_won": game.trick_won,  # the pile is a won trick: the next play leads
         "passed": list(game.passed),
         "places": list(game.places),
         "must_include": game.must_include if game.turn == player_id else None,

@@ -30,7 +30,7 @@ export function initTable({ onLeave, send: sendMessage }) {
   const menu = document.getElementById('table-menu');
   const menuButton = document.getElementById('btn-table-menu');
   menuButton.addEventListener('click', () => { menu.hidden = !menu.hidden; });
-  document.addEventListener('click', (event) => { // a tap anywhere else closes the menu
+  document.addEventListener('pointerdown', (event) => { // a tap anywhere else closes the menu
     if (!menu.hidden && !menu.contains(event.target) && !menuButton.contains(event.target)) menu.hidden = true;
   });
   document.getElementById('btn-table-leave').addEventListener('click', () => {
@@ -142,7 +142,7 @@ function renderScores(game, names) {
 function renderPile(game, names) {
   const pile = document.querySelector('.pile');
   const top = game.pile.at(-1);
-  const key = top ? `${game.round}:${game.pile.length}:${top.player_id}` : null;
+  const key = top ? `${game.round}:${game.pile.length}:${top.player_id}:${top.cards.join()}` : null;
   if (!top) {
     lastPlay = key;
     return pile.replaceChildren();
@@ -200,7 +200,12 @@ function renderActions(game, meId) {
   const play = document.getElementById('btn-play');
   play.hidden = !(myTurn || giving);
   play.textContent = giving ? 'Give' : 'Play';
-  document.getElementById('btn-pass').hidden = !myTurn || game.pile.length === 0;
+  document.getElementById('btn-pass').hidden = !myTurn || leading(game);
+}
+
+/** Nothing to beat: the pile is empty, or it's a won trick left on show until this lead. */
+function leading(game) {
+  return game.pile.length === 0 || game.pile_won;
 }
 
 function turnNote(game, meId, names) {
@@ -214,5 +219,5 @@ function turnNote(game, meId, names) {
   if (game.phase !== 'playing') return '';
   if (game.turn !== meId) return `${names[game.turn]}'s turn`;
   if (game.must_include) return `Your lead: include the ${cardName(game.must_include)}`;
-  return game.pile.length ? 'Your turn' : 'Your lead';
+  return leading(game) ? 'Your lead' : 'Your turn';
 }

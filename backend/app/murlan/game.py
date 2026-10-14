@@ -104,6 +104,7 @@ class Game:
         self.swap_given: dict[str, str] = {}  # giver -> the card they gave
         self.turn: str | None = None
         self.trick: list[tuple[str, list[str], Play]] = []  # this trick's plays, oldest first
+        self.trick_won = False  # everyone passed: the trick stays on show until the next lead
         self.passed: list[str] = []  # who passed since the last play
         self.places: list[str] = []  # who's out this round, in order
         self.must_include: str | None = None  # the first lead of a game must include this
@@ -125,7 +126,7 @@ class Game:
 
     @property
     def top(self) -> Play | None:
-        return self.trick[-1][2] if self.trick else None
+        return self.trick[-1][2] if self.trick and not self.trick_won else None
 
     def loser_voters(self) -> list[str]:
         """The two players who must agree who's last after a 4-player early end."""
@@ -159,6 +160,9 @@ class Game:
             raise Rejected(_why_not(play, top))
         for c in cards:
             hand.remove(c)
+        if self.trick_won:  # a new lead: the won trick goes
+            self.trick = []
+            self.trick_won = False
         self.must_include = None
         self.trick.append((player_id, sort_cards(cards), play))
         self.passed = []
@@ -428,23 +432,25 @@ class Game:
         self.swap_step = None
         self.turn = leader
         self.trick = []
+        self.trick_won = False
         self.passed = []
         self.places = []
         self.must_include = None
 
     def _advance(self) -> None:
         """Next player clockwise. When the turn gets back to whoever made the last
-        play (everyone else passed), the pile clears and they lead; if they're
-        already out, the next player clockwise who still has cards leads. A player
-        with nothing that beats the pile passes without being asked."""
+        play (everyone else passed), the trick is won and they lead; its cards stay
+        on show until that lead. If they're already out, the next player clockwise
+        who still has cards leads. A player with nothing that beats the pile passes
+        without being asked."""
         n = len(self.seats)
         i = self.seats.index(self.turn)
-        last = self.trick[-1][0] if self.trick else None
+        last = self.trick[-1][0] if self.top is not None else None
         for _ in range(2 * n):
             i = (i + 1) % n
             player = self.seats[i]
-            if player == last:
-                self.trick = []
+            if player == last:  # everyone passed: the trick is won but stays on show
+                self.trick_won = True
                 self.passed = []
                 last = None
             if self.hands[player]:

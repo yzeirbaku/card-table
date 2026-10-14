@@ -7,7 +7,7 @@ from app.murlan.cards import DECK
 from app.murlan.combos import beats, classify
 from app.murlan.game import PAUSE_SECONDS, REVEAL_SECONDS, Game, Rejected
 from app.murlan.views import view_for
-from tests.murlan_helpers import FakeClock, later_round, new_game
+from tests.murlan_helpers import FakeClock, later_round, new_game, rig
 
 CARDS = frozenset(DECK)
 
@@ -201,3 +201,14 @@ def test_no_view_ever_leaks_hidden_cards(n, seed):
             pytest.fail(f"bot move rejected: {e}")
     check_views(game)
     assert game.rounds_played >= 1 or game.phase == "game_over"
+
+
+def test_a_won_trick_stays_on_show_until_the_next_lead():
+    g = new_game(2)
+    rig(g, {"p0": ["JR", "3C"], "p1": ["4S", "5S"]}, "p0")
+    g.play("p0", ["JR"])  # p1 can't beat it and passes automatically
+    v = view_for(g, "p1")
+    assert v["pile"] == [{"player_id": "p0", "cards": ["JR"], "kind": "single"}]
+    assert v["pile_won"] is True and v["turn"] == "p0"
+    g.play("p0", ["3C"])
+    assert view_for(g, "p1")["pile_won"] is False

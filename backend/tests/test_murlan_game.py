@@ -81,8 +81,10 @@ def test_pile_clears_when_the_turn_gets_back_to_the_last_player():
     g.play("p0", ["4S"])
     g.pass_turn("p1")
     g.pass_turn("p2")
-    assert g.turn == "p0" and g.trick == [] and g.top is None and g.passed == []
+    assert g.turn == "p0" and g.top is None and g.passed == []
+    assert g.trick_won and [cards for _, cards, _ in g.trick] == [["4S"]]  # still on show
     g.play("p0", ["3S"])  # leads anything, even lower than before
+    assert not g.trick_won and [cards for _, cards, _ in g.trick] == [["3S"]]
 
 
 def test_lead_moves_on_when_the_last_player_is_out():
@@ -102,6 +104,7 @@ def test_a_player_who_cannot_beat_the_pile_passes_automatically():
     assert g.turn == "p2" and g.passed == ["p1"]  # p1 has nothing above a 9
     g.play("p2", ["KH"])
     assert g.turn == "p2" and g.top is None  # neither p0 nor p1 beats a king: p2 leads again
+    assert g.trick_won and g.trick[-1][1] == ["KH"]  # and everyone still sees the king
 
 
 def test_automatic_passes_go_on_when_the_last_player_is_out():
