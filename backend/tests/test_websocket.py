@@ -129,7 +129,9 @@ def test_out_of_turn_moves_are_rejected_and_legal_ones_broadcast(client):
         s1, s2 = state(ana), state(ben)
         expected = [{"player_id": lead_state["game"]["turn"], "cards": [card], "kind": "single"}]
         assert s1["game"]["pile"] == s2["game"]["pile"] == expected
-        assert s1["game"]["counts"][lead_state["game"]["turn"]] == 17
+        lead_now = s1 if lead is ana else s2
+        assert len(lead_now["game"]["hand"]) == 17
+        assert "counts" not in s1["game"]
 
 
 def test_malformed_actions_are_rejected(client):

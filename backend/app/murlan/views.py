@@ -1,8 +1,8 @@
 """What one player may see of a Murlan game: the ONLY way game state leaves the
-server. Other players' hands, the face-down deck and out-of-play cards are never
-included. A card code reaches a player only if it's in their own hand, on the
-pile, in a public reveal that is still running, or the cut card shown to the
-cutter."""
+server. Other players' hands (not even how many cards they hold), the face-down
+deck and out-of-play cards are never included. A card code reaches a player only
+if it's in their own hand, on the pile, in a public reveal that is still running,
+or the cut card shown to the cutter."""
 
 import math
 from typing import Any
@@ -21,7 +21,6 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
         "sides": [{"players": game.side_players(i), "score": score}
                   for i, score in enumerate(game.scores)],
         "hand": list(game.hands.get(player_id, [])),
-        "counts": {p: len(hand) for p, hand in game.hands.items()},
         "turn": game.turn,
         "pile": [{"player_id": p, "cards": list(cards), "kind": play.kind}
                  for p, cards, play in game.trick],

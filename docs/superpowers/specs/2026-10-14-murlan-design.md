@@ -175,9 +175,10 @@ player clockwise becomes creator.
     player id and an action and either change state or raise a rejection with
     a message for the player.
   - `views.py`: `view_for(game, player_id)` builds what one player may see:
-    their own hand, everyone's card counts, the pile, scores, phase, whose turn,
-    and any public reveals (swap between teammates, face-up first cards during
-    a "take it" deal). **No view ever contains another player's hidden cards.**
+    their own hand, the pile, scores, phase, whose turn, and any public
+    reveals (swap between teammates, face-up first cards during
+    a "take it" deal). **No view ever contains another player's hidden cards**,
+    nor how many cards anyone else holds (players finishing are still shown).
 - **Rooms** (`backend/app/rooms.py`) gain seats (`seat_index → player`),
   unseated players, the creator, and the game instance. The WebSocket handler
   routes `murlan` actions to the game and broadcasts each player's view.
@@ -190,8 +191,12 @@ player clockwise becomes creator.
   drive it without sleeping.
 - **Frontend** (no game logic): table screen renders the view — your hand
   (tap cards to select; **Play** sends the selection, **Pass** passes; an
-  illegal play comes back as a toast with the server's reason), the pile,
-  opponents' card backs and counts, whose turn, scores. Plus overlays for the
+  illegal play comes back as a toast with the server's reason), the pile as a
+  compact messy stack (each play lands slightly turned on the last), opponents'
+  card backs (a fixed fan, no count), whose turn, and the scores in a bar above
+  the table with the menu. Pass and Play sit either side of the turn note. Each
+  new deal is animated: backs go out round the table one at a time and your
+  hand turns face up at the end. Plus overlays for the
   target pick, the cut (spread deck, tap, Take it / Leave it), the swap
   (pick your card when you have a choice), agreeing the loser, the pause
   countdown with Keep waiting / End game, round result, and game over with the
@@ -227,4 +232,4 @@ player clockwise becomes creator.
 ## Out of scope
 
 Other games, accounts and stats, chat, spectators, animations beyond simple
-transitions, turn timers for connected players, deployment.
+transitions and the deal, turn timers for connected players, deployment.

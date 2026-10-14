@@ -12,7 +12,8 @@ Murlan (the first game) is `2026-10-14-murlan-design.md`.
 - **Hidden info never leaves the server.** All game state goes out through
   `backend/app/murlan/views.py::view_for`. Cards are codes (`"10H"`, `"JR"`); a
   code reaches a player only if it's in their hand, on the pile, in a public
-  reveal that is still running, or the cut card shown to the cutter.
+  reveal that is still running, or the cut card shown to the cutter. How many
+  cards the others hold isn't sent either.
   `tests/test_murlan_views.py::test_no_view_ever_leaks_hidden_cards` guards this.
 - **Single uvicorn worker.** Live rooms are in memory; a restart drops them.
 - **The Murlan game is pure Python** (`backend/app/murlan/game.py`): injected

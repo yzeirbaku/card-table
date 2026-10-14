@@ -23,12 +23,12 @@ def card_codes(value) -> set[str]:
     return set()
 
 
-def test_a_player_sees_their_own_hand_and_only_counts_of_others():
+def test_a_player_sees_their_own_hand_and_nothing_of_the_others():
     g = new_game(3)
     g.choose_target("p0", 13)
     v = view_for(g, "p1")
     assert v["hand"] == g.hands["p1"]
-    assert v["counts"] == {"p0": 18, "p1": 18, "p2": 18}
+    assert "counts" not in v  # how many cards the others hold is hidden too
     assert not (set(g.hands["p0"]) | set(g.hands["p2"])) & card_codes(v)
     assert v["phase"] == "playing" and v["target"] == 13 and v["round"] == 1
     assert v["seats"] == ["p0", "p1", "p2"] and v["creator"] == "p0" and v["decider"] == "p0"
