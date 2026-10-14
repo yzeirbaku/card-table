@@ -1,6 +1,6 @@
-// The deal, drawn: card backs go out from the middle of the table, one at a time, round
-// the table, and your hand turns face up at the end. Only a picture: the server has
-// already dealt, so nothing waits on it.
+// Cards moving on the table, drawn. The deal: card backs go out from the middle, one at a
+// time, round the table, and your hand turns face up at the end. A play: the cards slide
+// from the player to the pile. Only pictures: the server has already moved the cards.
 
 import { div } from './dom.js';
 
@@ -29,6 +29,20 @@ function place(el, table) {
   return { x: r.left + r.width / 2 - t.left, y: r.top + r.height / 2 - t.top, w: r.width, h: r.height };
 }
 
+const still = () => document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Slide a play that just landed on the pile (`el`) in from where it came from (`fromEl`). */
+export function flyIn(el, fromEl) {
+  if (!fromEl || still()) return;
+  const table = document.querySelector('.table');
+  const from = place(fromEl, table);
+  const to = place(el, table);
+  el.animate(
+    [{ translate: `${from.x - to.x}px ${from.y - to.y}px`, scale: 0.6 }, { translate: '0px 0px', scale: 1 }],
+    { duration: 320, easing: 'cubic-bezier(.2, .7, .3, 1)' },
+  );
+}
+
 const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
 /**
@@ -37,7 +51,7 @@ const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
  */
 export async function playDeal(positions, perPlayer) {
   stopDeal();
-  if (document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (still()) return;
   const mine = ++run;
   const table = document.querySelector('.table');
   const layer = document.querySelector('.deal-layer');

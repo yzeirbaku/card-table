@@ -1,4 +1,4 @@
-import { playDeal, stopDeal } from './deal.js';
+import { flyIn, playDeal, stopDeal } from './deal.js';
 import { button, div, face, span } from './dom.js';
 import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
@@ -19,6 +19,7 @@ let lastRound = null; // the round of the last render: a new round starts with n
 let waiting = false; // a move is out: ignore taps until the next state arrives
 let hadEmptyHand = null; // whether the last render had no cards in your hand: cards arriving after that are a deal
 let lastPlay; // the newest play on the pile at the last render (null: empty), so only a new one lands
+let lastPassed = []; // who had passed at the last render, so only a new Pass pops in
 
 /** Send a move once; further taps are ignored until the server answers with a state. */
 function sendOnce(message) {
@@ -34,13 +35,25 @@ export function initTable({ onLeave, send: sendMessage }) {
   document.addEventListener('pointerdown', (event) => { // a tap anywhere else closes the menu
     if (!menu.hidden && !menu.contains(event.target) && !menuButton.contains(event.target)) menu.hidden = true;
   });
-  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') menu.hidden = true; });
+  const ask = document.getElementById('leave-confirm');
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    menu.hidden = true;
+    ask.hidden = true;
+  });
   document.getElementById('btn-table-leave').addEventListener('click', () => {
     menu.hidden = true;
     const game = current?.game;
-    if (game && game.phase !== 'game_over' && !confirm('Leave the table? This ends the game for everyone.')) return;
+    if (!game || game.phase === 'game_over') return onLeave(); // nothing to end
+    ask.hidden = false;
+    document.getElementById('btn-leave-stay').focus();
+  });
+  document.getElementById('btn-leave-stay').addEventListener('click', () => { ask.hidden = true; });
+  document.getElementById('btn-leave-go').addEventListener('click', () => {
+    ask.hidden = true;
     onLeave();
   });
+  ask.addEventListener('click', (event) => { if (event.target === ask) ask.hidden = true; }); // tap outside: stay
   document.getElementById('btn-play').addEventListener('click', () => {
     const game = current?.game;
     if (!game) return;
@@ -64,6 +77,8 @@ export function resetTable() {
   lastRound = null;
   hadEmptyHand = null;
   lastPlay = undefined;
+  lastPassed = [];
+  document.getElementById('leave-confirm').hidden = true;
   stopDeal();
 }
 
@@ -84,16 +99,22 @@ export function renderTable(state, meId) {
   const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name
   for (const p of state.players) names[p.id] = p.name;
   const seated = game.seats.map((id) => byId[id] ?? { id, name: '?', connected: false });
-  document.querySelector('.seats').replaceChildren(
-    ...seatPositions(seated, meId).map(({ player, position }) => seat(player, position, game)),
-  );
+  const newPasses = game.passed.filter((id) => !lastPassed.includes(id));
+  lastPassed = [...game.passed];
+  const seatEls = new Map(); // player id -> their seat, where their plays come from
+  document.querySelector('.seats').replaceChildren(...seatPositions(seated, meId).map(({ player, position }) => {
+    const el = seat(player, position, game, newPasses);
+    seatEls.set(player.id, el);
+    return el;
+  }));
+  seatEls.set(meId, document.querySelector('.hand')); // yours come from your hand
   const me = byId[meId];
   document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me, game)] : []));
-  if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(span('Pass', 'bubble'));
+  if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(passBubble(newPasses.includes(meId)));
   renderScores(game, names);
   const dealt = hadEmptyHand === true && game.hand.length > 0; // seen empty, now full: a new deal
   hadEmptyHand = game.hand.length === 0;
-  renderPile(game, names);
+  renderPile(game, names, seatEls);
   renderHand(game);
   renderActions(game, meId);
   document.querySelector('.turn-note').textContent = turnNote(game, meId, names);
@@ -102,13 +123,18 @@ export function renderTable(state, meId) {
   if (dealt) playDeal(seatPositions(seated, meId).map(({ position }) => position), game.hand.length);
 }
 
-function seat(player, position, game) {
+/** "Pass" beside a name; it pops in when the pass is new. */
+function passBubble(fresh) {
+  return span('Pass', fresh ? 'bubble pop' : 'bubble');
+}
+
+function seat(player, position, game, newPasses) {
   const el = div(`seat seat-${position}`);
   const backs = div('backs');
   const holding = ['swapping', 'playing'].includes(game.phase) && !game.places.includes(player.id);
   if (holding) for (let i = 0; i < FAN; i++) backs.append(div('card-back'));
   el.append(backs, plate(player, game));
-  if (game.passed.includes(player.id)) el.append(span('Pass', 'bubble'));
+  if (game.passed.includes(player.id)) el.append(passBubble(newPasses.includes(player.id)));
   return el;
 }
 
@@ -142,7 +168,7 @@ function renderScores(game, names) {
 }
 
 /** The trick so far as a messy stack: each play a little turned on the one before, the newest on top. */
-function renderPile(game, names) {
+function renderPile(game, names, seatEls) {
   const pile = document.querySelector('.pile');
   const top = game.pile.at(-1);
   const key = top ? `${game.round}:${game.pile.length}:${top.player_id}:${top.cards.join()}` : null;
@@ -162,9 +188,10 @@ function renderPile(game, names) {
     cards.append(...play.cards.map((code) => face(code)));
     return cards;
   });
-  if (key !== lastPlay && lastPlay !== undefined) plays.at(-1).classList.add('landing');
+  const landed = key !== lastPlay && lastPlay !== undefined;
   lastPlay = key;
   pile.replaceChildren(...plays, span(names[top.player_id] ?? '', 'pile-who'));
+  if (landed) flyIn(plays.at(-1), seatEls.get(top.player_id)); // slides in from whoever played it
 }
 
 /** Your cards are in play on your turn, or when you have a card to give in the swap. */

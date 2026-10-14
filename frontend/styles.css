@@ -145,37 +145,41 @@ input { font: inherit; }
 .card-back { width: 22px; height: 32px; margin-left: -14px; border-radius: 3px; background: var(--card-back); border: 1.5px solid var(--card-back-edge); box-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .card-back:first-child { margin-left: 0; }
 /* Between the top player's name and the turn row, so it never covers either. */
-.play-area { position: absolute; left: 50%; top: calc(var(--bar) + 84px); bottom: calc(3cqh + var(--card-w) * 1.84 + 44px); z-index: 3; width: 34%; transform: translateX(-50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
+.play-area { position: absolute; left: 50%; top: calc(var(--bar) + 80px); bottom: calc(3cqh + var(--card-w) * 1.66 + 42px); z-index: 3; width: 42%; transform: translateX(-50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
 
 /* ---------- murlan table ---------- */
 /* Sizes follow the table box (cq units), so they're right when the table is turned on a portrait phone. */
 .table { container-type: size; --card-w: min(12cqh, 7.4cqw); }
-.plate.turn { box-shadow: 0 0 0 2px #f0c75e, 0 1px 3px rgba(0,0,0,.35); }
+.plate.turn { background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; font-weight: 700;
+              box-shadow: 0 0 0 2px #fff3cf, 0 0 14px 4px rgba(240,199,94,.7); animation: turn-glow 1.4s ease-in-out infinite alternate; }
+.plate.turn .count { color: #3a2a08; }
+@keyframes turn-glow { from { box-shadow: 0 0 0 2px #fff3cf, 0 0 6px 1px rgba(240,199,94,.45); } }
 /* "Pass" sits beside the name (inward on the right seat), so a seat never gets taller. */
 .seat .bubble { position: absolute; bottom: 3px; left: calc(100% + 6px); }
 .seat-right .bubble { left: auto; right: calc(100% + 6px); }
 .seat-me .bubble { left: 0; bottom: calc(100% + 4px); } /* beside it would cover your first card */
+.bubble.pop { animation: pop .28s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes pop { from { opacity: 0; scale: .3; } }
 .bubble { padding: 2px 9px; border-radius: 999px; background: #fffdf7; color: #1a1a1a; font-size: 12px; font-weight: 700; }
 .scoreboard { max-width: 50cqw; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scoreboard b { margin: 0 4px; font-size: 15px; color: var(--plate-count); }
 .score-round { justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; opacity: .7; }
 /* The pile: this trick's plays stacked, each a little turned, the newest on top. */
 .pile { position: absolute; inset: 0; }
-.pile-cards { position: absolute; left: 50%; top: 46%; display: flex; --w: calc(var(--card-w) * .85);
-              --gap: min(calc(var(--w) * -.45), calc((30cqw - var(--n, 1) * var(--w)) / max(1, var(--n, 1) - 1)));
+.pile-cards { position: absolute; left: 50%; top: 46%; display: flex; --w: var(--card-w);
+              --gap: min(calc(var(--w) * -.45), calc((38cqw - var(--n, 1) * var(--w)) / max(1, var(--n, 1) - 1)));
               transform: translate(-50%, -50%) translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--rot, 0deg)); }
 .pile-cards.under { filter: brightness(.8); }
-.pile-cards.landing { animation: land .18s ease-out; }
-@keyframes land { from { opacity: 0; scale: 1.12; } }
 .pile-cards .card-face { flex: none; width: var(--w); margin-left: var(--gap); }
 .pile-cards .card-face:first-child { margin-left: 0; }
-.pile-who { position: absolute; left: 50%; top: calc(46% + var(--card-w) * .85 * 1.46 / 2 + 8px); transform: translateX(-50%); white-space: nowrap;
+.pile-who { position: absolute; left: 50%; top: calc(46% + var(--card-w) * 1.46 / 2 + 8px); transform: translateX(-50%); white-space: nowrap;
             padding: 2px 9px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
 .hand { position: absolute; left: 50%; bottom: 3cqh; z-index: 4; width: max-content; transform: translateX(-50%); display: flex;
         --gap: min(4px, calc((68cqw - var(--n, 1) * var(--card-w)) / max(1, var(--n, 1) - 1))); }
 .hand-card { flex: none; width: var(--card-w); margin-left: var(--gap); transition: translate .12s; }
 .hand-card:first-child { margin-left: 0; }
-.hand-card.selected { translate: 0 -26%; }
+.hand-card.selected { translate: 0 -14%; }
+.hand-card.selected .card-face img { box-shadow: 0 0 0 2px #f0c75e, 0 4px 12px rgba(0,0,0,.45); }
 .hand-card.dim { filter: brightness(.55); }
 /* The deal (deal.js): backs fly from the middle; your hand and the turn row wait, the fans fill up. */
 .deal-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
@@ -185,10 +189,10 @@ input { font: inherit; }
 .table[data-fan="0"] .seats .card-back, .table[data-fan="1"] .seats .card-back:nth-child(n+2),
 .table[data-fan="2"] .seats .card-back:nth-child(n+3), .table[data-fan="3"] .seats .card-back:nth-child(n+4),
 .table[data-fan="4"] .seats .card-back:nth-child(n+5) { visibility: hidden; }
-@media (prefers-reduced-motion: reduce) { .pile-cards.landing { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .plate.turn, .bubble.pop { animation: none; } }
 /* Pass and Play above the hand, clear of a lifted card. The note between them is only for the
    swap and the first lead; whose turn it is shows on the players' names. */
-.turn-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.26 + 8px); z-index: 5; transform: translateX(-50%);
+.turn-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.14 + 4px); z-index: 5; transform: translateX(-50%);
             display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .turn-note { padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
 .turn-note:empty { display: none; }
@@ -209,6 +213,14 @@ input { font: inherit; }
 .overlay button.on { background: linear-gradient(#f3d27a, #d4a640); border-color: #d4a640; color: #3a2a08; }
 .overlay-buttons { display: grid; gap: 8px; width: 240px; }
 .overlay-buttons button { padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-weight: 700; }
+/* Our own confirm, drawn on the table so it turns with it on a portrait phone. */
+.confirm { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(0,0,0,.45); }
+.confirm-box { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 86cqw; padding: 18px 24px; border-radius: 16px;
+               background: #fffdf7; color: #1a1a1a; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.confirm-box h2 { font-family: Georgia, serif; font-size: 20px; }
+.confirm-box p { font-size: 14px; color: #4a4030; }
+.confirm-box .overlay-buttons { grid-template-columns: 1fr 1fr; }
+.overlay-buttons button.danger { background: #b3121f; border-color: #b3121f; color: #fff; }
 .overlay .countdown { font-family: Georgia, serif; font-size: 34px; font-weight: 700; }
 .score-list { display: grid; gap: 3px; min-width: 200px; font-size: 14px; }
 .score-list div { display: flex; justify-content: space-between; gap: 16px; }
