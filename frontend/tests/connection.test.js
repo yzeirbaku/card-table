@@ -150,3 +150,12 @@ test('close stops quietly and keeps the seat', () => {
   assert.equal(store.getToken('ABCD'), 'tok');
   assert.equal(events.length, before);
 });
+
+test('non-object frames are ignored', () => {
+  const { events, socket } = setup();
+  socket().open();
+  socket().onmessage({ data: 'null' });
+  socket().onmessage({ data: '42' });
+  socket().message({ type: 'state', code: 'ABCD' });
+  assert.deepEqual(events.slice(1), [['state', 'ABCD']]);
+});
