@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#123d25" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/themes.css" />
+  <title>Card Table</title>
+  <script src="/config.js"></script>
+</head>
+<body class="theme-classic cards-traditional">
+  <main id="view-main" class="view felt">
+    <h1 class="title">Card Table</h1>
+    <label class="name-field">
+      <span class="label">Your name</span>
+      <input id="name-input" maxlength="20" autocomplete="nickname" placeholder="Your name" />
+    </label>
+    <div class="menu-cards">
+      <button class="menu-card tilt-left" id="btn-new" type="button">
+        <span class="card-face"><img src="/cards/AH.webp" alt="" /></span><span class="tag">New table</span>
+      </button>
+      <button class="menu-card tilt-right" id="btn-join" type="button">
+        <span class="card-face"><img src="/cards/AC.webp" alt="" /></span><span class="tag">Join</span>
+      </button>
+      <button class="menu-card tilt-slight" id="btn-settings" type="button">
+        <span class="card-face"><img src="/cards/joker-red.webp" alt="" /></span><span class="tag">Settings</span>
+      </button>
+    </div>
+  </main>
+
+  <section id="view-lobby" class="view felt" hidden>
+    <p class="lobby-game"></p>
+    <div class="lobby-code-row">
+      <span class="lobby-code"></span>
+      <button id="btn-copy" class="small-btn" type="button">Copy</button>
+    </div>
+    <p class="lobby-hint">Share this code. The game starts when every seat is taken.</p>
+    <p class="lobby-count"></p>
+    <ul class="lobby-seats"></ul>
+    <button id="btn-lobby-leave" class="btn ghost" type="button">Leave</button>
+  </section>
+
+  <section id="view-table" class="view" hidden>
+    <div class="table-frame">
+      <div class="table">
+        <div class="surface">
+          <div class="cloth"></div><div class="stitch"></div><div class="runner"></div>
+          <div class="prop cup"></div><div class="prop glass"></div>
+        </div>
+        <button id="btn-table-menu" class="table-menu-btn" type="button" aria-label="Menu">☰</button>
+        <div id="table-menu" class="table-menu" hidden>
+          <button id="btn-table-leave" type="button">Leave table</button>
+        </div>
+        <div class="seats"></div>
+        <div class="play-area"></div>
+        <div class="hand-area"><span class="hand-hint">Your hand</span></div>
+        <div class="seat seat-me"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+
+  <section id="sheet-new" class="sheet" hidden>
+    <h2 class="sheet-title">Pick a game</h2>
+    <div class="sheet-step" data-step="game"><div class="choice-list" id="game-list"></div></div>
+    <div class="sheet-step" data-step="players" hidden>
+      <p class="sheet-sub" id="players-game"></p>
+      <div class="choice-row" id="player-counts"></div>
+    </div>
+  </section>
+
+  <section id="sheet-join" class="sheet" hidden>
+    <h2 class="sheet-title">Join a table</h2>
+    <form id="join-form" class="join-form">
+      <input id="join-code" class="code-input" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" />
+      <button id="btn-paste" class="small-btn" type="button" hidden>Paste</button>
+      <button class="btn primary" type="submit">Join</button>
+    </form>
+  </section>
+
+  <section id="sheet-settings" class="sheet" hidden>
+    <h2 class="sheet-title">Settings</h2>
+    <p class="sheet-sub">Table</p>
+    <div class="theme-swatches" id="theme-swatches">
+      <button type="button" data-theme="classic" class="swatch swatch-classic"><span>Classic</span></button>
+      <button type="button" data-theme="qendisje" class="swatch swatch-qendisje"><span>Qëndisje</span></button>
+      <button type="button" data-theme="kafeneio" class="swatch swatch-kafeneio"><span>Kafeneio</span></button>
+    </div>
+    <p class="sheet-sub">Cards</p>
+    <div class="segmented" id="card-styles">
+      <button type="button" data-cards="traditional">Traditional</button>
+      <button type="button" data-cards="vintage">Vintage</button>
+    </div>
+  </section>
+
+  <div id="banner" class="banner" hidden>Reconnecting…</div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+import { fetchGames, createRoom } from './api.js';
+import { canReadClipboard } from './clipboard.js';
+import { cleanCode, isCompleteCode } from './code.js';
+import { openSheet, closeSheets } from './sheets.js';
+import { toast } from './ui.js';
+
+const MAX_NAME = 20;
+
+export function initMain({ store, enterRoom, applySettings }) {
+  const nameInput = document.getElementById('name-input');
+  nameInput.value = store.getName();
+  nameInput.addEventListener('input', () => store.setName(nameInput.value.trim()));
+
+  const hasName = () => {
+    const name = nameInput.value.trim();
+    if (name.length >= 1 && name.length <= MAX_NAME) return true;
+    toast('Enter your name first');
+    nameInput.focus();
+    return false;
+  };
+
+  // New table: pick game, then player count, then the room is created.
+  document.getElementById('btn-new').addEventListener('click', async () => {
+    if (!hasName()) return;
+    showStep('game');
+    openSheet('sheet-new');
+    const list = document.getElementById('game-list');
+    list.replaceChildren();
+    try {
+      const games = await fetchGames();
+      list.replaceChildren(...games.map((game) => choice(game.name, () => pickPlayers(game))));
+    } catch (err) {
+      closeSheets();
+      toast(err.message);
+    }
+  });
+
+  function pickPlayers(game) {
+    showStep('players');
+    document.getElementById('players-game').textContent = `${game.name}: how many players?`;
+    const counts = [];
+    for (let n = game.min_players; n <= game.max_players; n++) counts.push(choice(String(n), () => create(game, n)));
+    document.getElementById('player-counts').replaceChildren(...counts);
+  }
+
+  async function create(game, players) {
+    try {
+      const code = await createRoom(game.id, players);
+      closeSheets();
+      enterRoom(code);
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+
+  function showStep(step) {
+    document.querySelectorAll('#sheet-new .sheet-step').forEach((el) => { el.hidden = el.dataset.step !== step; });
+    document.querySelector('#sheet-new .sheet-title').textContent = step === 'game' ? 'Pick a game' : 'Players';
+  }
+
+  // Join: one code box, optional Paste button.
+  const codeInput = document.getElementById('join-code');
+  document.getElementById('btn-join').addEventListener('click', () => {
+    if (!hasName()) return;
+    codeInput.value = '';
+    document.getElementById('btn-paste').hidden = !canReadClipboard();
+    openSheet('sheet-join');
+    codeInput.focus();
+  });
+  codeInput.addEventListener('input', () => { codeInput.value = cleanCode(codeInput.value); });
+  document.getElementById('btn-paste').addEventListener('click', async () => {
+    try {
+      codeInput.value = cleanCode(await navigator.clipboard.readText());
+    } catch {
+      toast('Paste the code into the box');
+    }
+  });
+  document.getElementById('join-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const code = cleanCode(codeInput.value);
+    if (!isCompleteCode(code)) {
+      toast('Codes are 4 letters');
+      return;
+    }
+    closeSheets();
+    enterRoom(code);
+  });
+
+  // Settings: theme + card style, applied immediately.
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    markSettings(store.getSettings());
+    openSheet('sheet-settings');
+  });
+  const change = (patch) => {
+    store.setSettings(patch);
+    const settings = store.getSettings();
+    applySettings(settings);
+    markSettings(settings);
+  };
+  document.getElementById('theme-swatches').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-theme]');
+    if (button) change({ theme: button.dataset.theme });
+  });
+  document.getElementById('card-styles').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-cards]');
+    if (button) change({ cardStyle: button.dataset.cards });
+  });
+}
+
+function markSettings({ theme, cardStyle }) {
+  document.querySelectorAll('[data-theme]').forEach((b) => b.classList.toggle('on', b.dataset.theme === theme));
+  document.querySelectorAll('[data-cards]').forEach((b) => b.classList.toggle('on', b.dataset.cards === cardStyle));
+}
+
+function choice(label, onClick) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  button.addEventListener('click', onClick);
+  return button;
+}

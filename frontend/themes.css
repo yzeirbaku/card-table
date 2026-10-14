@@ -1,0 +1,55 @@
+/* Table themes set the variables the table uses and switch on their surface layers
+   (.cloth, .stitch, .runner, .prop). Card faces don't depend on the theme. */
+
+.theme-classic {
+  --plate-bg: rgba(0,0,0,.45); --plate-fg: #f3e6c4; --plate-count: #f0c75e;
+  --card-back: repeating-linear-gradient(45deg, #8e1b22 0 4px, #a8262e 4px 8px); --card-back-edge: #fff;
+  --zone-line: rgba(243,230,196,.35);
+}
+.theme-classic .surface { background: radial-gradient(ellipse at 50% 45%, #2f7d4f 0%, #1d5a37 55%, #123d25 100%); }
+.theme-classic .surface::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 10px #5b3a1e, inset 0 0 0 13px #8a5a2f, inset 0 0 40px rgba(0,0,0,.5); }
+
+/* Albanian: embroidered linen over walnut */
+.theme-qendisje {
+  --plate-bg: #1d1a17; --plate-fg: #f6efe0; --plate-count: #e8b33a;
+  --card-back: repeating-linear-gradient(45deg, transparent 0 3px, rgba(0,0,0,.65) 3px 4px), repeating-linear-gradient(-45deg, transparent 0 3px, rgba(0,0,0,.65) 3px 4px), #b3121f;
+  --card-back-edge: #fbf7ec;
+  --zone-line: rgba(90,60,30,.45);
+}
+.theme-qendisje .surface { background: repeating-linear-gradient(92deg, rgba(0,0,0,.07) 0 2px, transparent 2px 9px), repeating-linear-gradient(88deg, rgba(255,255,255,.03) 0 1px, transparent 1px 23px), linear-gradient(180deg, #6b3d22, #4a2814); }
+.theme-qendisje .cloth { display: block; inset: 10px 12px; border-radius: 6px; background-color: #f1ebdc; box-shadow: 0 4px 14px rgba(0,0,0,.5);
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.035) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0,0,0,.03) 0 1px, transparent 1px 3px); }
+.theme-qendisje .stitch { display: block; inset: 20px 22px;
+  --st: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><path d='M7 1.5L12.5 7L7 12.5L1.5 7Z' fill='none' stroke='%23b3121f' stroke-width='1.6'/><path d='M7 4.5L9.5 7L7 9.5L4.5 7Z' fill='%23b3121f'/></svg>");
+  background-image: var(--st), var(--st), var(--st), var(--st); background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  background-position: left top, left bottom, left top, right top; background-size: 12px 12px; }
+.theme-qendisje .cup { display: block; right: 78px; top: 34px; }
+
+/* Greek: kafeneio marble with a checked runner */
+.theme-kafeneio {
+  --plate-bg: #14305e; --plate-fg: #fff; --plate-count: #9cc3ff;
+  --card-back: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path d='M0 14.5H16M13 14.5V1.5H2.5V11.5H9.5V5H6V8.5' fill='none' stroke='%23161616' stroke-width='1.8'/></svg>") 0 0 / 8px 8px, #c4622d;
+  --card-back-edge: #fbf7ec;
+  --zone-line: rgba(20,48,94,.4);
+}
+.theme-kafeneio .surface { background: linear-gradient(115deg, transparent 38%, rgba(130,130,145,.28) 39.5%, transparent 41%), linear-gradient(62deg, transparent 70%, rgba(130,130,145,.22) 71%, transparent 72.5%), linear-gradient(150deg, transparent 15%, rgba(130,130,145,.18) 16%, transparent 17.5%), radial-gradient(ellipse at 30% 25%, #ffffff, #e4e4e8 80%); }
+.theme-kafeneio .runner { display: block; left: 0; right: 0; top: 22%; height: 44%; border-top: 6px solid #fff; border-bottom: 6px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  background: linear-gradient(90deg, rgba(31,78,156,.5) 50%, transparent 50%) 0 0 / 12px 12px, linear-gradient(rgba(31,78,156,.5) 50%, transparent 50%) 0 0 / 12px 12px, #fbfbfd; }
+.theme-kafeneio .cup { display: block; right: 80px; bottom: 30%; }
+.theme-kafeneio .glass { display: block; right: 66px; top: 16px; }
+
+/* Props, drawn from above */
+.prop.cup { width: 46px; height: 46px; border-radius: 50%; background: #fbfbfb; box-shadow: 0 3px 8px rgba(0,0,0,.35), inset 0 0 0 1px #ddd; }
+.prop.cup::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: radial-gradient(circle at 45% 40%, #7a4a26 0 30%, #3b2010 70%); box-shadow: 0 0 0 3px #fff, 0 0 0 4px #d6d6d6; }
+.prop.cup::after { content: ""; position: absolute; right: -1px; top: 19px; width: 9px; height: 8px; border-radius: 4px; background: #fff; box-shadow: 0 0 0 1px #d6d6d6; }
+.prop.glass { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.95), rgba(235,240,245,.65) 60%, rgba(200,210,220,.7)); box-shadow: 0 2px 5px rgba(0,0,0,.35); }
+
+/* Settings swatches */
+.swatch-classic { background: radial-gradient(#2f7d4f, #123d25); }
+.swatch-qendisje { background: #f1ebdc; box-shadow: inset 0 0 0 4px #b3121f, 0 1px 3px rgba(0,0,0,.3); }
+.swatch-kafeneio { background: linear-gradient(90deg, rgba(31,78,156,.5) 50%, transparent 50%) 0 0 / 8px 8px, linear-gradient(rgba(31,78,156,.5) 50%, transparent 50%) 0 0 / 8px 8px, #fff; }
+
+/* Card style: Vintage ages the same images */
+.cards-vintage .card-face img { background: #f3e8cf; filter: sepia(.38) saturate(.85) contrast(.96) brightness(.98); }
+.cards-vintage .card-face::after { content: ""; position: absolute; inset: 0; border-radius: 6% / 4.2%; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(120,80,30,.22) 100%); mix-blend-mode: multiply; }
