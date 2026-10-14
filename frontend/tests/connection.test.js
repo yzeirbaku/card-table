@@ -206,3 +206,11 @@ test('non-object frames are ignored', () => {
   socket().message({ type: 'state', code: 'ABCD' });
   assert.deepEqual(events.slice(1), [['state', 'ABCD']]);
 });
+
+test('send goes out only while the socket is open', () => {
+  const { conn, socket } = setup();
+  assert.equal(conn.send({ type: 'sit', seat: 1 }), false);
+  socket().open();
+  assert.equal(conn.send({ type: 'sit', seat: 1 }), true);
+  assert.deepEqual(socket().sent.at(-1), { type: 'sit', seat: 1 });
+});

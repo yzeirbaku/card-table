@@ -70,6 +70,12 @@ input { font: inherit; }
 .lobby-seats li.offline { opacity: .55; }
 .lobby-seats li.open { background: none; border: 1.5px dashed rgba(243,230,196,.4); font-style: italic; font-weight: 400; opacity: .65; }
 .lobby-seats li.open .avatar { background: none; border: 1.5px dashed rgba(243,230,196,.5); }
+.lobby-groups { display: grid; gap: 14px; width: 100%; max-width: 340px; }
+.lobby-team { display: grid; gap: 8px; }
+.team-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: .75; text-align: left; }
+.lobby-seats li.open { cursor: pointer; }
+.lobby-seats li.me { box-shadow: 0 0 0 2px #f0c75e; }
+.lobby-unseated { font-size: 14px; opacity: .75; }
 #view-lobby .btn { max-width: 340px; margin-top: auto; }
 
 /* ---------- desktop: same layout, sized for a big screen ---------- */
@@ -94,6 +100,11 @@ input { font: inherit; }
   .lobby-seats { grid-template-columns: 1fr 1fr; gap: 14px; max-width: 720px; }
   .lobby-seats li { padding: 18px 22px; font-size: 20px; }
   .lobby-seats .avatar { width: 48px; height: 48px; font-size: 22px; }
+  .lobby-groups { max-width: 720px; }
+  .lobby-groups.teams { grid-template-columns: 1fr 1fr; gap: 22px; }
+  .lobby-groups.teams .lobby-seats { grid-template-columns: 1fr; }
+  .team-label { font-size: 15px; }
+  .lobby-unseated { font-size: 17px; }
   #view-lobby .btn { max-width: 240px; margin-top: 42px; padding: 15px; font-size: 18px; }
 }
 

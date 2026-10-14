@@ -65,6 +65,13 @@ export class RoomConnection {
     }
   }
 
+  /** Send a message to the server; false if the socket isn't open right now. */
+  send(message) {
+    if (this.ws?.readyState !== this.WebSocketImpl.OPEN) return false;
+    this.ws.send(JSON.stringify(message));
+    return true;
+  }
+
   /** Give up the seat for good. The server must hear it even if our socket isn't open right now. */
   leave() {
     const token = this.store.getToken(this.code); // read before forgetting

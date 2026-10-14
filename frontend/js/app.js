@@ -23,6 +23,10 @@ function gameName(id) {
   return gameNames[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
 }
 
+function send(message) {
+  if (!connection?.send(message)) toast('Not connected right now');
+}
+
 function render(state) {
   if (state.room.status === 'playing') {
     showView('table');
@@ -74,8 +78,8 @@ function updateRotation() {
 
 applySettings(store.getSettings());
 initMain({ store, enterRoom, applySettings });
-initLobby({ onLeave: leaveRoom });
-initTable({ onLeave: leaveRoom });
+initLobby({ onLeave: leaveRoom, send });
+initTable({ onLeave: leaveRoom, send });
 document.getElementById('sheet-backdrop').addEventListener('click', closeSheets);
 addEventListener('resize', updateRotation);
 updateRotation();
