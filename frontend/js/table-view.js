@@ -167,9 +167,8 @@ function renderPile(game, names) {
   pile.replaceChildren(...plays, span(names[top.player_id] ?? '', 'pile-who'));
 }
 
-/** Cards can be picked on your turn, or when you have a card to give in the swap. */
-function canPick(game, meId) {
-  if (game.pause) return false;
+/** Your cards are in play on your turn, or when you have a card to give in the swap. */
+function yourMove(game, meId) {
   return (game.phase === 'playing' && game.turn === meId) || (game.swap?.choices.length ?? 0) > 0;
 }
 
@@ -178,14 +177,16 @@ function renderHand(game) {
   const choices = game.swap?.choices ?? [];
   const giving = choices.length > 0;
   if (giving) selected = selected.filter((c) => choices.includes(c)).slice(0, 1);
-  const open = canPick(game, currentMe);
-  if (!open) selected = [];
+  const mine = yourMove(game, currentMe);
+  if (!mine) selected = []; // a pause keeps what you picked; it only stops new taps
+  const locked = !mine || Boolean(game.pause);
   const hand = document.querySelector('.hand');
-  hand.classList.toggle('locked', !open);
+  hand.classList.toggle('locked', locked);
   hand.style.setProperty('--n', String(game.hand.length));
   hand.replaceChildren(...game.hand.map((code) => {
     const card = button('', () => pick(code), 'hand-card');
     card.setAttribute('aria-label', cardName(code));
+    if (locked) card.setAttribute('aria-disabled', 'true');
     card.classList.toggle('selected', selected.includes(code));
     card.classList.toggle('dim', giving && !choices.includes(code));
     card.append(face(code));
@@ -195,7 +196,7 @@ function renderHand(game) {
 
 function pick(code) {
   const game = current.game;
-  if (!canPick(game, currentMe)) return; // not your turn: cards stay put
+  if (!yourMove(game, currentMe) || game.pause) return; // not your turn: cards stay put
   const choices = game.swap?.choices ?? [];
   if (choices.length) {
     if (!choices.includes(code)) return;
