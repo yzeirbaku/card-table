@@ -6,16 +6,17 @@ import secrets
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from .engine.actions import add_player, new_table, remove_player
 from .engine.state import TableState
 
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: easy to read aloud
 CODE_LENGTH = 4
-MAX_PLAYERS = 6
 MAX_NAME_LENGTH = 20
 IDLE_EXPIRY_SECONDS = 2 * 60 * 60
+
+RoomStatus = Literal["lobby", "playing"]
 
 
 class JoinRejected(Exception):
@@ -37,6 +38,9 @@ class Player:
 class Room:
     code: str
     last_activity: float
+    game: str
+    seats: int
+    status: RoomStatus = "lobby"  # "playing" once every seat is taken
     state: TableState = field(default_factory=new_table)
     players: list[Player] = field(default_factory=list)
     host_id: str | None = None
@@ -50,13 +54,15 @@ class Room:
         name = name.strip()
         if not 1 <= len(name) <= MAX_NAME_LENGTH:
             raise JoinRejected(4400, f"Name must be 1-{MAX_NAME_LENGTH} characters")
-        if len(self.players) >= MAX_PLAYERS:
-            raise JoinRejected(4409, f"Room is full ({MAX_PLAYERS} players)")
+        if self.status == "playing" or len(self.players) >= self.seats:
+            raise JoinRejected(4409, "This table is full")
         player = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16))
         self.players.append(player)
         add_player(self.state, player.id)
         if self.host_id is None:
             self.host_id = player.id
+        if len(self.players) == self.seats:
+            self.status = "playing"
         return player
 
     def leave(self, player_id: str) -> None:
@@ -64,6 +70,11 @@ class Room:
         remove_player(self.state, player_id)
         if self.host_id == player_id:
             self.host_id = self.players[0].id if self.players else None
+        # A game can't go on with an empty seat; back to waiting for someone.
+        self.status = "lobby"
+
+    def room_view(self) -> dict[str, Any]:
+        return {"game": self.game, "seats": self.seats, "status": self.status}
 
     def players_view(self) -> list[dict[str, Any]]:
         return [
@@ -83,12 +94,12 @@ class RoomManager:
         self._clock = clock
         self.rooms: dict[str, Room] = {}
 
-    def create(self) -> Room:
+    def create(self, game: str, seats: int) -> Room:
         while True:
             code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
             if code not in self.rooms:
                 break
-        room = Room(code=code, last_activity=self._clock())
+        room = Room(code=code, last_activity=self._clock(), game=game, seats=seats)
         self.rooms[code] = room
         return room
 

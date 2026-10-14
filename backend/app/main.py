@@ -3,19 +3,41 @@ broadcast for a room runs under that room's lock, so all players see changes
 in the same order."""
 
 import json
+import os
 from contextlib import suppress
+from dataclasses import asdict
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from .engine.actions import ActionRejected, apply_action
 from .engine.views import view_for
+from .games import GAMES
 from .rooms import JoinRejected, Player, Room, RoomManager
+
+# Local dev: the frontend is served on :5520 from localhost or a private-network address.
+DEV_ORIGINS = (
+    r"https?://(localhost|127\.0\.0\.1|10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}"
+    r"|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}):5520"
+)
+
+
+class CreateRoom(BaseModel):
+    game: str
+    players: int
 
 
 def create_app(manager: RoomManager | None = None) -> FastAPI:
     rooms = manager or RoomManager()
     app = FastAPI(title="Card Table")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=os.environ.get("CORS_ORIGIN_REGEX", DEV_ORIGINS),
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type"],
+    )
 
     async def send_state(room: Room, player: Player) -> None:
         if player.socket is None:
@@ -23,6 +45,7 @@ def create_app(manager: RoomManager | None = None) -> FastAPI:
         message: dict[str, Any] = {
             "type": "state",
             "code": room.code,
+            "room": room.room_view(),
             "players": room.players_view(),
             "view": view_for(room.state, player.id),
         }
@@ -71,10 +94,21 @@ def create_app(manager: RoomManager | None = None) -> FastAPI:
         await ws.send_json({"type": "error", "message": "Unknown message type"})
         return False
 
+    @app.get("/games")
+    async def list_games() -> list[dict[str, Any]]:
+        return [asdict(g) for g in GAMES.values()]
+
     @app.post("/rooms")
-    async def create_room() -> dict[str, str]:
+    async def create_room(body: CreateRoom) -> dict[str, str]:
         await close_expired()
-        return {"code": rooms.create().code}
+        game = GAMES.get(body.game)
+        if game is None:
+            raise HTTPException(400, f"Unknown game: {body.game}")
+        if not game.min_players <= body.players <= game.max_players:
+            raise HTTPException(
+                400, f"{game.name} is for {game.min_players}-{game.max_players} players"
+            )
+        return {"code": rooms.create(game.id, body.players).code}
 
     @app.websocket("/rooms/{code}/ws")
     async def room_socket(

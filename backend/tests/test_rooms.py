@@ -13,39 +13,39 @@ class FakeClock:
 
 def test_codes_are_four_letters_and_unique():
     manager = RoomManager()
-    codes = [manager.create().code for _ in range(50)]
+    codes = [manager.create("murlan", 6).code for _ in range(50)]
     assert len(set(codes)) == 50
     assert all(len(c) == 4 and set(c) <= set(CODE_ALPHABET) for c in codes)
 
 
 def test_get_is_case_insensitive():
     manager = RoomManager()
-    room = manager.create()
+    room = manager.create("murlan", 6)
     assert manager.get(room.code.lower()) is room
 
 
 def test_first_player_is_host_and_gets_a_hand():
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     ana = room.join("Ana", None)
     assert room.host_id == ana.id
     assert room.state.hands[ana.id] == []
 
 
 def test_names_are_trimmed():
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     assert room.join("  Ana  ", None).name == "Ana"
 
 
 @pytest.mark.parametrize("name", ["", "   ", "x" * 21])
 def test_name_validation(name):
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     with pytest.raises(JoinRejected) as e:
         room.join(name, None)
     assert e.value.code == 4400
 
 
 def test_reconnect_with_token_returns_the_same_seat():
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     ana = room.join("Ana", None)
     again = room.join("whatever", ana.token)
     assert again is ana
@@ -53,7 +53,7 @@ def test_reconnect_with_token_returns_the_same_seat():
 
 
 def test_unknown_token_takes_a_new_seat():
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     room.join("Ana", None)
     ben = room.join("Ben", "not-a-real-token")
     assert len(room.players) == 2
@@ -61,7 +61,7 @@ def test_unknown_token_takes_a_new_seat():
 
 
 def test_seventh_player_rejected():
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     for i in range(6):
         room.join(f"P{i}", None)
     with pytest.raises(JoinRejected) as e:
@@ -70,7 +70,7 @@ def test_seventh_player_rejected():
 
 
 def test_reconnect_still_works_when_full():
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     first = room.join("P0", None)
     for i in range(1, 6):
         room.join(f"P{i}", None)
@@ -78,7 +78,7 @@ def test_reconnect_still_works_when_full():
 
 
 def test_leave_returns_hand_and_passes_host_on():
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     ana = room.join("Ana", None)
     ben = room.join("Ben", None)
     deck = next(iter(room.state.piles.values()))
@@ -91,14 +91,14 @@ def test_leave_returns_hand_and_passes_host_on():
 
 
 def test_last_player_leaving_clears_host():
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     ana = room.join("Ana", None)
     room.leave(ana.id)
     assert room.host_id is None
 
 
 def test_players_view():
-    room = RoomManager().create()
+    room = RoomManager().create("murlan", 6)
     ana = room.join("Ana", None)
     ben = room.join("Ben", None)
     room.state.hands[ben.id].append(next(iter(room.state.piles.values())).cards.pop())
@@ -112,7 +112,7 @@ def test_players_view():
 def test_idle_rooms_expire_after_two_hours():
     clock = FakeClock()
     manager = RoomManager(clock)
-    room = manager.create()
+    room = manager.create("murlan", 6)
     clock.now += IDLE_EXPIRY_SECONDS
     assert manager.purge_expired() == []
     clock.now += 1
@@ -123,8 +123,61 @@ def test_idle_rooms_expire_after_two_hours():
 def test_activity_keeps_a_room_alive():
     clock = FakeClock()
     manager = RoomManager(clock)
-    room = manager.create()
+    room = manager.create("murlan", 6)
     clock.now += IDLE_EXPIRY_SECONDS - 10
     manager.touch(room)
     clock.now += IDLE_EXPIRY_SECONDS - 10
     assert manager.purge_expired() == []
+
+
+def test_room_starts_in_lobby_with_its_game_and_seats():
+    room = RoomManager().create("murlan", 4)
+    assert (room.game, room.seats, room.status) == ("murlan", 4, "lobby")
+    assert room.room_view() == {"game": "murlan", "seats": 4, "status": "lobby"}
+
+
+def test_filling_the_last_seat_starts_the_game():
+    room = RoomManager().create("murlan", 2)
+    room.join("Ana", None)
+    assert room.status == "lobby"
+    room.join("Ben", None)
+    assert room.status == "playing"
+
+
+def test_new_player_rejected_once_playing():
+    room = RoomManager().create("murlan", 2)
+    room.join("Ana", None)
+    room.join("Ben", None)
+    with pytest.raises(JoinRejected) as e:
+        room.join("Cleo", None)
+    assert e.value.code == 4409
+    assert e.value.message == "This table is full"
+
+
+def test_reconnect_with_token_works_while_playing():
+    room = RoomManager().create("murlan", 2)
+    ana = room.join("Ana", None)
+    room.join("Ben", None)
+    assert room.join("Ana", ana.token) is ana
+    assert room.status == "playing"
+
+
+def test_leaving_in_lobby_frees_the_seat():
+    room = RoomManager().create("murlan", 3)
+    room.join("Ana", None)
+    ben = room.join("Ben", None)
+    room.leave(ben.id)
+    assert room.status == "lobby"
+    room.join("Cleo", None)
+    assert [p.name for p in room.players] == ["Ana", "Cleo"]
+    assert room.status == "lobby"
+
+
+def test_leaving_while_playing_reopens_the_lobby():
+    room = RoomManager().create("murlan", 2)
+    room.join("Ana", None)
+    ben = room.join("Ben", None)
+    room.leave(ben.id)
+    assert room.status == "lobby"
+    room.join("Cleo", None)
+    assert room.status == "playing"

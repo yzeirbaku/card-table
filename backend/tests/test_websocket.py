@@ -26,8 +26,8 @@ def client(clock) -> TestClient:
     return TestClient(create_app(RoomManager(clock)))
 
 
-def new_room(client: TestClient) -> str:
-    res = client.post("/rooms")
+def new_room(client: TestClient, players: int = 4) -> str:
+    res = client.post("/rooms", json={"game": "murlan", "players": players})
     assert res.status_code == 200
     return res.json()["code"]
 
@@ -57,6 +57,7 @@ def test_create_and_join(client):
             {"id": welcome["player_id"], "name": "Ana", "connected": True, "is_host": True,
              "hand_count": 0}
         ]
+        assert state["room"] == {"game": "murlan", "seats": 4, "status": "lobby"}
         assert len(state["view"]["piles"]) == 1
         assert state["view"]["hand"] == []
 
@@ -122,15 +123,16 @@ def test_bad_name_closes_4400(client):
 
 
 def test_room_full_closes_4409(client):
-    code = new_room(client)
+    code = new_room(client, 4)
     with contextlib.ExitStack() as stack:
-        for i in range(6):
+        for i in range(4):
             ws = stack.enter_context(client.websocket_connect(f"/rooms/{code}/ws?name=P{i}"))
             join(ws)
         with pytest.raises(WebSocketDisconnect) as e:
-            with client.websocket_connect(f"/rooms/{code}/ws?name=Seventh") as ws:
+            with client.websocket_connect(f"/rooms/{code}/ws?name=Fifth") as ws:
                 ws.receive_json()
         assert e.value.code == 4409
+        assert e.value.reason == "This table is full"
 
 
 def test_reconnect_with_token_keeps_seat_and_hand(client):
