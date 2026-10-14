@@ -106,7 +106,10 @@ export function renderTable(state, meId) {
     resetTable();
     return;
   }
-  if (game.phase === 'game_over') showLeaveConfirm(false); // leaving no longer ends anything
+  if (game.phase === 'game_over' && !document.getElementById('leave-confirm').hidden) { // leaving no longer ends anything
+    showLeaveConfirm(false);
+    document.getElementById('btn-table-menu').focus();
+  }
   if (game.phase !== lastPhase || game.round !== lastRound) selected = [];
   lastPhase = game.phase;
   lastRound = game.round;
