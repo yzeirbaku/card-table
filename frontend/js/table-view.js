@@ -1,10 +1,14 @@
+import { playDeal, stopDeal } from './deal.js';
 import { button, div, face, span } from './dom.js';
 import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
 import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
 import { toast } from './ui.js';
 
-const MAX_BACKS = 7; // card backs drawn per opponent; the count shows the real number
+const FAN = 5; // card backs drawn per opponent: how many they really hold isn't shown
+// How each play in a trick lies on the pile (offset x, offset y in px, turn in degrees), by its place in the trick.
+const LIE = [[-3, 2, -7], [4, -2, 6], [-2, -3, -2], [3, 3, 9], [-4, 1, -4], [2, -2, 3], [-1, 3, -9], [4, 0, 4]];
+const PILE_SHOWN = 4; // older plays are buried under these
 
 let send = () => {};
 let selected = []; // card codes picked in your hand
@@ -12,6 +16,8 @@ let current = null; // the last state drawn, to redraw the hand after a tap
 let lastPhase = null; // the phase of the last render: a new phase starts with nothing selected
 let lastRound = null; // the round of the last render: a new round starts with nothing selected
 let waiting = false; // a move is out: ignore taps until the next state arrives
+let hadEmptyHand = null; // whether the last render had no cards in your hand: cards arriving after that are a deal
+let lastPlay; // the newest play on the pile at the last render (null: empty), so only a new one lands
 
 /** Send a move once; further taps are ignored until the server answers with a state. */
 function sendOnce(message) {
@@ -50,6 +56,9 @@ export function resetTable() {
   selected = [];
   lastPhase = null;
   lastRound = null;
+  hadEmptyHand = null;
+  lastPlay = undefined;
+  stopDeal();
 }
 
 export function renderTable(state, meId) {
@@ -74,19 +83,22 @@ export function renderTable(state, meId) {
   const me = byId[meId];
   document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me, game)] : []));
   renderScores(game, names);
+  const dealt = hadEmptyHand === true && game.hand.length > 0; // seen empty, now full: a new deal
+  hadEmptyHand = game.hand.length === 0;
   renderPile(game, names);
   renderHand(game);
   renderActions(game, meId);
   document.querySelector('.turn-note').textContent = turnNote(game, meId, names);
   renderReveal(document.querySelector('.reveal'), game, names);
   renderOverlay(document.querySelector('.overlay'), game, meId, names, sendOnce);
+  if (dealt) playDeal(seatPositions(seated, meId).map(({ position }) => position), game.hand.length);
 }
 
 function seat(player, position, game) {
   const el = div(`seat seat-${position}`);
   const backs = div('backs');
-  const count = game.counts[player.id] ?? 0;
-  for (let i = 0; i < Math.min(count, MAX_BACKS); i++) backs.append(div('card-back'));
+  const holding = ['swapping', 'playing'].includes(game.phase) && !game.places.includes(player.id);
+  if (holding) for (let i = 0; i < FAN; i++) backs.append(div('card-back'));
   el.append(backs, plate(player, game));
   if (game.passed.includes(player.id)) el.append(span('Pass', 'bubble'));
   return el;
@@ -96,34 +108,55 @@ function plate(player, game) {
   const el = div(player.connected ? 'plate' : 'plate offline');
   el.classList.toggle('turn', game.turn === player.id);
   const place = game.places.indexOf(player.id);
-  el.append(div('dot'), span(player.name),
-    span(place >= 0 ? placeLabel(place) : String(game.counts[player.id] ?? 0), 'count'));
+  el.append(div('dot'), span(player.name));
+  if (place >= 0) el.append(span(placeLabel(place), 'count'));
   return el;
 }
 
-function scoreHead(game) {
+function roundLabel(game) {
   if (!game.target) return 'Murlan';
   return game.phase === 'game_over' ? `Game over · to ${game.target}` : `Round ${game.round} · to ${game.target}`;
 }
 
+/** "Ana & Cleo 7 · 4 Ben & Dan" for two sides (scores in the middle), "Ana 7 · Ben 4 · Cleo 2" for more. */
 function renderScores(game, names) {
-  const head = span(scoreHead(game), 'score-head');
-  const rows = game.sides.map((side) => {
-    const row = div('score-row');
-    row.append(span(sideName(side, names)), span(String(side.score), 'score'));
-    return row;
+  const parts = [];
+  const two = game.sides.length === 2;
+  game.sides.forEach((side, i) => {
+    const score = document.createElement('b');
+    score.textContent = String(side.score);
+    const name = document.createTextNode(sideName(side, names));
+    if (i > 0) parts.push(document.createTextNode(' · '));
+    parts.push(...(two && i === 1 ? [score, name] : [name, score]));
   });
-  document.querySelector('.scoreboard').replaceChildren(head, ...rows);
+  document.querySelector('.scoreboard').replaceChildren(...parts);
+  document.querySelector('.score-round').textContent = roundLabel(game);
 }
 
+/** The trick so far as a messy stack: each play a little turned on the one before, the newest on top. */
 function renderPile(game, names) {
   const pile = document.querySelector('.pile');
   const top = game.pile.at(-1);
-  if (!top) return pile.replaceChildren();
-  const cards = div('pile-cards');
-  cards.style.setProperty('--n', String(top.cards.length));
-  cards.append(...top.cards.map((code) => face(code)));
-  pile.replaceChildren(cards, span(names[top.player_id] ?? '', 'pile-who'));
+  const key = top ? `${game.round}:${game.pile.length}:${top.player_id}` : null;
+  if (!top) {
+    lastPlay = key;
+    return pile.replaceChildren();
+  }
+  const start = Math.max(0, game.pile.length - PILE_SHOWN);
+  const plays = game.pile.slice(start).map((play, j) => {
+    const i = start + j; // where this play is in the trick, so it keeps the same lie as more land on it
+    const [dx, dy, rot] = LIE[i % LIE.length];
+    const cards = div(play === top ? 'pile-cards' : 'pile-cards under');
+    cards.style.setProperty('--n', String(play.cards.length));
+    cards.style.setProperty('--dx', `${dx}px`);
+    cards.style.setProperty('--dy', `${dy}px`);
+    cards.style.setProperty('--rot', `${rot}deg`);
+    cards.append(...play.cards.map((code) => face(code)));
+    return cards;
+  });
+  if (key !== lastPlay && lastPlay !== undefined) plays.at(-1).classList.add('landing');
+  lastPlay = key;
+  pile.replaceChildren(...plays, span(names[top.player_id] ?? '', 'pile-who'));
 }
 
 function renderHand(game) {
@@ -159,8 +192,9 @@ function renderActions(game, meId) {
   const paused = Boolean(game.pause);
   const myTurn = !paused && game.phase === 'playing' && game.turn === meId;
   const giving = !paused && (game.swap?.choices.length ?? 0) > 0;
-  document.querySelector('.actions').hidden = !(myTurn || giving);
-  document.getElementById('btn-play').textContent = giving ? 'Give' : 'Play';
+  const play = document.getElementById('btn-play');
+  play.hidden = !(myTurn || giving);
+  play.textContent = giving ? 'Give' : 'Play';
   document.getElementById('btn-pass').hidden = !myTurn || game.pile.length === 0;
 }
 

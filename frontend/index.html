@@ -52,20 +52,24 @@
           <div class="cloth"></div><div class="stitch"></div><div class="runner"></div>
           <div class="prop cup"></div><div class="prop glass"></div>
         </div>
-        <button id="btn-table-menu" class="table-menu-btn" type="button" aria-label="Menu">☰</button>
+        <div class="table-bar">
+          <button id="btn-table-menu" class="table-menu-btn" type="button" aria-label="Menu">☰</button>
+          <p class="scoreboard"></p>
+          <span class="score-round"></span>
+        </div>
         <div id="table-menu" class="table-menu" hidden>
           <button id="btn-table-leave" type="button">Leave table</button>
         </div>
         <div class="seats"></div>
-        <div class="scoreboard"></div>
         <div class="play-area"><div class="pile"></div></div>
-        <p class="turn-note"></p>
-        <div class="hand"></div>
-        <div class="actions" hidden>
-          <button id="btn-pass" class="btn ghost" type="button">Pass</button>
-          <button id="btn-play" class="btn primary" type="button">Play</button>
+        <div class="turn-row">
+          <button id="btn-pass" class="btn ghost" type="button" hidden>Pass</button>
+          <p class="turn-note"></p>
+          <button id="btn-play" class="btn primary" type="button" hidden>Play</button>
         </div>
+        <div class="hand"></div>
         <div class="seat seat-me"></div>
+        <div class="deal-layer"></div>
         <div class="reveal" hidden></div>
         <div class="overlay" hidden></div>
       </div>
@@ -78,7 +82,6 @@
     <h2 class="sheet-title">Pick a game</h2>
     <div class="sheet-step" data-step="game"><div class="choice-list" id="game-list"></div></div>
     <div class="sheet-step" data-step="players" hidden>
-      <p class="sheet-sub" id="players-game"></p>
       <div class="choice-row" id="player-counts"></div>
     </div>
   </section>

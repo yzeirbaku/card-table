@@ -59,7 +59,10 @@ input { font: inherit; }
 /* ---------- lobby ---------- */
 #view-lobby { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: max(60px, env(safe-area-inset-top)) 26px max(30px, env(safe-area-inset-bottom)); text-align: center; }
 .lobby-game { font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: #f0c75e; }
-.lobby-code-row { display: flex; align-items: center; gap: 12px; }
+/* The code sits in the middle column, so the button changing its label never moves it. */
+.lobby-code-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; width: 100%; }
+.lobby-code { grid-column: 2; }
+#btn-copy { grid-column: 3; justify-self: start; white-space: nowrap; }
 .lobby-code { font-family: Georgia, serif; font-size: 60px; font-weight: 700; letter-spacing: .14em; color: #fffdf7; user-select: all; -webkit-user-select: all; }
 .lobby-hint { max-width: 290px; font-size: 14px; opacity: .75; }
 .lobby-count { margin-top: 18px; font-weight: 700; }
@@ -118,11 +121,16 @@ input { font: inherit; }
 .table { position: absolute; inset: 0; overflow: hidden; }
 .surface { position: absolute; inset: 0; }
 .surface > * { position: absolute; display: none; } /* each theme turns on the layers it uses */
-.table-menu-btn { position: absolute; top: 12px; left: 14px; z-index: 5; width: 34px; height: 34px; border-radius: 9px; background: var(--plate-bg); color: var(--plate-fg); font-size: 17px; }
-.table-menu { position: absolute; top: 52px; left: 14px; z-index: 6; overflow: hidden; border-radius: 10px; background: #fffdf7; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+/* The bar above the table: menu, scores, round. The table's surface starts below it. */
+.table { --bar: max(34px, 9cqh); }
+.surface { top: var(--bar); }
+.table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; height: var(--bar); display: flex; align-items: center; gap: 12px; padding: 0 14px;
+             background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); color: var(--plate-fg); font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.table-menu-btn { flex: none; width: 34px; height: 100%; font-size: 18px; }
+.table-menu { position: absolute; top: calc(var(--bar) + 4px); left: 14px; z-index: 6; overflow: hidden; border-radius: 10px; background: #fffdf7; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 .table-menu button { display: block; padding: 12px 18px; color: #1a1a1a; font-weight: 700; }
 .seat { position: absolute; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.seat-top { top: 10px; left: 50%; transform: translateX(-50%); }
+.seat-top { top: calc(var(--bar) + 10px); left: 50%; transform: translateX(-50%); }
 .seat-left { left: 22px; top: 34%; }
 .seat-right { right: 22px; top: 34%; }
 .seat-me { left: 16px; bottom: 16px; }
@@ -134,37 +142,53 @@ input { font: inherit; }
 .backs { display: flex; }
 .card-back { width: 22px; height: 32px; margin-left: -14px; border-radius: 3px; background: var(--card-back); border: 1.5px solid var(--card-back-edge); box-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .card-back:first-child { margin-left: 0; }
-.play-area { position: absolute; left: 50%; top: 42%; z-index: 3; width: 34%; height: 30%; transform: translate(-50%, -50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
+/* Between the top player's name and the turn note, so it never covers either. */
+.play-area { position: absolute; left: 50%; top: calc(var(--bar) + 84px); bottom: calc(3cqh + var(--card-w) * 1.84 + 44px); z-index: 3; width: 34%; transform: translateX(-50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
 
 /* ---------- murlan table ---------- */
 /* Sizes follow the table box (cq units), so they're right when the table is turned on a portrait phone. */
 .table { container-type: size; --card-w: min(12cqh, 7.4cqw); }
 .plate.turn { box-shadow: 0 0 0 2px #f0c75e, 0 1px 3px rgba(0,0,0,.35); }
 .bubble { padding: 2px 9px; border-radius: 999px; background: #fffdf7; color: #1a1a1a; font-size: 12px; font-weight: 700; }
-.scoreboard { position: absolute; top: 12px; right: 14px; z-index: 5; display: grid; gap: 2px; min-width: 130px; padding: 7px 11px; border-radius: 10px;
-              background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
-.score-head { opacity: .75; }
-.score-row { display: flex; justify-content: space-between; gap: 12px; }
-.score-row .score { font-weight: 700; color: var(--plate-count); }
-.pile { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
-.pile-cards { display: flex; --w: calc(var(--card-w) * .85);
-              --gap: min(calc(var(--w) * -.45), calc((30cqw - var(--n, 1) * var(--w)) / max(1, var(--n, 1) - 1))); }
+.scoreboard { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scoreboard b { margin: 0 4px; font-size: 15px; color: var(--plate-count); }
+.score-round { flex: none; font-size: 12px; opacity: .7; }
+/* The pile: this trick's plays stacked, each a little turned, the newest on top. */
+.pile { position: absolute; inset: 0; }
+.pile-cards { position: absolute; left: 50%; top: 46%; display: flex; --w: calc(var(--card-w) * .85);
+              --gap: min(calc(var(--w) * -.45), calc((30cqw - var(--n, 1) * var(--w)) / max(1, var(--n, 1) - 1)));
+              transform: translate(-50%, -50%) translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--rot, 0deg)); }
+.pile-cards.under { filter: brightness(.8); }
+.pile-cards.landing { animation: land .18s ease-out; }
+@keyframes land { from { opacity: 0; scale: 1.12; } }
 .pile-cards .card-face { flex: none; width: var(--w); margin-left: var(--gap); }
 .pile-cards .card-face:first-child { margin-left: 0; }
-.pile-who { padding: 2px 9px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
+.pile-who { position: absolute; left: 50%; top: calc(46% + var(--card-w) * .85 * 1.46 / 2 + 8px); transform: translateX(-50%); white-space: nowrap;
+            padding: 2px 9px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
 .hand { position: absolute; left: 16%; right: 16%; bottom: 3cqh; z-index: 4; display: flex; justify-content: center;
         --gap: min(4px, calc((68cqw - var(--n, 1) * var(--card-w)) / max(1, var(--n, 1) - 1))); }
 .hand-card { flex: none; width: var(--card-w); margin-left: var(--gap); transition: translate .12s; }
 .hand-card:first-child { margin-left: 0; }
 .hand-card.selected { translate: 0 -26%; }
 .hand-card.dim { filter: brightness(.55); }
-.turn-note { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.26 + 8px); z-index: 4; transform: translateX(-50%); white-space: nowrap;
-             padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
+/* The deal (deal.js): backs fly from the middle; your hand and the turn row wait, the fans fill up. */
+.deal-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.deal-layer .card-back { position: absolute; margin: 0; }
+.deal-card, .deal-deck { width: calc(var(--card-w) * .55); height: auto; aspect-ratio: 320 / 466; transform: translate(-50%, -50%); }
+.table.dealing .hand, .table.dealing .turn-row { visibility: hidden; }
+.table[data-fan="0"] .seats .card-back, .table[data-fan="1"] .seats .card-back:nth-child(n+2),
+.table[data-fan="2"] .seats .card-back:nth-child(n+3), .table[data-fan="3"] .seats .card-back:nth-child(n+4),
+.table[data-fan="4"] .seats .card-back:nth-child(n+5) { visibility: hidden; }
+.hand.flip .hand-card { animation: flip .32s ease-out; }
+@keyframes flip { from { transform: scaleX(0); } }
+/* Pass, the turn note and Play in one row above the hand (clear of a lifted card). */
+.turn-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.26 + 8px); z-index: 5; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.turn-note { padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
 .turn-note:empty { display: none; }
-.actions { position: absolute; right: 2.5cqw; bottom: 4cqh; z-index: 5; display: flex; flex-direction: column; gap: 8px; width: 92px; }
-.actions .btn { padding: 10px; font-size: 14px; }
-.actions .btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
-.reveal { position: absolute; left: 50%; top: 10px; z-index: 7; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 12px;
+.turn-row .btn { width: auto; padding: 6px 18px; border-radius: 999px; font-size: 14px; }
+.turn-row .btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
+.reveal { position: absolute; left: 50%; top: calc(var(--bar) + 10px); z-index: 7; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 12px;
           padding: 8px 14px; border-radius: 14px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
 .reveal-title { align-self: center; font-weight: 700; }
 .reveal-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }

@@ -37,7 +37,6 @@ export function initMain({ store, enterRoom, applySettings }) {
 
   function pickPlayers(game) {
     showStep('players');
-    document.getElementById('players-game').textContent = `${game.name}: how many players?`;
     const counts = [];
     for (let n = game.min_players; n <= game.max_players; n++) counts.push(choice(String(n), () => create(game, n)));
     document.getElementById('player-counts').replaceChildren(...counts);
