@@ -24,5 +24,7 @@ Murlan (the first game) gets its own spec next.
 
 ## Git
 
-Local only, no remote yet. Commit as `Yzeir Baku <yzeirbaku@hotmail.com>`
-(set in local config). Never push without asking.
+Remote: `origin` = https://github.com/yzeirbaku/card-table (personal account
+`yzeirbaku`, via the stored git credentials, not the `gh` CLI, which is logged in
+to a work account). Commit as `Yzeir Baku <yzeirbaku@hotmail.com>` (set in
+local config). Never push without asking.
