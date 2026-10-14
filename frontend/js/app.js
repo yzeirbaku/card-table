@@ -6,7 +6,7 @@ import { shouldRotate } from './orientation.js';
 import { closeSheets } from './sheets.js';
 import { createStore } from './storage.js';
 import { initTable, renderTable } from './table-view.js';
-import { setReconnecting, showView, toast } from './ui.js';
+import { setReconnecting, showView, syncTableRotated, toast } from './ui.js';
 
 const store = createStore();
 const gameNames = {};
@@ -14,7 +14,9 @@ let connection = null;
 let meId = null;
 
 function applySettings({ theme, cardStyle }) {
-  document.body.className = `theme-${theme} cards-${cardStyle}`;
+  // classList, not className: keep other body classes such as table-rotated.
+  for (const c of [...document.body.classList]) if (/^(theme|cards)-/.test(c)) document.body.classList.remove(c);
+  document.body.classList.add(`theme-${theme}`, `cards-${cardStyle}`);
 }
 
 function gameName(id) {
@@ -31,11 +33,15 @@ function render(state) {
   }
 }
 
-function enterRoom(code) {
+function enterRoom(code, { resume = false } = {}) {
   connection?.close();
   meId = null;
-  showLobbyLoading(code);
-  showView('lobby');
+  if (resume) {
+    showView(null); // no lobby flash: the first state picks lobby or table
+  } else {
+    showLobbyLoading(code);
+    showView('lobby');
+  }
   connection = new RoomConnection({
     code,
     store,
@@ -63,6 +69,7 @@ function leaveRoom() {
 
 function updateRotation() {
   document.getElementById('view-table').classList.toggle('rotated', shouldRotate(innerWidth, innerHeight));
+  syncTableRotated();
 }
 
 applySettings(store.getSettings());
@@ -81,4 +88,4 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-wor
 
 // Back to the table you were at (reload, app reopened, phone slept).
 const current = store.getCurrentRoom();
-if (current && store.getToken(current)) enterRoom(current);
+if (current && store.getToken(current)) enterRoom(current, { resume: true });

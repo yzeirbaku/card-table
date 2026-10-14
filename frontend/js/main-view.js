@@ -43,13 +43,18 @@ export function initMain({ store, enterRoom, applySettings }) {
     document.getElementById('player-counts').replaceChildren(...counts);
   }
 
+  let creating = false;
   async function create(game, players) {
+    if (creating) return; // ignore double taps while the request is in flight
+    creating = true;
     try {
       const code = await createRoom(game.id, players);
       closeSheets();
       enterRoom(code);
     } catch (err) {
       toast(err.message);
+    } finally {
+      creating = false;
     }
   }
 

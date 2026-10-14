@@ -64,6 +64,10 @@ def ace_of_spades() -> str:
     svg, shines = re.subn(r'<path[^>]*?id="path3762[^"]*"[^>]*/>', "", svg, flags=re.S)
     if shines != 2:
         raise SystemExit(f"AH.svg changed: expected 2 shine paths, found {shines}")
+    # The centre spade inherits the heart's radial gradient; make it plain solid black.
+    if svg.count("fill:url(#radialGradient3776)") != 1:
+        raise SystemExit("AH.svg changed: expected the radialGradient3776 fill exactly once")
+    svg = svg.replace("fill:url(#radialGradient3776)", "fill:#000000")
     return svg.replace(HEART, SPADE).replace("#df0000", "#000000")
 
 
@@ -81,7 +85,6 @@ def joker(cap: str, accent: str) -> str:
     <path d="M36 66 C40 42 46 24 50 9 C54 24 60 42 64 66 Z" fill="{accent}"/>
     <path d="M22 68 C14 52 4 44 7 29 C19 34 33 45 41 64 Z" fill="{cap}"/>
     <path d="M59 64 C67 45 81 34 93 29 C96 44 86 52 78 68 Z" fill="{cap}"/>
-    <path d="M41 64 C38 50 36 40 36 34 C43 44 46 54 47 64 Z" fill="#e8b33a" opacity=".55"/>
     <rect x="18" y="64" width="64" height="13" rx="4" fill="#d4a640" stroke="#8a6a1f" stroke-width="1"/>
     <g fill="{cap}"><path d="M26 70.5l4-4 4 4-4 4z"/><path d="M42 70.5l4-4 4 4-4 4z"/><path d="M58 70.5l4-4 4 4-4 4z"/><path d="M74 70.5l3-3 3 3-3 3z"/></g>
     <g fill="#f0c75e" stroke="#8a6a1f" stroke-width="1.2"><circle cx="7" cy="29" r="5"/><circle cx="50" cy="9" r="5"/><circle cx="93" cy="29" r="5"/></g>

@@ -13,7 +13,7 @@ export function initTable({ onLeave }) {
 
 export function renderTable(state, meId) {
   const me = state.players.find((p) => p.id === meId);
-  document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me, false)] : []));
+  document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me)] : []));
   document.querySelector('.seats').replaceChildren(
     ...seatPositions(state.players, meId).map(({ player, position }) => seat(player, position)),
   );
@@ -23,21 +23,19 @@ function seat(player, position) {
   const el = div(`seat seat-${position}`);
   const backs = div('backs');
   for (let i = 0; i < Math.min(player.hand_count, MAX_BACKS); i++) backs.append(div('card-back'));
-  el.append(backs, plate(player, true));
+  el.append(backs, plate(player));
   return el;
 }
 
-function plate(player, withCount) {
+function plate(player) {
   const el = div(player.connected ? 'plate' : 'plate offline');
   const name = document.createElement('span');
   name.textContent = player.name;
   el.append(div('dot'), name);
-  if (withCount) {
-    const count = document.createElement('span');
-    count.className = 'count';
-    count.textContent = String(player.hand_count);
-    el.append(count);
-  }
+  const count = document.createElement('span');
+  count.className = 'count';
+  count.textContent = String(player.hand_count);
+  el.append(count);
   return el;
 }
 
