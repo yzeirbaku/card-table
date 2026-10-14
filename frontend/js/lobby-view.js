@@ -64,6 +64,9 @@ function seatTile(seat, player, meId) {
     row.tabIndex = 0;
     row.setAttribute('role', 'button');
     row.addEventListener('click', () => send({ type: 'sit', seat }));
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); send({ type: 'sit', seat }); }
+    });
   }
   row.append(avatar, name);
   return row;

@@ -68,12 +68,13 @@ input { font: inherit; }
 .lobby-seats .avatar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #f0c75e; color: #3a2a08; font-family: Georgia, serif; font-size: 17px; font-weight: 700; }
 .lobby-seats li.taken::after { content: "✓"; margin-left: auto; color: #7fd18b; font-weight: 700; }
 .lobby-seats li.offline { opacity: .55; }
-.lobby-seats li.open { background: none; border: 1.5px dashed rgba(243,230,196,.4); font-style: italic; font-weight: 400; opacity: .65; }
+.lobby-seats li.open { background: none; border: 1.5px dashed rgba(243,230,196,.4); }
 .lobby-seats li.open .avatar { background: none; border: 1.5px dashed rgba(243,230,196,.5); }
 .lobby-groups { display: grid; gap: 14px; width: 100%; max-width: 340px; }
 .lobby-team { display: grid; gap: 8px; }
 .team-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: .75; text-align: left; }
 .lobby-seats li.open { cursor: pointer; }
+.lobby-seats li.open:hover, .lobby-seats li.open:active { background: rgba(0,0,0,.18); border-color: rgba(243,230,196,.7); }
 .lobby-seats li.me { box-shadow: 0 0 0 2px #f0c75e; }
 .lobby-unseated { font-size: 14px; opacity: .75; }
 #view-lobby .btn { max-width: 340px; margin-top: auto; }
@@ -157,7 +158,7 @@ input { font: inherit; }
 .hand-card:first-child { margin-left: 0; }
 .hand-card.selected { translate: 0 -26%; }
 .hand-card.dim { filter: brightness(.55); }
-.turn-note { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 + 10px); z-index: 4; transform: translateX(-50%); white-space: nowrap;
+.turn-note { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.26 + 8px); z-index: 4; transform: translateX(-50%); white-space: nowrap;
              padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
 .turn-note:empty { display: none; }
 .actions { position: absolute; right: 2.5cqw; bottom: 4cqh; z-index: 5; display: flex; flex-direction: column; gap: 8px; width: 92px; }

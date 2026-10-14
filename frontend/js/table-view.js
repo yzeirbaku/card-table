@@ -39,7 +39,8 @@ export function renderTable(state, meId) {
   if (!game) return;
   current = state;
   const byId = Object.fromEntries(state.players.map((p) => [p.id, p]));
-  const names = Object.fromEntries(state.players.map((p) => [p.id, p.name]));
+  const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name
+  for (const p of state.players) names[p.id] = p.name;
   const seated = game.seats.map((id) => byId[id] ?? { id, name: '?', connected: false });
   document.querySelector('.seats').replaceChildren(
     ...seatPositions(seated, meId).map(({ player, position }) => seat(player, position, game)),
