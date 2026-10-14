@@ -1,8 +1,10 @@
 import pytest
 
 from app.murlan.cards import DECK
-from app.murlan.game import Game, Rejected
-from tests.murlan_helpers import Reverse, Rotate, new_game, rig
+from app.murlan.game import REVEAL_SECONDS, Game, Rejected
+from tests.murlan_helpers import (
+    FakeClock, Reverse, Rotate, later_round, new_game, rig, swap_ready,
+)
 
 
 def test_creator_picks_the_target_and_the_first_round_starts():
@@ -219,3 +221,99 @@ def test_game_needs_two_to_four_players_and_a_seated_creator():
         Game(["a", "b", "c", "d", "e"], "a")
     with pytest.raises(ValueError):
         Game(["a", "b"], "zz")
+
+
+def test_only_the_loser_cuts():
+    g = later_round()
+    assert g.phase == "cutting" and len(g.deck) == 54 and g.turn is None
+    with pytest.raises(Rejected, match="loser"):
+        g.cut("p0", 3)
+    with pytest.raises(Rejected, match="Pick a card first"):
+        g.take_cut("p3", True)
+    with pytest.raises(Rejected, match="in the deck"):
+        g.cut("p3", 54)
+    g.cut("p3", 10)
+    with pytest.raises(Rejected, match="already"):
+        g.cut("p3", 11)
+    with pytest.raises(Rejected, match="loser"):
+        g.take_cut("p0", True)
+
+
+def test_take_it_deals_the_cut_card_to_the_loser_and_shows_everyones_first_card():
+    clock = FakeClock()
+    g = later_round(clock=clock)
+    g.cut("p3", 10)
+    card = g.deck[10]
+    g.take_cut("p3", True)
+    assert g.reveal.kind == "first_cards"
+    assert g.reveal.cards["p3"] == card
+    assert set(g.reveal.cards) == set(g.seats)
+    assert len(set(g.reveal.cards.values())) == 4
+    assert g.reveal.until == clock.now + REVEAL_SECONDS
+    assert card in g.hands["p3"] or g.swap_given.get("p3") == card
+    # dealt from the loser: p3 and p0 got the two extra cards (the swap only moves cards between them)
+    assert [len(g.hands[p]) for p in ("p1", "p2")] == [13, 13]
+    assert len(g.hands["p3"]) + len(g.hands["p0"]) == 28
+    assert g.deck == [] and g.cut_index is None
+
+
+def test_leave_it_is_a_normal_hidden_deal():
+    g = later_round()
+    g.cut("p3", 10)
+    g.take_cut("p3", False)
+    assert g.reveal is None
+    assert sum(len(h) for h in g.hands.values()) == 54
+    assert g.phase in ("swapping", "playing") and g.deck == []
+
+
+def test_loser_picks_among_tied_highest_then_winner_gives_back_3_to_10():
+    g = swap_ready({"p0": ["5S", "7D", "KC", "AH"], "p1": ["4D"], "p2": ["6D"],
+                    "p3": ["2S", "2H", "5C"]})
+    assert g.phase == "swapping" and g.swap_giver() == "p3"
+    assert g.swap_choices("p3") == ["2S", "2H"]
+    assert g.swap_choices("p0") == []
+    with pytest.raises(Rejected, match="not your turn"):
+        g.give("p0", "5S")
+    with pytest.raises(Rejected, match="highest"):
+        g.give("p3", "5C")
+    g.give("p3", "2H")
+    assert "2H" in g.hands["p0"] and g.swap_giver() == "p0"
+    assert g.swap_choices("p0") == ["5S", "7D"]
+    with pytest.raises(Rejected, match="3 to 10"):
+        g.give("p0", "KC")
+    g.give("p0", "7D")
+    assert "7D" in g.hands["p3"]
+    assert g.phase == "playing" and g.turn == "p3"  # the loser leads
+    assert g.reveal is None  # winner and loser aren't partners: the swap stays hidden
+
+
+def test_a_single_choice_is_given_automatically():
+    g = swap_ready({"p0": ["9C", "KC"], "p1": ["4D"], "p2": ["6D"], "p3": ["JR", "4S"]})
+    assert g.phase == "playing" and g.turn == "p3"
+    assert "JR" in g.hands["p0"] and "9C" in g.hands["p3"]
+
+
+def test_a_winner_with_nothing_from_3_to_10_gives_their_lowest():
+    g = swap_ready({"p0": ["QC", "JC", "KD"], "p1": ["4D"], "p2": ["6D"], "p3": ["AS", "4H"]})
+    assert g.hands["p3"] == ["4H", "JC"]
+    assert g.hands["p0"] == ["QC", "KD", "AS"]
+
+
+def test_the_swap_is_public_between_partners():
+    g = swap_ready({"p0": ["9C", "KC"], "p1": ["4D"], "p2": ["JR", "4S"], "p3": ["6D"]},
+                   places=["p0", "p1", "p3", "p2"])  # winner p0, loser p2: seats 0 and 2
+    assert g.reveal.kind == "swap"
+    assert g.reveal.cards == {"p2": "JR", "p0": "9C"}
+
+
+def test_no_swap_when_the_loser_was_dealt_both_jokers_and_the_winner_leads():
+    g = swap_ready({"p0": ["9C"], "p1": ["4D"], "p2": ["6D"], "p3": ["JB", "JR", "4S"]})
+    assert g.phase == "playing" and g.turn == "p0"
+    assert g.hands["p3"] == ["JB", "JR", "4S"] and g.hands["p0"] == ["9C"]
+
+
+def test_two_players_swap_the_same_way():
+    g = swap_ready({"p0": ["4C", "9H"], "p1": ["KS", "3D"]}, n=2)
+    assert g.swap_giver() == "p0" and g.hands["p0"] == ["4C", "9H", "KS"]
+    g.give("p0", "9H")
+    assert g.hands["p1"] == ["3D", "9H"] and g.turn == "p1"

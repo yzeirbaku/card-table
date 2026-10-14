@@ -15,7 +15,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
-from .cards import DECK, card_name, sort_cards, sort_key, suit_of
+from .cards import DECK, JOKERS, card_name, power, rank_of, sort_cards, sort_key, suit_of
 from .combos import KIND_NAMES, STRAIGHTS, Play, beats, classify
 
 TARGETS = (13, 21)
@@ -23,6 +23,8 @@ TARGETS = (13, 21)
 # so one team taking 1st and 2nd scores 5 against 1 (and the round ends early).
 PLACE_POINTS = {2: (1, 0), 3: (2, 1, 0), 4: (3, 2, 1, 0)}
 DEALT = {2: 36, 3: 54, 4: 54}  # 2 players: 18 each, the other 18 are out of play
+REVEAL_SECONDS = 5  # how long public reveals (first cards, partners' swap) stay up
+SWAP_BACK_RANKS = frozenset({"3", "4", "5", "6", "7", "8", "9", "10"})
 
 Phase = Literal[
     "choosing_target", "cutting", "swapping", "playing", "agreeing_loser",
@@ -46,6 +48,15 @@ class RoundResult:
     @property
     def loser(self) -> str:
         return self.places[-1]
+
+
+@dataclass
+class Reveal:
+    """Cards everyone may see for a few seconds."""
+
+    kind: Literal["first_cards", "swap"]
+    cards: dict[str, str]  # player id -> their first card, or the card they gave
+    until: float
 
 
 class Game:
@@ -73,7 +84,7 @@ class Game:
         self.winner_side: int | None = None
         self.disconnected: list[str] = []
         self.pause = None  # set while someone is disconnected
-        self.reveal = None  # cards everyone may see for a few seconds
+        self.reveal: Reveal | None = None  # cards everyone may see for a few seconds
         self._clear_round()
 
     def _clear_round(self) -> None:
@@ -169,6 +180,47 @@ class Game:
             other = next(p for p in voters if p != choice)
             self._finish_round(self.places + [other, choice])
 
+    def cut(self, player_id: str, index: int) -> None:
+        self._check_can_move(player_id)
+        self._check_cutter(player_id)
+        if self.cut_index is not None:
+            raise Rejected("You've already picked a card")
+        if not 0 <= index < len(self.deck):
+            raise Rejected("Pick a card in the deck")
+        self.cut_index = index
+
+    def take_cut(self, player_id: str, take: bool) -> None:
+        self._check_can_move(player_id)
+        self._check_cutter(player_id)
+        if self.cut_index is None:
+            raise Rejected("Pick a card first")
+        if take:
+            i = self.cut_index
+            self.deck = self.deck[i:] + self.deck[:i]  # the cut card is dealt first, to the loser
+            order = self._deal(player_id)
+            first = {p: self.deck[k] for k, p in enumerate(order)}
+            self.reveal = Reveal("first_cards", first, self.clock() + REVEAL_SECONDS)
+        else:
+            self.rng.shuffle(self.deck)  # the loser saw a card: hide where it goes
+            self._deal(player_id)
+        self.deck = []
+        self.cut_index = None
+        self._after_deal()
+
+    def give(self, player_id: str, card: str) -> None:
+        self._check_can_move(player_id)
+        giver = self.swap_giver()
+        if giver is None:
+            raise Rejected("There's no swap right now")
+        if player_id != giver:
+            raise Rejected("It's not your turn to give a card")
+        if card not in self.swap_choices(player_id):
+            if self.swap_step == "loser":
+                raise Rejected("Give your highest card")
+            raise Rejected("Give back a card from 3 to 10, or your lowest card if you have none")
+        self._give(card)
+        self._auto_give()
+
     # ---- checks ----
 
     def _check_can_move(self, player_id: str) -> None:
@@ -179,12 +231,76 @@ class Game:
         if self.pause:
             raise Rejected("The game is paused")
 
+    def _check_cutter(self, player_id: str) -> None:
+        if self.phase != "cutting":
+            raise Rejected("There's no cut right now")
+        if player_id != self.last_result.loser:
+            raise Rejected("Only the loser cuts")
+
     def _check_turn(self, player_id: str) -> None:
         self._check_can_move(player_id)
         if self.phase != "playing":
             raise Rejected("It's not time to play cards")
         if player_id != self.turn:
             raise Rejected("It's not your turn")
+
+    # ---- the swap: loser gives the winner their highest card, winner gives one back ----
+
+    def teammates(self, a: str, b: str) -> bool:
+        return len(self.seats) == 4 and a != b and self.side_of(a) == self.side_of(b)
+
+    def swap_giver(self) -> str | None:
+        if self.phase != "swapping":
+            return None
+        result = self.last_result
+        return result.loser if self.swap_step == "loser" else result.winner
+
+    def swap_choices(self, player_id: str) -> list[str]:
+        """The cards `player_id` may give right now; empty unless it's their turn to give."""
+        if player_id != self.swap_giver():
+            return []
+        hand = self.hands[player_id]
+        if self.swap_step == "loser":
+            best = max(power(c) for c in hand)
+            return [c for c in hand if power(c) == best]
+        back = [c for c in hand if rank_of(c) in SWAP_BACK_RANKS]
+        if back:
+            return back
+        lowest = min(power(c) for c in hand)
+        return [c for c in hand if power(c) == lowest]
+
+    def _after_deal(self) -> None:
+        result = self.last_result
+        if all(j in self.hands[result.loser] for j in JOKERS):
+            self._start_play(result.winner)  # no swap, and the winner leads
+            return
+        self.phase = "swapping"
+        self.swap_step = "loser"
+        self._auto_give()
+
+    def _auto_give(self) -> None:
+        """A giver with only one allowed card gives it without being asked."""
+        while (giver := self.swap_giver()) is not None:
+            choices = self.swap_choices(giver)
+            if len(choices) != 1:
+                return
+            self._give(choices[0])
+
+    def _give(self, card: str) -> None:
+        result = self.last_result
+        if self.swap_step == "loser":
+            giver, receiver = result.loser, result.winner
+        else:
+            giver, receiver = result.winner, result.loser
+        self.hands[giver].remove(card)
+        self.hands[receiver] = sort_cards(self.hands[receiver] + [card])
+        self.swap_given[giver] = card
+        if self.swap_step == "loser":
+            self.swap_step = "winner"
+            return
+        if self.teammates(result.winner, result.loser):
+            self.reveal = Reveal("swap", dict(self.swap_given), self.clock() + REVEAL_SECONDS)
+        self._start_play(result.loser)
 
     # ---- rounds ----
 

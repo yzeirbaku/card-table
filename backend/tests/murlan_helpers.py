@@ -1,6 +1,6 @@
 import random
 
-from app.murlan.game import Game
+from app.murlan.game import Game, RoundResult
 
 
 class FakeClock:
@@ -37,3 +37,24 @@ def rig(game: Game, hands: dict[str, list[str]], turn: str, target: int = 13) ->
     for p in game.seats:
         game.hands[p] = list(hands.get(p, []))
     game._start_play(turn)
+
+
+def later_round(n: int = 4, places: list[str] | None = None, rng: random.Random | None = None,
+                clock: FakeClock | None = None) -> Game:
+    """A game at the start of a later round (phase cutting). The last round
+    finished in `places` order; by default p0 won and the last seat lost."""
+    game = new_game(n, rng=rng, clock=clock)
+    game.target = 13
+    game.last_result = RoundResult(list(places or game.seats), [0] * game.side_count)
+    game._start_round()
+    return game
+
+
+def swap_ready(hands: dict[str, list[str]], n: int = 4, places: list[str] | None = None) -> Game:
+    """A later round just after the deal: these hands, the swap about to start."""
+    game = later_round(n, places)
+    game.deck = []
+    for p in game.seats:
+        game.hands[p] = list(hands.get(p, []))
+    game._after_deal()
+    return game
