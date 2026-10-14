@@ -87,12 +87,28 @@ def test_pile_clears_when_the_turn_gets_back_to_the_last_player():
 
 def test_lead_moves_on_when_the_last_player_is_out():
     g = new_game(3)
-    rig(g, {"p0": ["AS"], "p1": ["5H", "6H"], "p2": ["4H", "7H"]}, "p0")
-    g.play("p0", ["AS"])
+    rig(g, {"p0": ["4S"], "p1": ["5H", "6H"], "p2": ["8H", "7H"]}, "p0")
+    g.play("p0", ["4S"])
     assert g.places == ["p0"] and g.turn == "p1"
     g.pass_turn("p1")
     g.pass_turn("p2")
     assert g.turn == "p1" and g.top is None
+
+
+def test_a_player_who_cannot_beat_the_pile_passes_automatically():
+    g = new_game(3)
+    rig(g, {"p0": ["9S", "3D"], "p1": ["5H", "6H"], "p2": ["4H", "KH"]}, "p0")
+    g.play("p0", ["9S"])
+    assert g.turn == "p2" and g.passed == ["p1"]  # p1 has nothing above a 9
+    g.play("p2", ["KH"])
+    assert g.turn == "p2" and g.top is None  # neither p0 nor p1 beats a king: p2 leads again
+
+
+def test_automatic_passes_go_on_when_the_last_player_is_out():
+    g = new_game(3)
+    rig(g, {"p0": ["AS"], "p1": ["5H", "6H"], "p2": ["4H", "7H"]}, "p0")
+    g.play("p0", ["AS"])
+    assert g.places == ["p0"] and g.turn == "p1" and g.top is None
 
 
 def test_moves_that_are_not_allowed():
@@ -112,7 +128,7 @@ def test_moves_that_are_not_allowed():
     with pytest.raises(Rejected, match="Play a pair or a bomb"):
         g.play("p1", ["JB"])
     g.play("p1", ["9H", "9S"])
-    assert g.top.kind == "pair"
+    assert g.turn == "p1" and g.top is None  # p0 has no pair above the 9s: passed for them
 
 
 def test_a_lower_card_does_not_beat_the_pile():
@@ -126,8 +142,8 @@ def test_a_lower_card_does_not_beat_the_pile():
 
 def test_a_bomb_beats_a_joker_and_only_a_higher_bomb_beats_a_bomb():
     g = new_game(2)
-    rig(g, {"p0": ["JR", "3C", "3D", "3H", "3S", "9D"],
-            "p1": ["4S", "4H", "4D", "4C", "5S"]}, "p0")
+    rig(g, {"p0": ["JR", "3C", "3D", "3H", "3S", "9D", "5C", "5D", "5H", "5S"],
+            "p1": ["4S", "4H", "4D", "4C", "6S"]}, "p0")
     g.play("p0", ["JR"])
     g.play("p1", ["4S", "4H", "4D", "4C"])
     assert g.top.kind == "bomb"
@@ -135,6 +151,7 @@ def test_a_bomb_beats_a_joker_and_only_a_higher_bomb_beats_a_bomb():
         g.play("p0", ["9D"])
     with pytest.raises(Rejected, match="higher bomb"):
         g.play("p0", ["3C", "3D", "3H", "3S"])
+    g.play("p0", ["5C", "5D", "5H", "5S"])
 
 
 def test_two_players_round_and_points():

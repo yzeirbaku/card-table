@@ -1,7 +1,7 @@
 import pytest
 
 from app.murlan.cards import DECK, card_name, is_card, power, rank_of, sort_cards, suit_of
-from app.murlan.combos import Play, beats, classify
+from app.murlan.combos import KIND_NAMES, STRAIGHTS, Play, beats, can_beat, classify
 
 
 def test_deck_has_54_distinct_cards():
@@ -106,3 +106,68 @@ def test_bombs():
     assert beats(p("6H", "6S", "6D", "6C"), bomb)
     assert not beats(p("4H", "4S", "4D", "4C"), bomb)
     assert not beats(p("JR"), bomb)
+
+
+@pytest.mark.parametrize(
+    "hand, top, expected",
+    [
+        (["3S", "9H"], ["8D"], True),
+        (["3S", "8H"], ["8D"], False),  # equal doesn't beat
+        (["JB"], ["2S"], True),
+        (["JB"], ["JR"], False),
+        (["9H", "9S", "4D"], ["8C", "8D"], True),
+        (["9H", "4D", "4S"], ["8C", "8D"], False),
+        (["JB", "JR"], ["3C", "3D"], False),  # jokers never pair
+        (["5C", "5D", "5H", "5S"], ["JR"], True),  # a bomb beats anything but a higher bomb
+        (["5C", "5D", "5H", "5S"], ["6C", "6D", "6H", "6S"], False),
+        (["7C", "7D", "7H", "7S"], ["6C", "6D", "6H", "6S"], True),
+        (["4D", "5D", "6D", "7D", "8D"], ["3S", "4S", "5S", "6S", "7S"], True),  # one higher, same length
+        (["5D", "6D", "7D", "8D", "9D"], ["3S", "4S", "5S", "6S", "7S"], False),  # two higher doesn't
+        (["10D", "JD", "QD", "KD", "AD"], ["9S", "10S", "JS", "QS", "KS"], True),  # ace on top
+        (["4D", "4C", "5D", "5C", "6D", "6C", "7D", "7C", "8D", "8C"],
+         ["3S", "3H", "4S", "4H", "5S", "5H", "6S", "6H", "7S", "7H"], True),
+        (["4D", "5D", "5C", "6D", "6C", "7D", "7C", "8D", "8C"],
+         ["3S", "3H", "4S", "4H", "5S", "5H", "6S", "6H", "7S", "7H"], False),
+        (["2D", "3D", "4D", "5D", "6D"], ["AS", "2S", "3S", "4S", "5S"], True),  # ace low
+        (["JS", "QS", "KS", "AS", "2S"], ["10S", "JD", "QD", "KD", "AD"], False),  # nothing above ace high
+    ],
+)
+def test_can_beat(hand, top, expected):
+    play = classify(top)
+    assert play is not None
+    assert can_beat(hand, play) is expected
+
+
+def test_can_beat_agrees_with_trying_every_play():
+    """Brute force: a hand can beat the pile exactly when some subset of it does."""
+    from itertools import combinations
+    import random
+
+    rng = random.Random(11)
+    deck = list(DECK)
+    by_kind: dict[str, set[Play]] = {}
+    for _ in range(40):  # plays of every kind to beat, from the subsets of random hands
+        sample = rng.sample(deck, 14)
+        for n in range(1, 11):
+            for c in combinations(sample, n):
+                if (play := classify(list(c))) is not None:
+                    by_kind.setdefault(play.kind, set()).add(play)
+    ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]  # straight order
+    for multiple in (1, 2, 3):  # double and triple straights hardly ever turn up by chance
+        for low in range(0, 9):
+            run = ranks[low:low + rng.choice([5, 6])]
+            cards = [r + s for r in run for s in "SHDC"[:multiple]]
+            if (play := classify(cards)) is not None:
+                by_kind.setdefault(play.kind, set()).add(play)
+    assert set(by_kind) == set(KIND_NAMES)
+    tops = [play for plays in by_kind.values() for play in sorted(plays, key=repr)[:40]]
+    for _ in range(300):
+        top = rng.choice(tops)
+        hand = rng.sample(deck, 10)
+        if top.kind in STRAIGHTS and rng.random() < .5:  # often hold the run one higher, or most of it
+            step = [ranks[(top.rank + k) % 14] for k in range(top.length)]
+            wanted = [r + s for r in step for s in "CDHS"[:STRAIGHTS.index(top.kind) + 1]]
+            hand = list(dict.fromkeys(wanted[: len(wanted) - rng.choice([0, 0, 1])] + hand))[:12]
+        brute = any((p := classify(list(c))) is not None and beats(p, top)
+                    for n in range(1, len(hand) + 1) for c in combinations(hand, n))
+        assert can_beat(hand, top) is brute, (hand, top)

@@ -64,6 +64,38 @@ def _run_start(ranks) -> int | None:
     return None
 
 
+def can_beat(hand: list[str], top: Play) -> bool:
+    """Whether any cards in `hand` make a play that beats `top`. Every candidate goes
+    through classify and beats, so this can't disagree with what a play would get."""
+    by_rank: dict[str, list[str]] = {}
+    for c in hand:
+        if c not in JOKERS:
+            by_rank.setdefault(rank_of(c), []).append(c)
+    candidates = [cards for cards in by_rank.values() if len(cards) == 4]  # bombs
+    if top.kind == "single":
+        candidates += [[c] for c in hand]
+    elif top.kind in ("pair", "triple"):
+        size = 2 if top.kind == "pair" else 3
+        candidates += [cards[:size] for cards in by_rank.values() if len(cards) >= size]
+    elif top.kind in STRAIGHTS:
+        size = STRAIGHTS.index(top.kind) + 1
+        run = [_rank_at(top.rank + 1 + k) for k in range(top.length)]
+        if None not in run and all(len(by_rank.get(r, [])) >= size for r in run):
+            candidates.append([c for r in run for c in by_rank[r][:size]])
+    for cards in candidates:
+        play = classify(cards)
+        if play is not None and beats(play, top):
+            return True
+    return False
+
+
+def _rank_at(position: int) -> str | None:
+    """The rank at a straight position (ace at 1 and 14), or None past the ends."""
+    if position in (1, 14):
+        return "A"
+    return next((r for r, p in _POSITION.items() if p == position), None)
+
+
 def beats(new: Play, top: Play) -> bool:
     if new.kind == "bomb":
         return top.kind != "bomb" or new.rank > top.rank

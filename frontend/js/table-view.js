@@ -28,7 +28,11 @@ function sendOnce(message) {
 export function initTable({ onLeave, send: sendMessage }) {
   send = sendMessage;
   const menu = document.getElementById('table-menu');
-  document.getElementById('btn-table-menu').addEventListener('click', () => { menu.hidden = !menu.hidden; });
+  const menuButton = document.getElementById('btn-table-menu');
+  menuButton.addEventListener('click', () => { menu.hidden = !menu.hidden; });
+  document.addEventListener('click', (event) => { // a tap anywhere else closes the menu
+    if (!menu.hidden && !menu.contains(event.target) && !menuButton.contains(event.target)) menu.hidden = true;
+  });
   document.getElementById('btn-table-leave').addEventListener('click', () => {
     menu.hidden = true;
     const game = current?.game;
@@ -82,6 +86,7 @@ export function renderTable(state, meId) {
   );
   const me = byId[meId];
   document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me, game)] : []));
+  if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(span('Pass', 'bubble'));
   renderScores(game, names);
   const dealt = hadEmptyHand === true && game.hand.length > 0; // seen empty, now full: a new deal
   hadEmptyHand = game.hand.length === 0;
@@ -115,7 +120,7 @@ function plate(player, game) {
 
 function roundLabel(game) {
   if (!game.target) return 'Murlan';
-  return game.phase === 'game_over' ? `Game over · to ${game.target}` : `Round ${game.round} · to ${game.target}`;
+  return game.phase === 'game_over' ? `Game over · Race to ${game.target}` : `Round ${game.round} · Race to ${game.target}`;
 }
 
 /** "Ana & Cleo 7 · 4 Ben & Dan" for two sides (scores in the middle), "Ana 7 · Ben 4 · Cleo 2" for more. */
@@ -209,5 +214,5 @@ function turnNote(game, meId, names) {
   if (game.phase !== 'playing') return '';
   if (game.turn !== meId) return `${names[game.turn]}'s turn`;
   if (game.must_include) return `Your lead: include the ${cardName(game.must_include)}`;
-  return game.pile.length ? 'Your turn: beat it or pass' : 'Your lead';
+  return game.pile.length ? 'Your turn' : 'Your lead';
 }

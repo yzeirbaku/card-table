@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from .cards import DECK, JOKERS, card_name, power, rank_of, sort_cards, sort_key, suit_of
-from .combos import KIND_NAMES, STRAIGHTS, Play, beats, classify
+from .combos import KIND_NAMES, STRAIGHTS, Play, beats, can_beat, classify
 
 TARGETS = (13, 21)
 # Points for 1st, 2nd, ... place. In 4-player games a team adds its two players,
@@ -435,7 +435,8 @@ class Game:
     def _advance(self) -> None:
         """Next player clockwise. When the turn gets back to whoever made the last
         play (everyone else passed), the pile clears and they lead; if they're
-        already out, the next player clockwise who still has cards leads."""
+        already out, the next player clockwise who still has cards leads. A player
+        with nothing that beats the pile passes without being asked."""
         n = len(self.seats)
         i = self.seats.index(self.turn)
         last = self.trick[-1][0] if self.trick else None
@@ -447,6 +448,10 @@ class Game:
                 self.passed = []
                 last = None
             if self.hands[player]:
+                top = self.top
+                if top is not None and not can_beat(self.hands[player], top):
+                    self.passed.append(player)
+                    continue
                 self.turn = player
                 return
         raise AssertionError("nobody has cards left")

@@ -113,7 +113,7 @@ function scores(game, names) {
     line.append(span(sideName(side, names)), span(String(side.score)));
     list.append(line);
   }
-  if (game.target) list.append(span(`First to ${game.target}`, 'score-target'));
+  if (game.target) list.append(span(`Race to ${game.target}`, 'score-target'));
   return list;
 }
 
