@@ -143,13 +143,16 @@ input { font: inherit; }
 .backs { display: flex; }
 .card-back { width: 22px; height: 32px; margin-left: -14px; border-radius: 3px; background: var(--card-back); border: 1.5px solid var(--card-back-edge); box-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .card-back:first-child { margin-left: 0; }
-/* Between the top player (name and Pass bubble) and the turn row, so it never covers either. */
-.play-area { position: absolute; left: 50%; top: calc(var(--bar) + 102px); bottom: calc(3cqh + var(--card-w) * 1.84 + 44px); z-index: 3; width: 34%; transform: translateX(-50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
+/* Between the top player's name and the turn row, so it never covers either. */
+.play-area { position: absolute; left: 50%; top: calc(var(--bar) + 84px); bottom: calc(3cqh + var(--card-w) * 1.84 + 44px); z-index: 3; width: 34%; transform: translateX(-50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
 
 /* ---------- murlan table ---------- */
 /* Sizes follow the table box (cq units), so they're right when the table is turned on a portrait phone. */
 .table { container-type: size; --card-w: min(12cqh, 7.4cqw); }
 .plate.turn { box-shadow: 0 0 0 2px #f0c75e, 0 1px 3px rgba(0,0,0,.35); }
+/* "Pass" sits beside the name (inward on the right seat), so a seat never gets taller. */
+.seat .bubble { position: absolute; bottom: 3px; left: calc(100% + 6px); }
+.seat-right .bubble { left: auto; right: calc(100% + 6px); }
 .bubble { padding: 2px 9px; border-radius: 999px; background: #fffdf7; color: #1a1a1a; font-size: 12px; font-weight: 700; }
 .scoreboard { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scoreboard b { margin: 0 4px; font-size: 15px; color: var(--plate-count); }
@@ -180,9 +183,7 @@ input { font: inherit; }
 .table[data-fan="0"] .seats .card-back, .table[data-fan="1"] .seats .card-back:nth-child(n+2),
 .table[data-fan="2"] .seats .card-back:nth-child(n+3), .table[data-fan="3"] .seats .card-back:nth-child(n+4),
 .table[data-fan="4"] .seats .card-back:nth-child(n+5) { visibility: hidden; }
-.hand.flip .hand-card { animation: flip .32s ease-out; }
-@keyframes flip { from { transform: scaleX(0); } }
-@media (prefers-reduced-motion: reduce) { .pile-cards.landing, .hand.flip .hand-card { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .pile-cards.landing { animation: none; } }
 /* Pass, the turn note and Play in one row above the hand (clear of a lifted card). */
 .turn-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.26 + 8px); z-index: 5; transform: translateX(-50%);
             display: flex; align-items: center; gap: 8px; white-space: nowrap; }

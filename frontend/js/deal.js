@@ -15,7 +15,6 @@ export function stopDeal() {
   const table = document.querySelector('.table');
   table.classList.remove('dealing');
   delete table.dataset.fan;
-  document.querySelector('.hand').classList.remove('flip');
   document.querySelector('.deal-layer').replaceChildren();
 }
 
@@ -66,11 +65,10 @@ export async function playDeal(positions, perPlayer) {
   await wait(FLIGHT_MS + 150);
   if (run !== mine) return;
   stopDeal();
-  const flipping = run; // stopDeal moved it on; a later stop or deal moves it again
-  const hand = document.querySelector('.hand');
-  hand.classList.add('flip'); // your cards turn face up
-  await wait(400);
-  if (run === flipping) hand.classList.remove('flip');
+  // Your cards turn face up. Animated on these elements only, so a re-render doesn't replay it.
+  for (const card of document.querySelectorAll('.hand .hand-card')) {
+    card.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 320, easing: 'ease-out' });
+  }
 }
 
 // A hidden tab barely runs timers: don't leave the hand hidden behind a deal crawling along.
