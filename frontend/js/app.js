@@ -5,7 +5,7 @@ import { initMain } from './main-view.js';
 import { shouldRotate } from './orientation.js';
 import { closeSheets } from './sheets.js';
 import { createStore } from './storage.js';
-import { initTable, renderTable } from './table-view.js';
+import { initTable, renderTable, resetTable } from './table-view.js';
 import { stopCountdown } from './table-overlay.js';
 import { setReconnecting, showView, syncTableRotated, toast } from './ui.js';
 
@@ -25,7 +25,9 @@ function gameName(id) {
 }
 
 function send(message) {
-  if (!connection?.send(message)) toast('Not connected right now');
+  const sent = Boolean(connection?.send(message));
+  if (!sent) toast('Not connected right now');
+  return sent;
 }
 
 function render(state) {
@@ -34,6 +36,7 @@ function render(state) {
     renderTable(state, meId);
   } else {
     stopCountdown();
+    resetTable();
     showView('lobby');
     renderLobby(state, meId, gameName(state.room.game));
   }
@@ -41,6 +44,7 @@ function render(state) {
 
 function enterRoom(code, { resume = false } = {}) {
   connection?.close();
+  resetTable();
   meId = null;
   if (resume) {
     showView(null); // no lobby flash: the first state picks lobby or table
@@ -71,6 +75,7 @@ function leaveRoom() {
   connection?.leave();
   connection = null;
   stopCountdown();
+  resetTable();
   setReconnecting(false);
   showView('main');
 }

@@ -347,3 +347,17 @@ def test_a_removed_player_s_socket_is_closed_on_its_next_message():
         send(ana, type="sit", seat=0)
         with pytest.raises(WebSocketDisconnect):
             ana.receive_json()
+
+
+def test_a_message_on_a_replaced_socket_is_not_applied(client):
+    code = new_room(client, 2)
+    with connect(client, code, "Ana") as first:
+        a, _ = join(first)
+        with connect(client, code, "Ana", a["token"]) as second:
+            join(second)
+            send(first, type="sit", seat=0)
+            with pytest.raises(WebSocketDisconnect):
+                while True:
+                    first.receive_json()
+            send(second, type="sit", seat=1)
+            assert state(second)["players"][0]["seat"] == 1  # never moved to seat 0

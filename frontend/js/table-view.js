@@ -9,14 +9,14 @@ const MAX_BACKS = 7; // card backs drawn per opponent; the count shows the real 
 let send = () => {};
 let selected = []; // card codes picked in your hand
 let current = null; // the last state drawn, to redraw the hand after a tap
-let lastPhase = null; // the phase of the last render: a new phase starts with nothing selected
+let lastPhase = null;
+let lastRound = null; // and the round: a new one starts with nothing selected // the phase of the last render: a new phase starts with nothing selected
 let waiting = false; // a move is out: ignore taps until the next state arrives
 
 /** Send a move once; further taps are ignored until the server answers with a state. */
 function sendOnce(message) {
   if (waiting) return;
-  waiting = true;
-  send(message);
+  if (send(message) !== false) waiting = true;
 }
 
 export function initTable({ onLeave, send: sendMessage }) {
@@ -45,17 +45,24 @@ export function initTable({ onLeave, send: sendMessage }) {
   });
 }
 
+/** Forget the selection and the remembered phase and round (table left or no game). */
+export function resetTable() {
+  selected = [];
+  lastPhase = null;
+  lastRound = null;
+}
+
 export function renderTable(state, meId) {
   const game = state.game;
   waiting = false;
   if (!game) {
     stopCountdown();
-    selected = [];
-    lastPhase = null;
+    resetTable();
     return;
   }
-  if (game.phase !== lastPhase) selected = [];
+  if (game.phase !== lastPhase || game.round !== lastRound) selected = [];
   lastPhase = game.phase;
+  lastRound = game.round;
   current = state;
   const byId = Object.fromEntries(state.players.map((p) => [p.id, p]));
   const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name

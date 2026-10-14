@@ -98,7 +98,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
 
     async def handle(room: Room, player: Player, ws: WebSocket, text: str) -> bool:
         """Process one client message. Returns True when the player left."""
-        if player not in room.players:  # removed (e.g. evicted): this socket is stale
+        if player not in room.players or player.socket is not ws:  # removed or replaced: stale
             if player.socket is ws:
                 player.socket = None
             with suppress(Exception):
@@ -195,7 +195,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
                 async with room.lock:
                     if await handle(room, player, ws, text):
                         break
-        except WebSocketDisconnect:
+        except (WebSocketDisconnect, RuntimeError):
             pass
         finally:
             async with room.lock:

@@ -45,7 +45,7 @@ export function renderLobby(state, meId, gameName) {
     return team;
   }));
 
-  const waiting = state.players.filter((p) => p.seat === null).map((p) => (p.id === meId ? 'you' : p.name));
+  const waiting = state.players.filter((p) => p.seat === null).map((p) => (p.id === meId ? 'you' : p.connected ? p.name : `${p.name} (offline)`));
   document.querySelector('.lobby-unseated').textContent = waiting.length ? `Not seated yet: ${waiting.join(', ')}` : '';
 }
 
