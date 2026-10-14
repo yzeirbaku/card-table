@@ -116,7 +116,7 @@ class Room:
         elif choice == "shuffle_teams":
             if self.seats != 4:
                 raise Rejected("Shuffling teams needs 4 players")
-            self.rng.shuffle(self.seating)
+            self._reshuffle_partners()
             self._new_game()
         elif choice == "lobby":
             self.seating = [None] * self.seats
@@ -137,6 +137,17 @@ class Room:
         for p in self.players:
             if p.socket is None:
                 self.game.disconnect(p.id)
+
+    def _reshuffle_partners(self) -> None:
+        """Reseat four players so everyone gets a new partner (seats 0+2 and 1+3 pair up)."""
+        a, b, c, d = self.seating
+        # Of the three ways to split four players into two pairs, drop the current one.
+        pairings = [((a, c), (b, d)), ((a, b), (c, d)), ((a, d), (b, c))][1:]
+        (p, q), (r, s) = self.rng.choice(pairings)
+        seating = [p, r, q, s]
+        if self.rng.random() < 0.5:
+            seating = [r, p, s, q]
+        self.seating = seating
 
     def _unseat(self, player_id: str) -> None:
         self.seating = [None if s == player_id else s for s in self.seating]

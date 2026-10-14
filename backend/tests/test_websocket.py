@@ -239,3 +239,26 @@ def test_expired_room_is_gone(client, clock):
         with connect(client, code, "Ana") as ws:
             ws.receive_json()
     assert e.value.code == 4404
+
+
+def test_a_socket_that_dies_during_a_broadcast_pauses_the_game():
+    manager = RoomManager()
+    client = TestClient(create_app(manager, use_timers=False))
+    with started_game(client) as (ana, ben, a, b, sa, sb):
+        room = next(iter(manager.rooms.values()))
+
+        class Dead:
+            async def send_json(self, _):
+                raise RuntimeError("gone")
+
+        # The player on the move plays; the other one's socket dies mid-broadcast.
+        if sa["game"]["turn"] == a["player_id"]:
+            lead, lead_state, other_id = ana, sa, b["player_id"]
+        else:
+            lead, lead_state, other_id = ben, sb, a["player_id"]
+        victim = next(p for p in room.players if p.id == other_id)
+        victim.socket = Dead()
+        act(lead, type="play", cards=[lead_state["game"]["must_include"]])
+        state(lead)
+        assert victim.socket is None
+        assert room.game.disconnected == [other_id] and room.game.pause is not None

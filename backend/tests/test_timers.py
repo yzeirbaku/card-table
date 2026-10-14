@@ -58,3 +58,29 @@ def test_a_wake_can_set_the_next_deadline():
         return fired
 
     assert asyncio.run(main()) == [0, 1, 2]
+
+
+def test_an_early_wakeup_waits_for_the_deadline():
+    class Clock:
+        now = 0.0
+
+        def __call__(self):
+            return self.now
+
+    async def main():
+        clock = Clock()
+        fired = []
+
+        async def wake():
+            fired.append(clock.now)
+
+        timer = RoomTimer(clock)
+        timer.set(0.05, wake)  # real sleep of 0.05s, but the fake clock hasn't moved
+        await asyncio.sleep(0.1)
+        early = list(fired)
+        clock.now = 0.05  # now the deadline has passed
+        await asyncio.sleep(0.15)
+        return early, fired
+
+    early, fired = asyncio.run(main())
+    assert early == [] and fired == [0.05]

@@ -55,6 +55,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
             await player.socket.send_json(message)
         except Exception:  # a dead socket must not break the broadcast
             player.socket = None
+            room.mark_disconnected(player.id)
 
     async def broadcast(room: Room) -> None:
         for p in list(room.players):
@@ -68,6 +69,8 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
 
     async def wake(room: Room) -> None:
         async with room.lock:
+            if rooms.get(room.code) is not room:  # purged while this wake was pending
+                return
             if room.game is not None:
                 room.game.tick()
             await broadcast(room)
@@ -169,9 +172,9 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
         except WebSocketDisconnect:
             pass
         finally:
-            if player.socket is ws:
-                player.socket = None
-                async with room.lock:
+            async with room.lock:
+                if player.socket is ws:
+                    player.socket = None
                     room.mark_disconnected(player.id)
                     await broadcast(room)
 

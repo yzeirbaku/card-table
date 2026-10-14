@@ -1,4 +1,4 @@
-# card-table — Claude guide
+# card-table â€” Claude guide
 
 Personal project: card games for friends, one game at a time. Vanilla-JS PWA
 (`frontend/`, no build step) + FastAPI (`backend/`). Specs in

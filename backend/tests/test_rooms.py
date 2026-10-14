@@ -260,3 +260,17 @@ def test_rooms_hand_their_clock_to_the_game():
     room.sit(a.id, 0)
     room.sit(b.id, 1)
     assert room.game.clock is clock
+
+
+def test_shuffle_teams_always_changes_the_partners():
+    def pairs(seating):
+        return {frozenset((seating[0], seating[2])), frozenset((seating[1], seating[3]))}
+
+    for seed in range(30):
+        room, players = full_room(4)
+        room.rng = random.Random(seed)
+        before = pairs(room.seating)
+        room.game.phase = "game_over"
+        room.after_game(players[0].id, "shuffle_teams")
+        assert sorted(room.seating) == sorted(p.id for p in players)
+        assert pairs(room.seating) != before

@@ -29,7 +29,9 @@ class RoomTimer:
         self._deadline = None
 
     async def _run(self, deadline: float, wake: Callable[[], Awaitable[None]]) -> None:
-        await asyncio.sleep(max(0.0, deadline - self._clock()))
+        # asyncio can wake a little early (~15 ms on Windows): keep waiting for the deadline.
+        while (remaining := deadline - self._clock()) > 0:
+            await asyncio.sleep(remaining)
         # Done waiting: forget this task first, so a set() made during wake()
         # schedules the next wake-up instead of cancelling this one.
         self._task = None
