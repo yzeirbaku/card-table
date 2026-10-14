@@ -171,9 +171,7 @@ input { font: inherit; }
 .pile-cards .card-face:first-child { margin-left: 0; }
 .pile-who { position: absolute; left: 50%; top: calc(46% + var(--card-w) * .85 * 1.46 / 2 + 8px); transform: translateX(-50%); white-space: nowrap;
             padding: 2px 9px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
-/* The hand is centred on the table; Play and Pass hang just off its right end, so they never move it. */
-.hand-wrap { position: absolute; left: 50%; bottom: 3cqh; z-index: 4; width: max-content; transform: translateX(-50%); }
-.hand { display: flex;
+.hand { position: absolute; left: 50%; bottom: 3cqh; z-index: 4; width: max-content; transform: translateX(-50%); display: flex;
         --gap: min(4px, calc((68cqw - var(--n, 1) * var(--card-w)) / max(1, var(--n, 1) - 1))); }
 .hand-card { flex: none; width: var(--card-w); margin-left: var(--gap); transition: translate .12s; }
 .hand-card:first-child { margin-left: 0; }
@@ -183,18 +181,20 @@ input { font: inherit; }
 .deal-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
 .deal-layer .card-back { position: absolute; margin: 0; }
 .deal-card, .deal-deck { width: calc(var(--card-w) * .55); height: auto; aspect-ratio: 320 / 466; transform: translate(-50%, -50%); }
-.table.dealing .hand-wrap, .table.dealing .turn-note { visibility: hidden; }
+.table.dealing .hand, .table.dealing .turn-row { visibility: hidden; }
 .table[data-fan="0"] .seats .card-back, .table[data-fan="1"] .seats .card-back:nth-child(n+2),
 .table[data-fan="2"] .seats .card-back:nth-child(n+3), .table[data-fan="3"] .seats .card-back:nth-child(n+4),
 .table[data-fan="4"] .seats .card-back:nth-child(n+5) { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .pile-cards.landing { animation: none; } }
-/* The turn note above the hand (clear of a lifted card). */
-.turn-note { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.26 + 8px); z-index: 5; transform: translateX(-50%); white-space: nowrap;
-             padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
+/* Pass and Play above the hand, clear of a lifted card. The note between them is only for the
+   swap and the first lead; whose turn it is shows on the players' names. */
+.turn-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.26 + 8px); z-index: 5; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.turn-note { padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
 .turn-note:empty { display: none; }
-.hand-actions { position: absolute; left: calc(100% + 10px); bottom: 0; display: flex; flex-direction: column; gap: 6px; }
-.hand-actions .btn { width: auto; min-width: 72px; padding: 7px 16px; border-radius: 999px; font-size: 14px; }
-.hand-actions .btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
+.turn-row .btn { width: auto; min-width: 76px; padding: 7px 18px; border-radius: 999px; font-size: 14px; }
+.turn-row .btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
+.hand.locked .hand-card { cursor: default; }
 .reveal { position: absolute; left: 50%; top: calc(var(--bar) + 10px); z-index: 7; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 12px;
           padding: 8px 14px; border-radius: 14px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
 .reveal-title { align-self: center; font-weight: 700; }

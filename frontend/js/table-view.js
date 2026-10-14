@@ -13,6 +13,7 @@ const PILE_SHOWN = 4; // older plays are buried under these
 let send = () => {};
 let selected = []; // card codes picked in your hand
 let current = null; // the last state drawn, to redraw the hand after a tap
+let currentMe = null; // your player id in that state
 let lastPhase = null; // the phase of the last render: a new phase starts with nothing selected
 let lastRound = null; // the round of the last render: a new round starts with nothing selected
 let waiting = false; // a move is out: ignore taps until the next state arrives
@@ -78,6 +79,7 @@ export function renderTable(state, meId) {
   lastPhase = game.phase;
   lastRound = game.round;
   current = state;
+  currentMe = meId;
   const byId = Object.fromEntries(state.players.map((p) => [p.id, p]));
   const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name
   for (const p of state.players) names[p.id] = p.name;
@@ -165,12 +167,21 @@ function renderPile(game, names) {
   pile.replaceChildren(...plays, span(names[top.player_id] ?? '', 'pile-who'));
 }
 
+/** Cards can be picked on your turn, or when you have a card to give in the swap. */
+function canPick(game, meId) {
+  if (game.pause) return false;
+  return (game.phase === 'playing' && game.turn === meId) || (game.swap?.choices.length ?? 0) > 0;
+}
+
 function renderHand(game) {
   selected = keepHeld(selected, game.hand);
   const choices = game.swap?.choices ?? [];
   const giving = choices.length > 0;
   if (giving) selected = selected.filter((c) => choices.includes(c)).slice(0, 1);
+  const open = canPick(game, currentMe);
+  if (!open) selected = [];
   const hand = document.querySelector('.hand');
+  hand.classList.toggle('locked', !open);
   hand.style.setProperty('--n', String(game.hand.length));
   hand.replaceChildren(...game.hand.map((code) => {
     const card = button('', () => pick(code), 'hand-card');
@@ -184,6 +195,7 @@ function renderHand(game) {
 
 function pick(code) {
   const game = current.game;
+  if (!canPick(game, currentMe)) return; // not your turn: cards stay put
   const choices = game.swap?.choices ?? [];
   if (choices.length) {
     if (!choices.includes(code)) return;
@@ -217,8 +229,6 @@ function turnNote(game, meId, names) {
     const loser = game.last_round.places.at(-1);
     return giver === loser ? `Give ${names[receiver]} your highest card` : `Give ${names[receiver]} a card back`;
   }
-  if (game.phase !== 'playing') return '';
-  if (game.turn !== meId) return `${names[game.turn]}'s turn`;
-  if (game.must_include) return `Your lead: include the ${cardName(game.must_include)}`;
-  return leading(game) ? 'Your lead' : 'Your turn';
+  if (game.phase === 'playing' && game.turn === meId && game.must_include) return `Include the ${cardName(game.must_include)}`;
+  return ''; // whose turn it is shows on the players' names
 }
