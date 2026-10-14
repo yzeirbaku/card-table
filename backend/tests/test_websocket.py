@@ -6,14 +6,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.main import create_app
 from app.rooms import IDLE_EXPIRY_SECONDS, RoomManager
-
-
-class FakeClock:
-    def __init__(self) -> None:
-        self.now = 1000.0
-
-    def __call__(self) -> float:
-        return self.now
+from tests.murlan_helpers import FakeClock
 
 
 @pytest.fixture
@@ -23,93 +16,196 @@ def clock() -> FakeClock:
 
 @pytest.fixture
 def client(clock) -> TestClient:
-    return TestClient(create_app(RoomManager(clock)))
+    # No room timers here: these tests share no event loop between sockets.
+    return TestClient(create_app(RoomManager(clock), use_timers=False))
 
 
-def new_room(client: TestClient, players: int = 4) -> str:
+def new_room(client: TestClient, players: int = 2) -> str:
     res = client.post("/rooms", json={"game": "murlan", "players": players})
     assert res.status_code == 200
     return res.json()["code"]
 
 
+def connect(client: TestClient, code: str, name: str, token: str | None = None):
+    query = f"name={name}" + (f"&token={token}" if token else "")
+    return client.websocket_connect(f"/rooms/{code}/ws?{query}")
+
+
 def join(ws) -> tuple[dict, dict]:
     welcome = ws.receive_json()
-    state = ws.receive_json()
     assert welcome["type"] == "welcome"
-    assert state["type"] == "state"
-    return welcome, state
+    return welcome, state(ws)
 
 
-def deck_id(state: dict) -> str:
-    return max(state["view"]["piles"], key=lambda p: len(p["cards"]))["id"]
+def state(ws) -> dict:
+    msg = ws.receive_json()
+    assert msg["type"] == "state", msg
+    return msg
 
 
-def act(ws, action: dict) -> None:
+def send(ws, **msg) -> None:
+    ws.send_json(msg)
+
+
+def act(ws, **action) -> None:
     ws.send_json({"type": "action", "action": action})
+
+
+def seat_and_start(ana, ben) -> tuple[dict, dict]:
+    """Ana sits at 0, Ben at 1, Ana picks 13. Returns both states after the deal."""
+    send(ana, type="sit", seat=0)
+    state(ana), state(ben)
+    send(ben, type="sit", seat=1)
+    state(ana), state(ben)
+    act(ana, type="choose_target", target=13)
+    return state(ana), state(ben)
+
+
+@contextlib.contextmanager
+def started_game(client: TestClient):
+    """Ana (creator, seat 0) and Ben (seat 1) in a dealt 2-player game.
+    Yields (ana_ws, ben_ws, ana_welcome, ben_welcome, ana_state, ben_state)."""
+    code = new_room(client)
+    with connect(client, code, "Ana") as ana:
+        a, _ = join(ana)
+        with connect(client, code, "Ben") as ben:
+            b, _ = join(ben)
+            state(ana)  # Ben arrived
+            sa, sb = seat_and_start(ana, ben)
+            yield ana, ben, a, b, sa, sb
 
 
 def test_create_and_join(client):
     code = new_room(client)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ws:
-        welcome, state = join(ws)
+    with connect(client, code, "Ana") as ws:
+        welcome, s = join(ws)
         assert welcome["code"] == code
-        assert state["players"] == [
-            {"id": welcome["player_id"], "name": "Ana", "connected": True, "is_host": True,
-             "hand_count": 0}
-        ]
-        assert state["room"] == {"game": "murlan", "seats": 4, "status": "lobby"}
-        assert len(state["view"]["piles"]) == 1
-        assert state["view"]["hand"] == []
+        assert s["players"] == [{"id": welcome["player_id"], "name": "Ana", "connected": True,
+                                 "seat": None, "is_creator": True}]
+        assert s["room"] == {"game": "murlan", "seats": 2, "status": "lobby"}
+        assert s["game"] is None
 
 
-def test_actions_are_broadcast_with_private_hands(client):
+def test_seats_fill_then_the_creator_picks_the_target(client):
     code = new_room(client)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ana:
-        _, state = join(ana)
-        with client.websocket_connect(f"/rooms/{code}/ws?name=Ben") as ben:
-            join(ben)
-            assert len(ana.receive_json()["players"]) == 2  # Ben arrived
-            act(ana, {"type": "deal", "pile_id": deck_id(state), "count": 2})
-            a, b = ana.receive_json(), ben.receive_json()
-            assert len(a["view"]["hand"]) == 2
-            assert len(b["view"]["hand"]) == 2
-            assert {c["id"] for c in a["view"]["hand"]}.isdisjoint(
-                {c["id"] for c in b["view"]["hand"]}
-            )
-            assert [p["hand_count"] for p in a["players"]] == [2, 2]
+    with connect(client, code, "Ana") as ana:
+        a, _ = join(ana)
+        with connect(client, code, "Ben") as ben:
+            b, _ = join(ben)
+            state(ana)
+            send(ana, type="sit", seat=1)
+            assert state(ana)["players"][0]["seat"] == 1
+            state(ben)
+            send(ben, type="sit", seat=1)
+            assert ben.receive_json() == {"type": "error", "message": "That seat is taken"}
+            state(ben)
+            send(ben, type="sit", seat=0)
+            sa, _ = state(ana), state(ben)
+            assert sa["room"]["status"] == "playing"
+            assert sa["game"]["phase"] == "choosing_target"
+            assert sa["game"]["seats"] == [b["player_id"], a["player_id"]]
+            act(ben, type="choose_target", target=13)
+            assert ben.receive_json() == {"type": "error",
+                                          "message": "The room creator picks the target"}
+            state(ben)
+            act(ana, type="choose_target", target=13)
+            sa, sb = state(ana), state(ben)
+            assert sa["game"]["phase"] == "playing"
+            assert len(sa["game"]["hand"]) == 18 and len(sb["game"]["hand"]) == 18
+            assert set(sa["game"]["hand"]).isdisjoint(sb["game"]["hand"])
 
 
-def test_rejected_action_gets_error_and_fresh_state(client):
+def test_out_of_turn_moves_are_rejected_and_legal_ones_broadcast(client):
+    with started_game(client) as (ana, ben, a, b, sa, sb):
+        if sa["game"]["turn"] == a["player_id"]:
+            (lead, lead_state), (other, other_state) = (ana, sa), (ben, sb)
+        else:
+            (lead, lead_state), (other, other_state) = (ben, sb), (ana, sa)
+        act(other, type="play", cards=[other_state["game"]["hand"][0]])
+        assert other.receive_json() == {"type": "error", "message": "It's not your turn"}
+        state(other)
+        card = lead_state["game"]["must_include"]
+        act(lead, type="play", cards=[card])
+        s1, s2 = state(ana), state(ben)
+        expected = [{"player_id": lead_state["game"]["turn"], "cards": [card], "kind": "single"}]
+        assert s1["game"]["pile"] == s2["game"]["pile"] == expected
+        assert s1["game"]["counts"][lead_state["game"]["turn"]] == 17
+
+
+def test_malformed_actions_are_rejected(client):
+    with started_game(client) as (ana, *_):
+        act(ana, type="play", cards="3S")
+        assert ana.receive_json() == {"type": "error", "message": "Malformed action"}
+        assert state(ana)["game"]["phase"] == "playing"
+
+
+def test_bad_messages_get_errors_and_the_connection_survives(client):
     code = new_room(client)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ws:
-        _, state = join(ws)
-        act(ws, {"type": "flip_card", "card_id": "nope"})
-        error = ws.receive_json()
-        assert error["type"] == "error"
-        assert "top card" in error["message"]
-        fresh = ws.receive_json()
-        assert fresh["type"] == "state"
-        assert fresh["view"]["version"] == state["view"]["version"]
-
-
-def test_malformed_messages_get_errors_and_connection_survives(client):
-    code = new_room(client)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ws:
-        _, state = join(ws)
+    with connect(client, code, "Ana") as ws:
+        join(ws)
         ws.send_text("not json")
         assert ws.receive_json() == {"type": "error", "message": "Malformed message"}
-        ws.send_json({"type": "dance"})
+        send(ws, type="dance")
         assert ws.receive_json() == {"type": "error", "message": "Unknown message type"}
-        ws.send_text('{"type":"action","action":{"type":"move_pile","pile_id":"x","x":NaN,"y":0}}')
-        assert ws.receive_json()["type"] == "error"
-        ws.receive_json()  # fresh state after rejection
-        act(ws, {"type": "shuffle", "pile_id": deck_id(state)})
-        assert ws.receive_json()["type"] == "state"
+        act(ws, type="pass")
+        assert ws.receive_json() == {"type": "error", "message": "The game hasn't started yet"}
+        state(ws)
+        send(ws, type="sit", seat=7)
+        assert ws.receive_json() == {"type": "error", "message": "There's no such seat"}
+        state(ws)
+        send(ws, type="sit", seat=0)
+        assert state(ws)["players"][0]["seat"] == 0
+
+
+def test_reconnect_mid_round_restores_the_hand(client):
+    code = new_room(client)
+    with connect(client, code, "Ana") as ana:
+        join(ana)
+        with connect(client, code, "Ben") as ben:
+            b, _ = join(ben)
+            state(ana)
+            _, sb = seat_and_start(ana, ben)
+            hand = sb["game"]["hand"]
+        paused = state(ana)  # Ben dropped
+        assert paused["game"]["pause"]["waiting_for"] == [b["player_id"]]
+        assert [p["connected"] for p in paused["players"]] == [True, False]
+        with connect(client, code, "Ben", b["token"]) as ben:
+            again, s = join(ben)
+            assert again["player_id"] == b["player_id"]
+            assert s["game"]["hand"] == hand and s["game"]["pause"] is None
+            assert state(ana)["game"]["pause"] is None
+
+
+def test_leave_while_playing_returns_everyone_to_the_lobby(client):
+    with started_game(client) as (ana, ben, a, *_):
+        send(ben, type="leave")
+        update = state(ana)
+        assert update["room"]["status"] == "lobby" and update["game"] is None
+        assert update["players"] == [{"id": a["player_id"], "name": "Ana", "connected": True,
+                                      "seat": 0, "is_creator": True}]
+
+
+def test_pause_times_out_without_any_message(monkeypatch):
+    monkeypatch.setattr("app.murlan.game.PAUSE_SECONDS", 0.2)
+    # `with TestClient(...)`: one event loop for every socket, so room timers can run.
+    # If this test hangs, the room timer never woke the game.
+    with TestClient(create_app(RoomManager())) as client:
+        code = new_room(client)
+        with connect(client, code, "Ana") as ana:
+            join(ana)
+            with connect(client, code, "Ben") as ben:
+                join(ben)
+                state(ana)
+                seat_and_start(ana, ben)
+            assert state(ana)["game"]["pause"]["timed_out"] is False  # Ben dropped
+            later = state(ana)  # nobody sent anything: the timer woke the room
+            assert later["game"]["phase"] == "round_cancelled"
+            assert later["game"]["pause"]["timed_out"] is True
 
 
 def test_unknown_room_closes_4404(client):
     with pytest.raises(WebSocketDisconnect) as e:
-        with client.websocket_connect("/rooms/ZZZZ/ws?name=Ana") as ws:
+        with connect(client, "ZZZZ", "Ana") as ws:
             ws.receive_json()
     assert e.value.code == 4404
 
@@ -117,63 +213,22 @@ def test_unknown_room_closes_4404(client):
 def test_bad_name_closes_4400(client):
     code = new_room(client)
     with pytest.raises(WebSocketDisconnect) as e:
-        with client.websocket_connect(f"/rooms/{code}/ws?name=") as ws:
+        with connect(client, code, "") as ws:
             ws.receive_json()
     assert e.value.code == 4400
 
 
-def test_room_full_closes_4409(client):
-    code = new_room(client, 4)
-    with contextlib.ExitStack() as stack:
-        for i in range(4):
-            ws = stack.enter_context(client.websocket_connect(f"/rooms/{code}/ws?name=P{i}"))
-            join(ws)
-        with pytest.raises(WebSocketDisconnect) as e:
-            with client.websocket_connect(f"/rooms/{code}/ws?name=Fifth") as ws:
-                ws.receive_json()
-        assert e.value.code == 4409
-        assert e.value.reason == "This table is full"
-
-
-def test_reconnect_with_token_keeps_seat_and_hand(client):
-    code = new_room(client)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ws:
-        welcome, state = join(ws)
-        act(ws, {"type": "deal", "pile_id": deck_id(state), "count": 3})
-        hand = ws.receive_json()["view"]["hand"]
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana&token={welcome['token']}") as ws:
-        again, state = join(ws)
-        assert again["player_id"] == welcome["player_id"]
-        assert state["view"]["hand"] == hand
-        assert len(state["players"]) == 1
-
-
-def test_disconnected_player_shows_as_not_connected(client):
-    code = new_room(client)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ana:
+def test_more_players_than_seats_closes_4409(client):
+    code = new_room(client, 2)
+    with connect(client, code, "Ana") as ana:
         join(ana)
-        with client.websocket_connect(f"/rooms/{code}/ws?name=Ben") as ben:
+        with connect(client, code, "Ben") as ben:
             join(ben)
-            ana.receive_json()
-        update = ana.receive_json()
-        assert [p["connected"] for p in update["players"]] == [True, False]
-
-
-def test_leave_frees_the_seat_and_returns_cards(client):
-    code = new_room(client)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ana:
-        _, state = join(ana)
-        with client.websocket_connect(f"/rooms/{code}/ws?name=Ben") as ben:
-            join(ben)
-            ana.receive_json()
-            act(ana, {"type": "deal", "pile_id": deck_id(state), "count": 2})
-            ana.receive_json()
-            ben.receive_json()
-            ben.send_json({"type": "leave"})
-            update = ana.receive_json()
-            assert [p["name"] for p in update["players"]] == ["Ana"]
-            on_table = sum(len(p["cards"]) for p in update["view"]["piles"])
-            assert on_table == 52 - 2  # only Ana's 2 cards are off the table
+            state(ana)
+            with pytest.raises(WebSocketDisconnect) as e:
+                with connect(client, code, "Cleo") as ws:
+                    ws.receive_json()
+            assert e.value.code == 4409 and e.value.reason == "This table is full"
 
 
 def test_expired_room_is_gone(client, clock):
@@ -181,6 +236,6 @@ def test_expired_room_is_gone(client, clock):
     clock.now += IDLE_EXPIRY_SECONDS + 1
     new_room(client)  # creating a room purges expired ones
     with pytest.raises(WebSocketDisconnect) as e:
-        with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ws:
+        with connect(client, code, "Ana") as ws:
             ws.receive_json()
     assert e.value.code == 4404

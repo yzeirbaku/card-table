@@ -7,21 +7,7 @@ from app.rooms import RoomManager
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(create_app(RoomManager()))
-
-
-def new_room(client: TestClient, players: int) -> str:
-    res = client.post("/rooms", json={"game": "murlan", "players": players})
-    assert res.status_code == 200
-    return res.json()["code"]
-
-
-def join(ws) -> tuple[dict, dict]:
-    welcome = ws.receive_json()
-    state = ws.receive_json()
-    assert welcome["type"] == "welcome"
-    assert state["type"] == "state"
-    return welcome, state
+    return TestClient(create_app(RoomManager(), use_timers=False))
 
 
 def test_games_lists_murlan(client):
@@ -46,45 +32,6 @@ def test_create_room_rejects_unknown_game_or_bad_count(client, body):
 
 def test_create_room_requires_a_body(client):
     assert client.post("/rooms").status_code == 422
-
-
-def test_room_starts_when_the_last_seat_fills(client):
-    code = new_room(client, 2)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ana:
-        _, state = join(ana)
-        assert state["room"] == {"game": "murlan", "seats": 2, "status": "lobby"}
-        with client.websocket_connect(f"/rooms/{code}/ws?name=Ben") as ben:
-            _, ben_state = join(ben)
-            assert ben_state["room"]["status"] == "playing"
-            assert ana.receive_json()["room"]["status"] == "playing"
-
-
-def test_reconnect_while_playing_keeps_the_seat(client):
-    code = new_room(client, 2)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ana:
-        welcome, _ = join(ana)
-        with client.websocket_connect(f"/rooms/{code}/ws?name=Ben") as ben:
-            join(ben)
-            ana.receive_json()  # Ben arrived
-    # Both sockets dropped; seats are kept.
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana&token={welcome['token']}") as ana:
-        again, state = join(ana)
-        assert again["player_id"] == welcome["player_id"]
-        assert state["room"]["status"] == "playing"
-        assert len(state["players"]) == 2
-
-
-def test_leave_while_playing_returns_to_lobby(client):
-    code = new_room(client, 2)
-    with client.websocket_connect(f"/rooms/{code}/ws?name=Ana") as ana:
-        join(ana)
-        with client.websocket_connect(f"/rooms/{code}/ws?name=Ben") as ben:
-            join(ben)
-            ana.receive_json()  # Ben arrived, game started
-            ben.send_json({"type": "leave"})
-            update = ana.receive_json()
-            assert update["room"]["status"] == "lobby"
-            assert [p["name"] for p in update["players"]] == ["Ana"]
 
 
 def preflight(client: TestClient, origin: str):

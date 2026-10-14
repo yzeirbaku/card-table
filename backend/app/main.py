@@ -1,6 +1,7 @@
-"""HTTP to create rooms, one WebSocket per player to play. Every action and
-broadcast for a room runs under that room's lock, so all players see changes
-in the same order."""
+"""HTTP to create rooms, one WebSocket per player to play. Every message and
+broadcast for a room runs under that room's lock, so all players see changes in
+the same order. Timed game events (a reveal ending, the pause countdown running
+out) wake the room through its RoomTimer."""
 
 import json
 import os
@@ -12,10 +13,10 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .engine.actions import ActionRejected, apply_action
-from .engine.views import view_for
 from .games import GAMES
+from .murlan.game import Rejected
 from .rooms import JoinRejected, Player, Room, RoomManager
+from .timers import RoomTimer
 
 # Local dev: the frontend is served on :5520 from localhost or a private-network address.
 DEV_ORIGINS = (
@@ -29,8 +30,9 @@ class CreateRoom(BaseModel):
     players: int
 
 
-def create_app(manager: RoomManager | None = None) -> FastAPI:
+def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -> FastAPI:
     rooms = manager or RoomManager()
+    timers: dict[str, RoomTimer] = {}
     app = FastAPI(title="Card Table")
     app.add_middleware(
         CORSMiddleware,
@@ -47,7 +49,7 @@ def create_app(manager: RoomManager | None = None) -> FastAPI:
             "code": room.code,
             "room": room.room_view(),
             "players": room.players_view(),
-            "view": view_for(room.state, player.id),
+            "game": room.game_view(player.id),
         }
         try:
             await player.socket.send_json(message)
@@ -57,9 +59,24 @@ def create_app(manager: RoomManager | None = None) -> FastAPI:
     async def broadcast(room: Room) -> None:
         for p in list(room.players):
             await send_state(room, p)
+        if use_timers:
+            schedule(room)
+
+    def schedule(room: Room) -> None:
+        timer = timers.setdefault(room.code, RoomTimer(rooms.clock))
+        timer.set(room.game.deadline() if room.game else None, lambda: wake(room))
+
+    async def wake(room: Room) -> None:
+        async with room.lock:
+            if room.game is not None:
+                room.game.tick()
+            await broadcast(room)
 
     async def close_expired() -> None:
         for room in rooms.purge_expired():
+            timer = timers.pop(room.code, None)
+            if timer is not None:
+                timer.cancel()
             for p in room.players:
                 if p.socket is not None:
                     with suppress(Exception):
@@ -75,23 +92,29 @@ def create_app(manager: RoomManager | None = None) -> FastAPI:
             await ws.send_json({"type": "error", "message": "Malformed message"})
             return False
         rooms.touch(room)
-        if msg.get("type") == "action":
-            try:
-                apply_action(room.state, player.id, msg.get("action"))
-            except ActionRejected as e:
-                await ws.send_json({"type": "error", "message": str(e)})
-                await send_state(room, player)
-                return False
-            await broadcast(room)
-            return False
-        if msg.get("type") == "leave":
+        kind = msg.get("type")
+        if kind == "leave":
             room.leave(player.id)
             player.socket = None
             with suppress(Exception):
                 await ws.close(1000, "Left the room")
             await broadcast(room)
             return True
-        await ws.send_json({"type": "error", "message": "Unknown message type"})
+        try:
+            if kind == "action":
+                room.act(player.id, msg.get("action"))
+            elif kind == "sit":
+                room.sit(player.id, msg.get("seat"))
+            elif kind == "after_game":
+                room.after_game(player.id, msg.get("choice"))
+            else:
+                await ws.send_json({"type": "error", "message": "Unknown message type"})
+                return False
+        except Rejected as e:
+            await ws.send_json({"type": "error", "message": str(e)})
+            await send_state(room, player)
+            return False
+        await broadcast(room)
         return False
 
     @app.get("/games")
@@ -130,6 +153,7 @@ def create_app(manager: RoomManager | None = None) -> FastAPI:
             if old is not None:
                 with suppress(Exception):
                     await old.close(4000, "Opened on another connection")
+            room.mark_connected(player.id)
             rooms.touch(room)
             await ws.send_json(
                 {"type": "welcome", "player_id": player.id, "token": player.token,
@@ -148,6 +172,7 @@ def create_app(manager: RoomManager | None = None) -> FastAPI:
             if player.socket is ws:
                 player.socket = None
                 async with room.lock:
+                    room.mark_disconnected(player.id)
                     await broadcast(room)
 
     return app

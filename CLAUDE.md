@@ -1,21 +1,26 @@
-# card-table â€” Claude guide
+# card-table — Claude guide
 
 Personal project: card games for friends, one game at a time. Vanilla-JS PWA
 (`frontend/`, no build step) + FastAPI (`backend/`). Specs in
-`docs/superpowers/specs/`; the current one is `2026-10-14-pwa-conversion-design.md`.
-Murlan (the first game) gets its own spec next.
+`docs/superpowers/specs/`: the PWA shell is `2026-10-14-pwa-conversion-design.md`,
+Murlan (the first game) is `2026-10-14-murlan-design.md`.
 
 ## Invariants (don't undo)
 
 - **Server is authoritative; the frontend has no game logic.** It renders
-  whatever `state` the server sends.
-- **Hidden info never leaves the server.** All state goes out through
-  `backend/app/engine/views.py::view_for`. Card ids are re-issued when a card
-  enters a hand or a pile is shuffled/gathered, so ids can't track hidden cards.
-  `tests/test_views.py::test_no_view_ever_leaks_hidden_cards` guards this.
+  whatever `state` the server sends and turns taps into messages.
+- **Hidden info never leaves the server.** All game state goes out through
+  `backend/app/murlan/views.py::view_for`. Cards are codes (`"10H"`, `"JR"`); a
+  code reaches a player only if it's in their hand, on the pile, in a public
+  reveal that is still running, or the cut card shown to the cutter.
+  `tests/test_murlan_views.py::test_no_view_ever_leaks_hidden_cards` guards this.
 - **Single uvicorn worker.** Live rooms are in memory; a restart drops them.
-- Rooms: `lobby` until the last seat fills, then `playing`; leaving drops back
-  to `lobby`. Games and their player ranges live in `backend/app/games.py`.
+- **The Murlan game is pure Python** (`backend/app/murlan/game.py`): injected
+  clock and RNG, no I/O. Timed events (reveals, the 2:00 pause) run off
+  `game.deadline()` / `game.tick()`; `app/timers.py` wakes the room for them.
+- Rooms: players join unseated and tap a seat; the room is `lobby` until every
+  seat is taken, then the game starts (`playing`). Leaving ends the game and
+  drops back to `lobby`. Games and their player ranges live in `backend/app/games.py`.
 - Frontend: no npm dependencies and no bundler. `frontend/package.json` only
   makes Node treat `.js` as ES modules for `node --test`.
 - Names and anything from the server go into the DOM via `textContent`, never

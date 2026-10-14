@@ -1,5 +1,6 @@
-"""Games the server can host. For now only what the lobby needs: a display name
-and the allowed player counts. Each game's rules arrive with its own spec."""
+"""Games the server can host: a display name and the allowed player counts for
+the lobby. Murlan's rules live in app/murlan/ (spec:
+docs/superpowers/specs/2026-10-14-murlan-design.md)."""
 
 from dataclasses import dataclass
 
@@ -12,5 +13,4 @@ class GameInfo:
     max_players: int
 
 
-# Murlan's player range is provisional until its rules are pinned down.
 GAMES: dict[str, GameInfo] = {g.id: g for g in [GameInfo("murlan", "Murlan", 2, 4)]}
