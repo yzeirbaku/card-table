@@ -166,6 +166,29 @@ def test_an_unseated_creator_hands_over_to_whoever_has_been_here_longest():
     assert room.creator_id == ben.id
 
 
+def test_an_unseated_player_who_drops_in_the_lobby_is_removed():
+    room, (ana, ben, cleo) = room_with(3, "Ana", "Ben", "Cleo")
+    room.sit(ana.id, 0)
+    room.mark_disconnected(cleo.id)
+    assert [p.id for p in room.players] == [ana.id, ben.id]
+
+
+def test_a_seated_player_who_drops_in_the_lobby_stays():
+    room, (ana, ben, cleo) = room_with(3, "Ana", "Ben", "Cleo")
+    room.sit(ana.id, 0)
+    ana.socket = None
+    room.mark_disconnected(ana.id)
+    assert ana in room.players and room.seat_of(ana.id) == 0
+    assert room.players_view()[0]["connected"] is False
+
+
+def test_the_creator_hands_over_when_an_unseated_creator_drops():
+    room, (ana, ben, cleo) = room_with(3, "Ana", "Ben", "Cleo")
+    room.sit(cleo.id, 1)
+    room.mark_disconnected(ana.id)
+    assert room.creator_id == ben.id and ana not in room.players  # longest here
+
+
 def test_last_player_leaving_clears_the_creator():
     room, (ana,) = room_with(3, "Ana")
     room.leave(ana.id)

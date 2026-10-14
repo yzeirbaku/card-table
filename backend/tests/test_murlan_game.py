@@ -1,7 +1,8 @@
 import pytest
 
 from app.murlan.cards import DECK
-from app.murlan.game import PAUSE_SECONDS, REVEAL_SECONDS, Game, Rejected
+from app.murlan.game import PAUSE_SECONDS, REVEAL_SECONDS, Game, Rejected, Reveal
+from app.murlan.views import view_for
 from tests.murlan_helpers import (
     FakeClock, Reverse, Rotate, later_round, new_game, rig, swap_ready,
 )
@@ -423,19 +424,54 @@ def test_reveals_expire_on_tick():
     assert g.reveal is None and g.deadline() is None
 
 
-def test_a_second_drop_keeps_the_first_countdown():
+def test_a_second_drop_restarts_the_countdown():
     clock = FakeClock()
     g = new_game(3, clock=clock)
     g.choose_target("p0", 13)
     g.disconnect("p1")
-    first_deadline = g.pause.deadline
     clock.now += 30
     g.disconnect("p2")
-    assert g.pause.deadline == first_deadline
+    assert g.pause.deadline == clock.now + PAUSE_SECONDS
     g.reconnect("p1")
     assert g.pause is not None  # p2 is still away
     g.reconnect("p2")
     assert g.pause is None
+
+
+def test_a_returning_player_does_not_shorten_the_next_droppers_time():
+    clock = FakeClock()
+    g = new_game(3, clock=clock)
+    g.choose_target("p0", 13)
+    g.disconnect("p1")
+    clock.now += 100
+    g.disconnect("p2")
+    g.reconnect("p1")
+    assert g.pause.deadline == clock.now + PAUSE_SECONDS
+    clock.now += PAUSE_SECONDS - 1
+    g.tick()
+    assert g.phase == "playing"
+
+
+def test_a_swap_reveal_waits_for_the_first_cards_reveal():
+    clock = FakeClock()
+    g = later_round(places=["p0", "p1", "p3", "p2"], clock=clock)  # p0 and p2 are partners
+    g.deck = []
+    for p, hand in {"p0": ["9C", "KC"], "p1": ["4D"], "p2": ["JR", "4S"], "p3": ["6D"]}.items():
+        g.hands[p] = hand
+    g.reveal = Reveal("first_cards", {p: "3S" for p in g.seats}, clock.now + REVEAL_SECONDS)
+    g._after_deal()
+    assert g.phase == "playing"
+    assert g.reveal.kind == "first_cards" and g.next_reveal.kind == "swap"
+    assert all(view_for(g, p)["reveal"]["kind"] == "first_cards" for p in g.seats)
+    assert g.deadline() == clock.now + REVEAL_SECONDS
+    clock.now += REVEAL_SECONDS
+    g.tick()
+    assert g.reveal.kind == "swap" and g.next_reveal is None
+    assert g.reveal.cards == {"p2": "JR", "p0": "9C"}
+    assert g.deadline() == clock.now + REVEAL_SECONDS
+    clock.now += REVEAL_SECONDS
+    g.tick()
+    assert g.reveal is None and g.deadline() is None
 
 
 def test_no_pause_once_the_game_is_over():

@@ -3,6 +3,11 @@ import { formatClock, placeLabel, sideName } from './murlan.js';
 
 let countdown = null; // ticks the pause clock between server updates
 
+/** Stop the pause clock when the table goes away. */
+export function stopCountdown() {
+  clearInterval(countdown);
+}
+
 /** The panel over the table for whatever needs attention right now, or nothing. */
 export function renderOverlay(el, game, meId, names, send) {
   clearInterval(countdown);

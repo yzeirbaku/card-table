@@ -6,6 +6,7 @@ import { shouldRotate } from './orientation.js';
 import { closeSheets } from './sheets.js';
 import { createStore } from './storage.js';
 import { initTable, renderTable } from './table-view.js';
+import { stopCountdown } from './table-overlay.js';
 import { setReconnecting, showView, syncTableRotated, toast } from './ui.js';
 
 const store = createStore();
@@ -56,6 +57,7 @@ function enterRoom(code, { resume = false } = {}) {
     onReconnecting: setReconnecting,
     onClosed: (message) => {
       connection = null;
+      stopCountdown();
       setReconnecting(false);
       showView('main');
       toast(message);
@@ -67,6 +69,7 @@ function enterRoom(code, { resume = false } = {}) {
 function leaveRoom() {
   connection?.leave();
   connection = null;
+  stopCountdown();
   setReconnecting(false);
   showView('main');
 }

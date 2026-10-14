@@ -1,7 +1,7 @@
 import { button, div, face, span } from './dom.js';
 import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
-import { renderOverlay, renderReveal } from './table-overlay.js';
+import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
 import { toast } from './ui.js';
 
 const MAX_BACKS = 7; // card backs drawn per opponent; the count shows the real number
@@ -16,6 +16,8 @@ export function initTable({ onLeave, send: sendMessage }) {
   document.getElementById('btn-table-menu').addEventListener('click', () => { menu.hidden = !menu.hidden; });
   document.getElementById('btn-table-leave').addEventListener('click', () => {
     menu.hidden = true;
+    const game = current?.game;
+    if (game && game.phase !== 'game_over' && !confirm('Leave the table? This ends the game for everyone.')) return;
     onLeave();
   });
   document.getElementById('btn-play').addEventListener('click', () => {
@@ -36,7 +38,10 @@ export function initTable({ onLeave, send: sendMessage }) {
 
 export function renderTable(state, meId) {
   const game = state.game;
-  if (!game) return;
+  if (!game) {
+    stopCountdown();
+    return;
+  }
   current = state;
   const byId = Object.fromEntries(state.players.map((p) => [p.id, p]));
   const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name
@@ -75,8 +80,13 @@ function plate(player, game) {
   return el;
 }
 
+function scoreHead(game) {
+  if (!game.target) return 'Murlan';
+  return game.phase === 'game_over' ? `Game over · to ${game.target}` : `Round ${game.round} · to ${game.target}`;
+}
+
 function renderScores(game, names) {
-  const head = span(game.target ? `Round ${game.round} · to ${game.target}` : 'Murlan', 'score-head');
+  const head = span(scoreHead(game), 'score-head');
   const rows = game.sides.map((side) => {
     const row = div('score-row');
     row.append(span(sideName(side, names)), span(String(side.score), 'score'));

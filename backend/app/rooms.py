@@ -131,6 +131,8 @@ class Room:
     def mark_disconnected(self, player_id: str) -> None:
         if self.game is not None:
             self.game.disconnect(player_id)
+        elif self.seat_of(player_id) is None:  # an unseated lobby visitor who left
+            self.leave(player_id)
 
     def _new_game(self) -> None:
         self.game = Game(list(self.seating), self.creator_id, rng=self.rng, clock=self.clock)

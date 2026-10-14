@@ -93,6 +93,7 @@ class Game:
         self.disconnected: list[str] = []
         self.pause: Pause | None = None  # set while someone is disconnected
         self.reveal: Reveal | None = None  # cards everyone may see for a few seconds
+        self.next_reveal: Reveal | None = None  # waits for the running reveal to end
         self._clear_round()
 
     def _clear_round(self) -> None:
@@ -107,6 +108,7 @@ class Game:
         self.places: list[str] = []  # who's out this round, in order
         self.must_include: str | None = None  # the first lead of a game must include this
         self.agree_picks: dict[str, str] = {}
+        self.next_reveal = None
 
     # ---- sides: teams of partners across in 4-player games, else each player ----
 
@@ -235,8 +237,12 @@ class Game:
         if player_id not in self.seats or player_id in self.disconnected:
             return
         self.disconnected.append(player_id)
-        if self.pause is None and self.phase != "game_over":
+        if self.phase == "game_over":
+            return
+        if self.pause is None:
             self.pause = Pause(deadline=self.clock() + PAUSE_SECONDS)
+        elif not self.pause.timed_out:  # every new drop gets a full countdown
+            self.pause.deadline = self.clock() + PAUSE_SECONDS
 
     def reconnect(self, player_id: str) -> None:
         if player_id not in self.disconnected:
@@ -282,13 +288,14 @@ class Game:
     def deadline(self) -> float | None:
         """When tick() next has something to do."""
         times = [self.reveal.until if self.reveal else None,
+                 self.next_reveal.until if self.next_reveal else None,
                  self.pause.deadline if self.pause else None]
         return min((t for t in times if t is not None), default=None)
 
     def tick(self) -> None:
         now = self.clock()
-        if self.reveal and now >= self.reveal.until:
-            self.reveal = None
+        while self.reveal and now >= self.reveal.until:
+            self.reveal, self.next_reveal = self.next_reveal, None
         if self.pause and self.pause.deadline is not None and now >= self.pause.deadline:
             self.pause.deadline = None
             self.pause.timed_out = True
@@ -374,7 +381,12 @@ class Game:
             self.swap_step = "winner"
             return
         if self.teammates(result.winner, result.loser):
-            self.reveal = Reveal("swap", dict(self.swap_given), self.clock() + REVEAL_SECONDS)
+            now = self.clock()
+            if self.reveal and now < self.reveal.until:  # the first cards are still up: wait
+                self.next_reveal = Reveal("swap", dict(self.swap_given),
+                                          self.reveal.until + REVEAL_SECONDS)
+            else:
+                self.reveal = Reveal("swap", dict(self.swap_given), now + REVEAL_SECONDS)
         self._start_play(result.loser)
 
     # ---- rounds ----

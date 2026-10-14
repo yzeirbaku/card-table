@@ -32,7 +32,7 @@ class CreateRoom(BaseModel):
 
 def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -> FastAPI:
     rooms = manager or RoomManager()
-    timers: dict[str, RoomTimer] = {}
+    timers: dict[int, RoomTimer] = {}  # by id(room): a purged room's timer can't be reused
     app = FastAPI(title="Card Table")
     app.add_middleware(
         CORSMiddleware,
@@ -41,9 +41,10 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
         allow_headers=["Content-Type"],
     )
 
-    async def send_state(room: Room, player: Player) -> None:
+    async def send_state(room: Room, player: Player) -> bool:
+        """Send the player their view. False if their socket turned out dead."""
         if player.socket is None:
-            return
+            return True
         message: dict[str, Any] = {
             "type": "state",
             "code": room.code,
@@ -56,15 +57,21 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
         except Exception:  # a dead socket must not break the broadcast
             player.socket = None
             room.mark_disconnected(player.id)
+            return False
+        return True
 
     async def broadcast(room: Room) -> None:
-        for p in list(room.players):
-            await send_state(room, p)
+        # A socket that dies mid-broadcast changes the state (the game pauses), so
+        # the players already sent to get another round with the new state.
+        for _ in range(2):
+            results = [await send_state(room, p) for p in list(room.players)]
+            if all(results):
+                break
         if use_timers:
             schedule(room)
 
     def schedule(room: Room) -> None:
-        timer = timers.setdefault(room.code, RoomTimer(rooms.clock))
+        timer = timers.setdefault(id(room), RoomTimer(rooms.clock))
         timer.set(room.game.deadline() if room.game else None, lambda: wake(room))
 
     async def wake(room: Room) -> None:
@@ -77,7 +84,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
 
     async def close_expired() -> None:
         for room in rooms.purge_expired():
-            timer = timers.pop(room.code, None)
+            timer = timers.pop(id(room), None)
             if timer is not None:
                 timer.cancel()
             for p in room.players:

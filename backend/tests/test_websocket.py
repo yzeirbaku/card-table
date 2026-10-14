@@ -259,6 +259,7 @@ def test_a_socket_that_dies_during_a_broadcast_pauses_the_game():
         victim = next(p for p in room.players if p.id == other_id)
         victim.socket = Dead()
         act(lead, type="play", cards=[lead_state["game"]["must_include"]])
-        state(lead)
+        state(lead)  # the first pass, before the dead socket was found
+        assert state(lead)["game"]["pause"] is not None  # the re-run: already paused
         assert victim.socket is None
         assert room.game.disconnected == [other_id] and room.game.pause is not None
