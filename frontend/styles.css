@@ -17,15 +17,16 @@ input { font: inherit; }
 .card-face img { display: block; width: 100%; height: 100%; border-radius: 6% / 4.2%; box-shadow: 0 4px 12px rgba(0,0,0,.45); }
 
 /* ---------- main ---------- */
-#view-main { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: max(44px, env(safe-area-inset-top)) 26px 30px; }
-.title { font-family: Georgia, serif; font-size: 30px; font-weight: 700; color: #f0c75e; }
+/* safe center: centred when it fits, scrolls from the top when it doesn't */
+#view-main { display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 24px; padding: max(44px, env(safe-area-inset-top)) 26px 30px; }
+.title { font-family: Georgia, serif; font-size: 32px; font-weight: 700; color: #f0c75e; }
 .name-field { width: 100%; max-width: 340px; }
-.name-field input { width: 100%; padding: 11px 13px; border-radius: 10px; font-size: 16px; background: rgba(0,0,0,.3); color: #f3e6c4; border: 1px solid rgba(243,230,196,.35); }
-.menu-cards { display: grid; grid-template-columns: auto auto; justify-content: center; gap: 18px 34px; }
-.menu-card { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.menu-card .card-face { width: 96px; transition: translate .15s; }
+.name-field input { width: 100%; padding: 12px 14px; border-radius: 10px; font-size: 16px; background: rgba(0,0,0,.3); color: #f3e6c4; border: 1px solid rgba(243,230,196,.35); }
+.menu-cards { display: grid; grid-template-columns: auto auto; justify-content: center; gap: 20px 38px; }
+.menu-card { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.menu-card .card-face { width: 104px; transition: translate .15s; }
 .menu-card:active .card-face { translate: 0 -4px; }
-.menu-card .tag { font-family: Georgia, serif; font-size: 15px; font-weight: 700; color: #f0c75e; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.menu-card .tag { font-family: Georgia, serif; font-size: 16px; font-weight: 700; color: #f0c75e; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .tilt-left .card-face { rotate: -7deg; }
 .tilt-right .card-face { rotate: 6deg; }
 .tilt-slight .card-face { rotate: -2deg; }
@@ -56,18 +57,45 @@ input { font: inherit; }
 .segmented button.on { background: #1a1a1a; color: #f6eedd; border-color: #1a1a1a; }
 
 /* ---------- lobby ---------- */
-#view-lobby { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: max(44px, env(safe-area-inset-top)) 26px 30px; text-align: center; }
-.lobby-game { font-family: Georgia, serif; font-size: 22px; color: #f0c75e; }
+#view-lobby { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: max(60px, env(safe-area-inset-top)) 26px max(30px, env(safe-area-inset-bottom)); text-align: center; }
+.lobby-game { font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: #f0c75e; }
 .lobby-code-row { display: flex; align-items: center; gap: 12px; }
-.lobby-code { font-family: Georgia, serif; font-size: 52px; font-weight: 700; letter-spacing: 8px; user-select: all; -webkit-user-select: all; }
-.lobby-hint { max-width: 280px; font-size: 13px; opacity: .8; }
-.lobby-count { font-weight: 700; }
-.lobby-seats { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 320px; list-style: none; }
-.lobby-seats li { padding: 11px 14px; border-radius: 10px; background: rgba(0,0,0,.3); text-align: left; }
-.lobby-seats li.taken::after { content: " ✓"; color: #7fd18b; }
+.lobby-code { font-family: Georgia, serif; font-size: 60px; font-weight: 700; letter-spacing: .14em; color: #fffdf7; user-select: all; -webkit-user-select: all; }
+.lobby-hint { max-width: 290px; font-size: 14px; opacity: .75; }
+.lobby-count { margin-top: 18px; font-weight: 700; }
+.lobby-seats { display: grid; gap: 10px; width: 100%; max-width: 340px; list-style: none; }
+.lobby-seats li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: rgba(0,0,0,.3); text-align: left; font-weight: 600; }
+.lobby-seats .avatar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #f0c75e; color: #3a2a08; font-family: Georgia, serif; font-size: 17px; font-weight: 700; }
+.lobby-seats li.taken::after { content: "✓"; margin-left: auto; color: #7fd18b; font-weight: 700; }
 .lobby-seats li.offline { opacity: .55; }
-.lobby-seats li.open { background: none; border: 1px dashed rgba(243,230,196,.4); font-style: italic; opacity: .6; }
-#view-lobby .btn { max-width: 320px; margin-top: auto; }
+.lobby-seats li.open { background: none; border: 1.5px dashed rgba(243,230,196,.4); font-style: italic; font-weight: 400; opacity: .65; }
+.lobby-seats li.open .avatar { background: none; border: 1.5px dashed rgba(243,230,196,.5); }
+#view-lobby .btn { max-width: 340px; margin-top: auto; }
+
+/* ---------- desktop: same layout, sized for a big screen ---------- */
+@media (min-width: 900px) and (min-height: 600px) {
+  #view-main { gap: 40px; }
+  .title { font-size: 76px; }
+  .name-field { max-width: 440px; }
+  .name-field input { padding: 15px 18px; font-size: 20px; border-radius: 12px; }
+  .menu-cards { grid-template-columns: repeat(3, auto); gap: 56px; margin-top: 10px; }
+  #btn-settings { grid-column: auto; }
+  .menu-card { gap: 16px; }
+  .menu-card .card-face { width: 180px; }
+  .menu-card .tag { font-size: 25px; }
+
+  #view-lobby { justify-content: safe center; gap: 14px; }
+  .lobby-game { font-size: 40px; }
+  .lobby-code-row { gap: 22px; margin-top: 8px; }
+  .lobby-code { font-size: 120px; line-height: 1.1; }
+  #btn-copy { padding: 12px 22px; font-size: 20px; border-radius: 10px; }
+  .lobby-hint { max-width: none; font-size: 18px; }
+  .lobby-count { margin-top: 30px; font-size: 20px; }
+  .lobby-seats { grid-template-columns: 1fr 1fr; gap: 14px; max-width: 720px; }
+  .lobby-seats li { padding: 18px 22px; font-size: 20px; }
+  .lobby-seats .avatar { width: 48px; height: 48px; font-size: 22px; }
+  #view-lobby .btn { max-width: 240px; margin-top: 42px; padding: 15px; font-size: 18px; }
+}
 
 /* ---------- table ---------- */
 #view-table { overflow: hidden; background: #000; }

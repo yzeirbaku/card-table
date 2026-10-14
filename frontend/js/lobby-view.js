@@ -27,13 +27,18 @@ export function renderLobby(state, meId, gameName) {
   for (let i = 0; i < seats; i++) {
     const player = state.players[i];
     const row = document.createElement('li');
+    const avatar = document.createElement('span');
+    avatar.className = 'avatar';
+    const name = document.createElement('span');
     if (player) {
-      row.textContent = player.id === meId ? `${player.name} (you)` : player.name;
+      avatar.textContent = player.name.charAt(0).toUpperCase();
+      name.textContent = player.id === meId ? `${player.name} (you)` : player.name;
       row.className = player.connected ? 'taken' : 'taken offline';
     } else {
-      row.textContent = 'waiting…';
+      name.textContent = 'waiting…';
       row.className = 'open';
     }
+    row.append(avatar, name);
     rows.push(row);
   }
   document.querySelector('.lobby-seats').replaceChildren(...rows);
