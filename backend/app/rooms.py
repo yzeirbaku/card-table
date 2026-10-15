@@ -1,8 +1,14 @@
 """Live rooms: join codes, seats, the creator, reconnect tokens, idle expiry and,
 once every seat is taken, the Murlan game. In memory only - the backend must
-run as a single worker."""
+run as a single worker.
+
+A computer table (`computer=True`) has its computer players seated from the
+start and one seat left for the person who joins; the game starts as they do.
+The computer players move on their own: after every change `update_bots` says
+when the next one is due, and `run_bot` makes that move once its time comes."""
 
 import asyncio
+import logging
 import random
 import secrets
 import time
@@ -10,14 +16,23 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from .murlan.bot import Bot
+from .murlan.combos import classify
 from .murlan.game import Game, Rejected
+from .murlan.moves import legal_plays
 from .murlan.protocol import apply_action
 from .murlan.views import view_for
+
+log = logging.getLogger(__name__)
 
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: easy to read aloud
 CODE_LENGTH = 4
 MAX_NAME_LENGTH = 20
 IDLE_EXPIRY_SECONDS = 2 * 60 * 60
+# A computer player takes its time, so you see each move happen: it waits out the deal animation
+# and the end-of-round spotlight (see deal.js, spotlight.js), and any public reveal.
+DEAL_SECONDS = 3.0
+ROUND_END_SECONDS = 6.0
 
 RoomStatus = Literal["lobby", "playing"]
 
@@ -36,6 +51,7 @@ class Player:
     token: str  # secret; lets the same phone reclaim this player after a drop
     socket: Any = None  # the live WebSocket, or None while disconnected
     reacted_at: float = float("-inf")  # their last reaction, to keep a fast tapper from flooding the table
+    computer: bool = False  # a computer player: always here, never has a socket
 
 
 @dataclass
@@ -52,10 +68,22 @@ class Room:
     game: Game | None = None  # exists from the moment every seat is taken
     ended_by: str | None = None  # the name of whoever left and so ended the last game (until the next starts)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    computer: bool = False  # you against computer players
+    bots: dict[str, Bot] = field(default_factory=dict)  # the computer players' minds, by player id
+    bot_due: tuple[str, float, tuple] | None = None  # (who, when, the state they're answering): the next computer move
+    _quiet_until: float = float("-inf")  # no computer moves before this (the deal, the round's end)
+    _bots_saw: tuple[int, str] | None = None  # rounds played and phase at the last update
 
     def __post_init__(self) -> None:
         if not self.seating:
             self.seating = [None] * self.seats
+        if self.computer:  # seats 1… are theirs; seat 0 waits for you
+            for seat in range(1, self.seats):
+                name = "Computer" if self.seats == 2 else f"Computer {seat}"
+                bot = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16), computer=True)
+                self.players.append(bot)
+                self.seating[seat] = bot.id
+                self.bots[bot.id] = Bot(bot.id, random.Random(self.rng.random()))
 
     @property
     def status(self) -> RoomStatus:
@@ -69,7 +97,7 @@ class Room:
         name = name.strip()
         if not 1 <= len(name) <= MAX_NAME_LENGTH:
             raise JoinRejected(4400, f"Name must be 1-{MAX_NAME_LENGTH} characters")
-        if self.game is not None:
+        if self.game is not None or (self.computer and any(not p.computer for p in self.players)):
             raise JoinRejected(4409, "This table is full")
         if len(self.players) >= self.seats:
             # Make room by dropping whoever has been offline and unseated the longest.
@@ -82,6 +110,8 @@ class Room:
         self.players.append(player)
         if self.creator_id is None:
             self.creator_id = player.id
+        if self.computer:  # straight to the free seat: the game starts
+            self.sit(player.id, self.seating.index(None))
         return player
 
     def seat_of(self, player_id: str) -> int | None:
@@ -108,8 +138,9 @@ class Room:
         self.players = [p for p in self.players if p.id != player_id]
         self._unseat(player_id)
         self.game = None  # a game can't go on with an empty seat
-        if self.creator_id == player_id:
-            self.creator_id = self._next_creator(seat)
+        self.bot_due = None
+        if self.creator_id == player_id:  # a computer never takes over: the next person to join does
+            self.creator_id = None if self.computer else self._next_creator(seat)
 
     def act(self, player_id: str, action: object) -> None:
         if self.game is None:
@@ -130,6 +161,8 @@ class Room:
             self._reshuffle_partners()
             self._new_game()
         elif choice == "lobby":
+            if self.computer:
+                raise Rejected("A table against the computer has no lobby: leave instead")
             self.seating = [None] * self.seats
             self.game = None
         else:
@@ -145,10 +178,83 @@ class Room:
 
     def _new_game(self) -> None:
         self.ended_by = None
-        self.game =Game(list(self.seating), self.creator_id, rng=self.rng, clock=self.clock)
+        self.bot_due = None
+        self._bots_saw = None
+        # Against the computer nobody else is waiting on you: if you drop, the game just waits.
+        self.game = Game(list(self.seating), self.creator_id, rng=self.rng, clock=self.clock,
+                         no_countdown=self.computer)
         for p in self.players:
-            if p.socket is None:
+            if p.socket is None and not p.computer:
                 self.game.disconnect(p.id)
+
+    # ---- computer players ----
+
+    def update_bots(self) -> float | None:
+        """After any change: the computer players take in the new state. Returns when the
+        next computer move is due, or None if none is."""
+        game = self.game
+        if game is None or not self.bots:
+            self.bot_due = None
+            return None
+        now = self.clock()
+        saw, self._bots_saw = self._bots_saw, (game.rounds_played, game.phase)
+        if saw is not None and saw[0] != game.rounds_played:  # a round just ended: its spotlight runs
+            self._quiet_until = max(self._quiet_until, now + ROUND_END_SECONDS)
+        dealing = ("swapping", "playing")
+        if game.phase in dealing and (saw is None or saw[1] not in dealing):  # the cards are flying out
+            self._quiet_until = max(self._quiet_until, now + DEAL_SECONDS)
+        views = {b: view_for(game, b) for b in self.bots}
+        for b, bot in self.bots.items():
+            bot.observe(views[b])
+        mover = next((b for b, bot in self.bots.items() if bot.needs_to_act(views[b])), None)
+        if mover is None:
+            self.bot_due = None
+            return None
+        state = _moment(game)
+        if self.bot_due and self.bot_due[0] == mover and self.bot_due[2] == state:
+            return self.bot_due[1]  # already thinking about it
+        reveals = [r.until for r in (game.reveal, game.next_reveal) if r]  # a queued reveal too (both jokers after first cards)
+        start = max(now, self._quiet_until, *reveals)
+        self.bot_due = (mover, start + self._think_time(game), state)
+        return self.bot_due[1]
+
+    def run_bot(self) -> bool:
+        """Make the due computer move if its time has come. True if one was made."""
+        due = self.bot_due
+        if due is None or self.game is None or self.clock() < due[1] or due[2] != _moment(self.game):
+            return False
+        self.bot_due = None
+        bot_id = due[0]
+        try:
+            action = self.bots[bot_id].act(view_for(self.game, bot_id))
+            if action is None:
+                return False
+            self.act(bot_id, action)
+        except Exception:  # shouldn't happen; never leave the table stuck on a computer's turn
+            log.exception("computer move by %s failed", bot_id)
+            fallback = self._fallback(bot_id)
+            if fallback is None:
+                return False
+            try:
+                self.act(bot_id, fallback)
+            except Rejected:
+                log.exception("computer fallback move by %s refused", bot_id)
+                return False
+        return True
+
+    def _fallback(self, bot_id: str) -> dict[str, Any] | None:
+        game = self.game
+        if game.phase != "playing" or game.turn != bot_id:
+            return None
+        if game.top is not None:
+            return {"type": "pass"}
+        plays = legal_plays(game.hands[bot_id], None, game.must_include)
+        return {"type": "play", "cards": min(plays, key=lambda c: classify(c).rank)}
+
+    def _think_time(self, game: Game) -> float:
+        if game.phase == "playing":
+            return self.rng.uniform(1.2, 2.2) + (0.8 if game.trick_won else 0.0)  # a won trick: a look first
+        return {"cutting": 1.4, "swapping": 1.6}.get(game.phase, 1.5)
 
     def _reshuffle_partners(self) -> None:
         """Reseat four players so everyone gets a new partner (seats 0+2 and 1+3 pair up)."""
@@ -175,16 +281,18 @@ class Room:
         return self.players[0].id if self.players else None
 
     def room_view(self) -> dict[str, Any]:
-        return {"game": self.game_id, "seats": self.seats, "status": self.status, "ended_by": self.ended_by}
+        return {"game": self.game_id, "seats": self.seats, "status": self.status, "ended_by": self.ended_by,
+                "computer": self.computer}
 
     def players_view(self) -> list[dict[str, Any]]:
         return [
             {
                 "id": p.id,
                 "name": p.name,
-                "connected": p.socket is not None,
+                "connected": p.computer or p.socket is not None,
                 "seat": self.seat_of(p.id),
                 "is_creator": p.id == self.creator_id,
+                "computer": p.computer,
             }
             for p in self.players
         ]
@@ -198,13 +306,13 @@ class RoomManager:
         self.clock = clock
         self.rooms: dict[str, Room] = {}
 
-    def create(self, game_id: str, seats: int) -> Room:
+    def create(self, game_id: str, seats: int, computer: bool = False) -> Room:
         while True:
             code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
             if code not in self.rooms:
                 break
         room = Room(code=code, last_activity=self.clock(), game_id=game_id, seats=seats,
-                    clock=self.clock)
+                    clock=self.clock, computer=computer)
         self.rooms[code] = room
         return room
 
@@ -220,3 +328,9 @@ class RoomManager:
         for r in expired:
             del self.rooms[r.code]
         return expired
+
+
+def _moment(game: Game) -> tuple:
+    """What a computer move answers: if any of this changes before it's made, it's thought out again."""
+    return (game.phase, game.turn, game.rounds_played, len(game.trick), game.trick_won, game.swap_step,
+            game.cut_index, tuple(sorted(game.agree_picks.items())), tuple(game.thrown), game.pause is None)

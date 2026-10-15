@@ -81,8 +81,8 @@ def test_create_and_join(client):
         welcome, s = join(ws)
         assert welcome["code"] == code
         assert s["players"] == [{"id": welcome["player_id"], "name": "Ana", "connected": True,
-                                 "seat": None, "is_creator": True}]
-        assert s["room"] == {"game": "murlan", "seats": 2, "status": "lobby", "ended_by": None}
+                                 "seat": None, "is_creator": True, "computer": False}]
+        assert s["room"] == {"game": "murlan", "seats": 2, "status": "lobby", "ended_by": None, "computer": False}
         assert s["game"] is None
 
 
@@ -184,7 +184,7 @@ def test_leave_while_playing_returns_everyone_to_the_lobby(client):
         update = state(ana)
         assert update["room"]["status"] == "lobby" and update["game"] is None
         assert update["players"] == [{"id": a["player_id"], "name": "Ana", "connected": True,
-                                      "seat": 0, "is_creator": True}]
+                                      "seat": 0, "is_creator": True, "computer": False}]
 
 
 def test_pause_times_out_without_any_message(monkeypatch):
@@ -400,3 +400,28 @@ def test_reactions_faster_than_one_a_second_are_dropped(client, clock):
         send(ana, type="react", reaction="asleep")
         assert ana.receive_json()["reaction"] == "asleep"
         assert [ben.receive_json()["reaction"] for _ in range(2)] == ["shocked", "asleep"]
+
+
+def test_a_table_against_the_computer_starts_on_join_and_the_computer_moves_by_itself(monkeypatch):
+    monkeypatch.setattr("app.rooms.DEAL_SECONDS", 0.05)
+    monkeypatch.setattr("app.rooms.Room._think_time", lambda self, game: 0.05)
+    # `with TestClient(...)`: one event loop for every socket, so the room's timer can run.
+    with TestClient(create_app(RoomManager())) as client:
+        res = client.post("/rooms", json={"game": "murlan", "players": 2, "computer": True})
+        code = res.json()["code"]
+        with connect(client, code, "Ana") as ana:
+            welcome, s = join(ana)
+            me = welcome["player_id"]
+            assert s["room"]["computer"] is True and s["room"]["status"] == "playing"
+            assert [p["name"] for p in s["players"] if p["computer"]] == ["Computer"]
+            act(ana, type="choose_target", target=5)
+            s = state(ana)
+            game = s["game"]
+            if game["turn"] == me:  # you lead: the card that must go down
+                act(ana, type="play", cards=[game["must_include"]])
+                s = state(ana)
+            for _ in range(5):  # nobody else sends anything: the computer's move arrives on its own
+                if s["game"]["turn"] == me:
+                    break
+                s = state(ana)
+            assert s["game"]["turn"] == me and s["game"]["pile"]

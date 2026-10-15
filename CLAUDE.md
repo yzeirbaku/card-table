@@ -24,6 +24,12 @@ Murlan (the first game) is `2026-10-14-murlan-design.md`.
 - Rooms: players join unseated and tap a seat; the room is `lobby` until every
   seat is taken, then the game starts (`playing`). Leaving ends the game and
   drops back to `lobby`. Games and their player ranges live in `backend/app/games.py`.
+- **Computer players play fair.** A computer table (`computer=True`, spec
+  `2026-10-15-vs-computer-design.md`) seats them from the start. The bot
+  (`backend/app/murlan/bot.py`) decides only from `view_for(game, its id)` plus
+  its memory of earlier views; it never reads the `Game`. Its moves go through
+  `apply_action` like anyone's, timed by `Room.update_bots` / `run_bot`.
+  Strength is checked by self-play (`tests/murlan_selfplay.py`).
 - Frontend: no npm dependencies and no bundler. `frontend/package.json` only
   makes Node treat `.js` as ES modules for `node --test`.
 - Names and anything from the server go into the DOM via `textContent`, never

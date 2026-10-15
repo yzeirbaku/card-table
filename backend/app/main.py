@@ -1,9 +1,10 @@
 """HTTP to create rooms, one WebSocket per player to play. Every message and
 broadcast for a room runs under that room's lock, so all players see changes in
 the same order. Timed game events (a reveal ending, the pause countdown running
-out) wake the room through its RoomTimer."""
+out, a computer player's move coming due) wake the room through its RoomTimer."""
 
 import json
+import logging
 import os
 from contextlib import suppress
 from dataclasses import asdict
@@ -18,6 +19,8 @@ from .murlan.game import Rejected
 from .rooms import JoinRejected, Player, Room, RoomManager
 from .timers import RoomTimer
 
+log = logging.getLogger(__name__)
+
 REACTIONS = frozenset({"shocked", "laughing", "angry", "asleep"})
 REACTION_GAP_SECONDS = 1.0  # a player's reactions closer together than this are dropped
 
@@ -31,6 +34,7 @@ DEV_ORIGINS = (
 class CreateRoom(BaseModel):
     game: str
     players: int
+    computer: bool = False  # you against computer players: they fill every seat but yours
 
 
 def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -> FastAPI:
@@ -66,6 +70,11 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
         return True
 
     async def broadcast(room: Room) -> None:
+        try:
+            room.update_bots()  # they see every change, as the people at the table do
+        except Exception:  # a computer player's bug must not take the table down with it
+            log.exception("computer players failed to take in room %s", room.code)
+            room.bot_due = None
         # A socket that dies mid-broadcast changes the state (the game pauses), so
         # the players already sent to get another round with the new state.
         for _ in range(len(room.players) + 1):
@@ -79,7 +88,8 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
         if rooms.get(room.code) is not room:  # purged: no timers for it
             return
         timer = timers.setdefault(id(room), RoomTimer(rooms.clock))
-        timer.set(room.game.deadline() if room.game else None, lambda: wake(room))
+        times = [room.game.deadline() if room.game else None, room.bot_due[1] if room.bot_due else None]
+        timer.set(min((t for t in times if t is not None), default=None), lambda: wake(room))
 
     async def wake(room: Room) -> None:
         async with room.lock:
@@ -87,6 +97,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
                 return
             if room.game is not None:
                 room.game.tick()
+                room.run_bot()
             await broadcast(room)
 
     async def react(room: Room, player: Player, ws: WebSocket, reaction: Any) -> None:
@@ -176,7 +187,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
             raise HTTPException(
                 400, f"{game.name} is for {game.min_players}-{game.max_players} players"
             )
-        return {"code": rooms.create(game.id, body.players).code}
+        return {"code": rooms.create(game.id, body.players, computer=body.computer).code}
 
     @app.websocket("/rooms/{code}/ws")
     async def room_socket(
@@ -208,7 +219,10 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
             except Exception:  # same cleanup as a disconnect
                 if player.socket is ws:
                     player.socket = None
-                    room.mark_disconnected(player.id)
+                    if room.computer:  # they never got their token: free the table for their next try
+                        room.leave(player.id)
+                    else:
+                        room.mark_disconnected(player.id)
                     await broadcast(room)
                 with suppress(Exception):
                     await ws.close()

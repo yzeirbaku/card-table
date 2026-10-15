@@ -79,6 +79,7 @@ class Game:
         *,
         rng: random.Random | None = None,
         clock: Callable[[], float] = time.monotonic,
+        no_countdown: bool = False,  # wait for a dropped player for as long as it takes
     ) -> None:
         if len(seats) not in PLACE_POINTS:
             raise ValueError("Murlan is for 2 to 4 players")
@@ -88,6 +89,7 @@ class Game:
         self.creator = creator
         self.rng = rng or random.SystemRandom()
         self.clock = clock
+        self.no_countdown = no_countdown
         self.phase: Phase = "choosing_target"
         self.target: int | None = None
         self.scores = [0] * self.side_count
@@ -264,10 +266,11 @@ class Game:
         self.disconnected.append(player_id)
         if self.phase == "game_over":
             return
+        deadline = None if self.no_countdown else self.clock() + PAUSE_SECONDS
         if self.pause is None:
-            self.pause = Pause(deadline=self.clock() + PAUSE_SECONDS)
+            self.pause = Pause(deadline=deadline, keep_waiting=deadline is None)
         elif not self.pause.timed_out:  # every new drop gets a full countdown
-            self.pause.deadline = self.clock() + PAUSE_SECONDS
+            self.pause.deadline = deadline
 
     def reconnect(self, player_id: str) -> None:
         if player_id not in self.disconnected:

@@ -52,6 +52,11 @@ input { font: inherit; }
 .choice-row { display: flex; gap: 10px; }
 .choice-list button, .choice-row button { padding: 14px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-size: 16px; font-weight: 700; }
 .choice-row button { flex: 1; font-size: 20px; }
+.sheet-step { display: flex; flex-direction: column; gap: 12px; }
+/* Friends / Computer on the New table sheet */
+.seg { display: flex; padding: 3px; border-radius: 12px; background: #efe7d3; }
+.seg button { flex: 1; padding: 9px; border: none; border-radius: 9px; background: none; color: #6b5f4a; font-size: 15px; font-weight: 700; }
+.seg button.on { background: #fffdf7; color: #1a1a1a; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
 .join-form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .join-form .btn { flex-basis: 100%; }
 .code-input { flex: 1; min-width: 0; padding: 12px; border-radius: 10px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-size: 24px; font-weight: 700; letter-spacing: 6px; text-align: center; text-transform: uppercase; }

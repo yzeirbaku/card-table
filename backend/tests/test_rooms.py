@@ -306,10 +306,10 @@ def test_room_and_player_views():
     room, (ana, ben) = room_with(3, "Ana", "Ben")
     room.sit(ben.id, 2)
     ana.socket = None
-    assert room.room_view() == {"game": "murlan", "seats": 3, "status": "lobby", "ended_by": None}
+    assert room.room_view() == {"game": "murlan", "seats": 3, "status": "lobby", "ended_by": None, "computer": False}
     assert room.players_view() == [
-        {"id": ana.id, "name": "Ana", "connected": False, "seat": None, "is_creator": True},
-        {"id": ben.id, "name": "Ben", "connected": True, "seat": 2, "is_creator": False},
+        {"id": ana.id, "name": "Ana", "connected": False, "seat": None, "is_creator": True, "computer": False},
+        {"id": ben.id, "name": "Ben", "connected": True, "seat": 2, "is_creator": False, "computer": False},
     ]
     assert room.game_view(ana.id) is None
     started, (first, _) = full_room(2)

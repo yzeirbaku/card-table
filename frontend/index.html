@@ -90,7 +90,7 @@
         <div class="confirm" id="leave-confirm" role="dialog" aria-modal="true" aria-labelledby="leave-title" hidden>
           <div class="confirm-box">
             <h2 id="leave-title">Leave the table?</h2>
-            <p>This ends the game for everyone.</p>
+            <p id="leave-text">This ends the game for everyone.</p>
             <div class="overlay-buttons">
               <button id="btn-leave-stay" type="button">Stay</button>
               <button id="btn-leave-go" class="danger" type="button">Leave</button>
@@ -134,7 +134,12 @@
     <h2 class="sheet-title">Pick a game</h2>
     <div class="sheet-step" data-step="game"><div class="choice-list" id="game-list"></div></div>
     <div class="sheet-step" data-step="players" hidden>
+      <div class="seg" id="player-mode" role="group" aria-label="Who you play with">
+        <button type="button" data-mode="friends">Friends</button>
+        <button type="button" data-mode="computer">Computer</button>
+      </div>
       <div class="choice-row" id="player-counts" role="group" aria-label="Number of players"></div>
+      <p class="sheet-sub" id="player-note" hidden>You count as one of them: 3 is you and 2 computer players.</p>
     </div>
   </section>
 

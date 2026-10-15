@@ -14,11 +14,11 @@ async function request(path, options) {
 
 export const fetchGames = () => request('/games');
 
-export async function createRoom(game, players) {
+export async function createRoom(game, players, computer = false) {
   const { code } = await request('/rooms', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ game, players }),
+    body: JSON.stringify({ game, players, computer }),
   });
   return code;
 }
