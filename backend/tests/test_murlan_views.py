@@ -216,6 +216,7 @@ def test_the_last_round_keeps_its_final_trick_so_everyone_sees_how_it_ended():
     final = [{"player_id": "p0", "cards": ["3C"]}, {"player_id": "p1", "cards": ["4S"]},
              {"player_id": "p0", "cards": ["9H"]}]
     assert all(view_for(g, p)["last_round"]["pile"] == final for p in g.seats)
+    assert view_for(g, "p1")["last_round"]["out"] == 1  # only p0 went out; p1 still held cards
 
 
 def test_a_won_trick_stays_on_show_until_the_next_lead():

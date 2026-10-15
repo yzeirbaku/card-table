@@ -74,7 +74,7 @@ input { font: inherit; }
 .lobby-hint { max-width: 290px; font-size: 14px; opacity: .75; }
 .lobby-count { margin-top: 18px; font-weight: 700; }
 .lobby-seats { display: grid; gap: 10px; width: 100%; max-width: 340px; list-style: none; }
-.lobby-seats li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: rgba(0,0,0,.3); text-align: left; font-weight: 600; }
+.lobby-seats li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1.5px solid transparent; border-radius: 14px; background: rgba(0,0,0,.3); text-align: left; font-weight: 600; } /* same border as an open seat: taking one doesn't shrink it */
 .lobby-seats .avatar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #f0c75e; color: #3a2a08; font-family: Georgia, serif; font-size: 17px; font-weight: 700; }
 .lobby-seats li.taken::after { content: "✓"; margin-left: auto; color: #7fd18b; font-weight: 700; }
 .lobby-seats li.offline { opacity: .55; }
@@ -86,7 +86,7 @@ input { font: inherit; }
 .lobby-seats li.open { cursor: pointer; }
 .lobby-seats li.open:hover, .lobby-seats li.open:active { background: rgba(0,0,0,.18); border-color: rgba(243,230,196,.7); }
 .lobby-seats li.me { box-shadow: 0 0 0 2px #f0c75e; }
-.lobby-unseated { font-size: 14px; opacity: .75; }
+.lobby-unseated { min-height: 1.4em; font-size: 14px; line-height: 1.4; opacity: .75; } /* keeps its line when empty, so nothing moves */
 #view-lobby .btn { max-width: 340px; margin-top: auto; }
 
 /* ---------- desktop: same layout, sized for a big screen ---------- */

@@ -202,6 +202,7 @@ def test_four_players_one_team_first_and_second_then_the_others_agree_on_last():
     g.pick_loser("p3", "p3")
     assert g.scores == [5, 1]
     assert g.last_result.places == ["p0", "p2", "p1", "p3"]
+    assert g.last_result.out == 2  # 3rd and 4th were agreed, not played out
     assert g.phase == "cutting"
 
 

@@ -186,20 +186,23 @@ export function renderTable(state, meId) {
   const newPasses = lastPlay === undefined ? [] : game.passed.filter((id, i) => !lastPassed.includes(passes[i]));
   lastPassed = passes;
   const seatEls = new Map(); // player id -> their seat, where their plays come from
+  const final = finalPile(); // the round just ended: its last cards (and who went out) stay a while
+  // While they do, the medals of those who went out stay too, until the next round is dealt.
+  const dealing = ['swapping', 'playing'].includes(game.phase);
+  const seen = final && !dealing ? { ...game, places: game.last_round.places.slice(0, game.last_round.out) } : game;
   document.querySelector('.seats').replaceChildren(...seatPositions(seated, meId).map(({ player, position }) => {
-    const el = seat(player, position, game, newPasses);
+    const el = seat(player, position, seen, newPasses);
     seatEls.set(player.id, el);
     return el;
   }));
   seatEls.set(meId, document.querySelector('.hand')); // yours come from your hand
   const me = byId[meId];
-  document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me, game)] : []));
+  document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me, seen)] : []));
   document.querySelector('.my-row').classList.toggle('spot-winner', crowned(meId));
   if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(passStamp(newPasses.includes(meId)));
   renderScores(game, names);
   const dealt = hadEmptyHand === true && game.hand.length > 0; // seen empty, now full: a new deal
   hadEmptyHand = game.hand.length === 0;
-  const final = finalPile(); // the round just ended: its last cards stay on the pile a while
   renderPile(final ? { ...game, pile: final, pile_won: false, round: game.round - 1 } : game, names, seatEls); // its own round: no second landing
   renderHand(game);
   renderActions(game, meId);

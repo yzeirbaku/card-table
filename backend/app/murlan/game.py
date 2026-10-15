@@ -42,6 +42,7 @@ class RoundResult:
     places: list[str]  # player ids, 1st place first; the last one is the loser
     points: list[int]  # what each side scored this round
     pile: list[tuple[str, list[str]]] = field(default_factory=list)  # the last trick, as it lay when the round ended
+    out: int = 0  # how many of `places` really went out (the rest still held cards)
 
     @property
     def winner(self) -> str:
@@ -472,7 +473,7 @@ class Game:
         self.scores = [s + p for s, p in zip(self.scores, points)]
         self.rounds_played += 1
         pile = [(p, list(cards)) for p, cards, _ in self.trick]  # still on show while the round's end sinks in
-        self.last_result = RoundResult(order, points, pile)
+        self.last_result = RoundResult(order, points, pile, out=len(self.places))
         best = max(self.scores)
         if best >= self.target and self.scores.count(best) == 1:
             self._clear_round()

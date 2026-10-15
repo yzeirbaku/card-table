@@ -39,6 +39,7 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
     if game.last_result:
         view["last_round"] = {"places": list(game.last_result.places),
                               "points": list(game.last_result.points),
+                              "out": game.last_result.out,
                               # the round's last trick: it was face up on the pile
                               "pile": [{"player_id": p, "cards": list(cards)}
                                        for p, cards in game.last_result.pile]}
