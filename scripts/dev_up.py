@@ -50,9 +50,12 @@ def lan_ip() -> str | None:
         s.close()
 
 
-def start(cmd: list[str], cwd: Path, log_name: str) -> int:
+def start(cmd: list[str], cwd: Path, log_name: str, own_group: bool = False) -> int:
     log = (DEV_STATE_DIR / log_name).open("w")
-    return subprocess.Popen(cmd, cwd=cwd, stdout=log, stderr=subprocess.STDOUT).pid
+    # own_group (Windows): its own process group ignores the Ctrl+C that uvicorn's reloader
+    # sends the whole console on every reload, which would otherwise stop it too.
+    flags = subprocess.CREATE_NEW_PROCESS_GROUP if own_group and sys.platform == "win32" else 0
+    return subprocess.Popen(cmd, cwd=cwd, stdout=log, stderr=subprocess.STDOUT, creationflags=flags).pid
 
 
 def wait_for(url: str, what: str) -> None:
@@ -81,6 +84,7 @@ def main() -> int:
         [sys.executable, str(REPO_ROOT / "scripts" / "serve_frontend.py"), str(FRONTEND_PORT)],
         REPO_ROOT,
         "frontend.log",
+        own_group=True,
     )
     PIDS_PATH.write_text(json.dumps({"backend_pid": backend, "frontend_pid": frontend}))
     wait_for(f"http://127.0.0.1:{BACKEND_PORT}/games", "Backend")

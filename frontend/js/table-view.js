@@ -2,7 +2,7 @@ import { flyIn, playDeal, stopDeal } from './deal.js';
 import { button, div, face, span } from './dom.js';
 import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
-import { crowned, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
+import { crowned, finalPile, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
 import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
 import { toast } from './ui.js';
 
@@ -10,9 +10,15 @@ const FAN = 5; // card backs drawn per opponent: how many they really hold isn't
 // How each play in a trick lies on the pile (offset x, offset y in px, turn in degrees), by its place in the trick.
 const LIE = [[-3, 2, -7], [4, -2, 6], [-2, -3, -2], [3, 3, 9], [-4, 1, -4], [2, -2, 3], [-1, 3, -9], [4, 0, 4]];
 const PILE_SHOWN = 4; // older plays are buried under these
+const RECEIVED_MS = 2400; // a card given to you in the swap stands up this long (the CSS animation's length)
+const OUT_MS = 2600; // "Ana is out · 1st" shows this long (the CSS animation's length)
 
 let send = () => {};
 let selected = []; // card codes picked in your hand
+let lastHand = []; // your cards at the last render, to spot the one you were just given
+let received = null; // { code, at } the card given to you in the swap, while it stands up
+let seenOut = null; // { round, places } who was out at the last render, to spot someone going out
+let outNote = null; // { id, place, at } someone just went out and play goes on, while that shows
 let current = null; // the last state drawn, to redraw the hand after a tap
 let currentMe = null; // your player id in that state
 let lastPhase = null; // the phase of the last render: a new phase starts with nothing selected
@@ -136,6 +142,10 @@ export function showEnded(name, onDone) {
 /** Forget the selection and the remembered phase and round (table left or no game). */
 export function resetTable() {
   selected = [];
+  lastHand = [];
+  received = null;
+  seenOut = null;
+  outNote = null;
   lastPhase = null;
   lastRound = null;
   hadEmptyHand = null;
@@ -169,6 +179,7 @@ export function renderTable(state, meId) {
   const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name
   for (const p of state.players) names[p.id] = p.name;
   updateSpotlight(game, names, redraw);
+  noteGoingOut(game);
   const seated = game.seats.map((id) => byId[id] ?? { id, name: '?', connected: false });
   // A pass is new if this player hadn't passed on this pile; nothing pops on the first render.
   const passes = game.passed.map((id) => `${pileKey(game)}|${id}`);
@@ -188,11 +199,13 @@ export function renderTable(state, meId) {
   renderScores(game, names);
   const dealt = hadEmptyHand === true && game.hand.length > 0; // seen empty, now full: a new deal
   hadEmptyHand = game.hand.length === 0;
-  renderPile(game, names, seatEls);
+  const final = finalPile(); // the round just ended: its last cards stay on the pile a while
+  renderPile(final ? { ...game, pile: final, pile_won: false, round: game.round - 1 } : game, names, seatEls); // its own round: no second landing
   renderHand(game);
   renderActions(game, meId);
   document.querySelector('.turn-note').textContent = turnNote(game, meId, names);
   renderReveal(document.querySelector('.reveal'), game, names);
+  renderOutNote(names, meId);
   const overlay = document.querySelector('.overlay');
   if (spotlightOn()) overlay.hidden = true; // what comes next waits for the spotlight
   else renderOverlay(overlay, game, meId, names, sendOnce);
@@ -210,7 +223,12 @@ function seat(player, position, game, newPasses) {
   const backs = div('backs');
   const holding = ['swapping', 'playing'].includes(game.phase) && !game.places.includes(player.id);
   if (holding) for (let i = 0; i < FAN; i++) backs.append(div('card-back'));
-  el.append(backs, plate(player, game));
+  const place = game.places.indexOf(player.id);
+  if (place >= 0) { // out: a medal where their cards were, all round
+    backs.append(span(placeLabel(place), 'medal'));
+    el.classList.add('out');
+  }
+  el.append(backs, plate(player, game, place < 0));
   el.classList.toggle('spot-winner', crowned(player.id));
   if (game.passed.includes(player.id)) {
     el.classList.add('passed'); // their cards grey out under the stamp
@@ -219,14 +237,36 @@ function seat(player, position, game, newPasses) {
   return el;
 }
 
-function plate(player, game) {
+/** A player's name plate; `showPlace`: their finishing place after the name (not when a medal shows it). */
+function plate(player, game, showPlace = true) {
   const el = div(player.connected ? 'plate' : 'plate offline');
   el.classList.toggle('turn', game.turn === player.id);
   const place = game.places.indexOf(player.id);
   el.append(div('dot'), span(player.name, 'name'));
   if (crowned(player.id)) el.append(span('♛', 'crown'));
-  if (place >= 0) el.append(span(placeLabel(place), 'count'));
+  if (place >= 0 && showPlace) el.append(span(placeLabel(place), 'count'));
   return el;
+}
+
+/** Someone just went out and the round goes on: note it for a moment. Nothing pops on the first render. */
+function noteGoingOut(game) {
+  const before = seenOut;
+  seenOut = { round: game.round, places: game.places.length };
+  if (game.phase !== 'playing' || (before && before.round !== game.round)) outNote = null; // the round's over: play doesn't go on
+  if (!before || before.round !== game.round || game.places.length <= before.places || game.phase !== 'playing') return;
+  const note = { id: game.places.at(-1), place: game.places.length - 1, at: performance.now() };
+  outNote = note;
+  setTimeout(() => { if (outNote === note) { outNote = null; redraw(); } }, OUT_MS);
+}
+
+/** "Ana is out · 1st / Play goes on" over the pile; a redraw picks the fade up where it was. */
+function renderOutNote(names, meId) {
+  const el = document.querySelector('.out-note');
+  el.hidden = outNote === null;
+  if (!outNote) return;
+  const who = outNote.id === meId ? "You're out" : `${names[outNote.id]} is out`;
+  el.querySelector('.out-note-text').textContent = `${who} · ${placeLabel(outNote.place)}`;
+  el.style.setProperty('--since', `${-(performance.now() - outNote.at)}ms`);
 }
 
 function roundLabel(game) {
@@ -295,6 +335,16 @@ function yourMove(game, meId) {
 }
 
 function renderHand(game) {
+  // One card more than before, and not a deal: it was given to you in the swap.
+  const gained = game.hand.filter((code) => !lastHand.includes(code));
+  if (lastHand.length && gained.length === 1 && game.hand.length === lastHand.length + 1) {
+    received = { code: gained[0], at: performance.now() };
+    const mine = received;
+    setTimeout(() => { if (received === mine) { received = null; redraw(); } }, RECEIVED_MS); // back in line, the lift gone
+  }
+  lastHand = [...game.hand];
+  const since = received && performance.now() - received.at;
+  if (since >= RECEIVED_MS) received = null;
   selected = keepHeld(selected, game.hand);
   const choices = game.swap?.choices ?? [];
   const giving = choices.length > 0;
@@ -311,6 +361,10 @@ function renderHand(game) {
     if (locked) card.setAttribute('aria-disabled', 'true');
     card.classList.toggle('selected', selected.includes(code));
     card.classList.toggle('dim', giving && !choices.includes(code));
+    if (received?.code === code && !selected.includes(code)) { // picked: it lifts as a pick instead // stands up, then settles; a redraw picks the motion up where it was
+      card.classList.add('received');
+      card.style.setProperty('--since', `${-since}ms`);
+    }
     card.append(face(code));
     return card;
   }));

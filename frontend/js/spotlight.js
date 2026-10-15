@@ -1,14 +1,16 @@
-// The end of a round, shown before anything else: the table dims, a crown sits over the
+// The end of a round, shown before anything else. First the final cards stay on the pile
+// for a moment, so everyone sees how it ended; then the table dims, a crown sits over the
 // winner, a gold banner names them, and the points rise next to the scores. A round's
 // spotlight goes after a few seconds; a won game's stays until someone taps.
 
 import { sideName } from './murlan.js';
 
+const HOLD_MS = 2500; // the final cards alone on the pile, before the result
 const ROUND_MS = 3200;
 
 let shown; // the last result already shown (undefined: nothing drawn yet, so don't replay one)
 let shownResult = null; // that result without the game-over flag, to tell new points from old
-let active = null; // { crowned: [player ids], text, game: bool, points } while the spotlight is up
+let active = null; // { crowned: [player ids], text, game: bool, points, pile, holding: bool } while the spotlight is up
 let timer = null;
 
 export function resetSpotlight() {
@@ -25,12 +27,22 @@ export function spotlightOn() {
 
 /** Players who get a crown right now. */
 export function crowned(playerId) {
-  return active !== null && active.crowned.includes(playerId);
+  return lit() && active.crowned.includes(playerId);
 }
 
 /** Points each side just won, while the spotlight is up (else nothing). */
 export function gains() {
-  return active?.points ?? null;
+  return lit() ? active.points : null;
+}
+
+/** The round's final trick, kept on the pile while the spotlight is up (else nothing). */
+export function finalPile() {
+  return active?.pile ?? null;
+}
+
+/** Past the moment for the final cards: the result is showing. */
+function lit() {
+  return active !== null && !active.holding;
 }
 
 /**
@@ -51,6 +63,7 @@ export function updateSpotlight(game, names, redraw) {
   }
   shown = key;
   const points = fresh ? result.points : null;
+  const pile = fresh && result.pile?.length ? result.pile : null; // new cards: show them first
   clearTimeout(timer);
   const sideOf = (id) => game.sides.find((side) => side.players.includes(id));
   if (over) {
@@ -61,8 +74,11 @@ export function updateSpotlight(game, names, redraw) {
       text: side ? `${sideName(side, names)} ${many ? 'win' : 'wins'} the game!` : "It's a draw",
       game: true,
       points,
+      pile,
+      holding: pile !== null,
     };
-    return; // stays until a tap
+    hold(redraw, () => {}); // then stays until a tap
+    return;
   }
   const winner = result.places[0];
   const side = sideOf(winner);
@@ -71,11 +87,29 @@ export function updateSpotlight(game, names, redraw) {
     text: `${sideName(side, names)} ${side.players.length > 1 ? 'win' : 'wins'} the round`,
     game: false,
     points,
+    pile,
+    holding: pile !== null,
   };
+  const spot = active;
+  hold(redraw, () => {
+    timer = setTimeout(() => {
+      if (active !== spot) return;
+      active = null;
+      redraw();
+    }, ROUND_MS);
+  });
+}
+
+/** Keep the final cards alone for a moment (if there are any), then show the result and go on. */
+function hold(redraw, next) {
+  const spot = active;
+  if (!spot.holding) return next();
   timer = setTimeout(() => {
-    active = null;
+    if (active !== spot) return; // gone meanwhile (play again, table left)
+    spot.holding = false;
     redraw();
-  }, ROUND_MS);
+    next();
+  }, HOLD_MS);
 }
 
 /** Draw the shade and banner (or clear them). `redraw` repaints after a tap ends a game's spotlight. */
@@ -83,10 +117,11 @@ export function renderSpotlight(redraw) {
   const table = document.querySelector('.table');
   const shade = document.querySelector('.spot-shade');
   const ribbon = document.querySelector('.ribbon');
-  table.classList.toggle('spotlight', active !== null);
-  shade.hidden = active === null;
-  ribbon.hidden = active === null;
-  if (!active) return;
+  const on = lit();
+  table.classList.toggle('spotlight', on);
+  shade.hidden = !on;
+  ribbon.hidden = !on;
+  if (!on) return;
   ribbon.classList.toggle('big', active.game);
   ribbon.querySelector('.ribbon-text').textContent = active.text;
   ribbon.querySelector('.ribbon-hint').hidden = !active.game;

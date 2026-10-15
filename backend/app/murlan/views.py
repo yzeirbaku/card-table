@@ -38,7 +38,10 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
     }
     if game.last_result:
         view["last_round"] = {"places": list(game.last_result.places),
-                              "points": list(game.last_result.points)}
+                              "points": list(game.last_result.points),
+                              # the round's last trick: it was face up on the pile
+                              "pile": [{"player_id": p, "cards": list(cards)}
+                                       for p, cards in game.last_result.pile]}
     if game.phase == "cutting":
         cutter = game.last_result.loser
         shown = player_id == cutter and game.cut_index is not None

@@ -195,6 +195,12 @@ input { font: inherit; }
 .hand-card.selected { translate: 0 -14%; }
 .hand-card.selected .card-face img { box-shadow: 0 0 0 2px #f0c75e, 0 4px 12px rgba(0,0,0,.45); }
 .hand-card.dim { filter: brightness(.55); }
+/* The card you were just given in the swap stands up out of your hand, glowing, then settles in. */
+.hand-card.received { animation: received 2.4s var(--since, 0ms) ease-in-out both; }
+.hand-card.received .card-face img { animation: received-glow 2.4s var(--since, 0ms) ease-in-out both; }
+@keyframes received { 0% { translate: 0 0; } 15%, 75% { translate: 0 -30%; } 100% { translate: 0 0; } }
+@keyframes received-glow { 0%, 100% { box-shadow: none; } 15%, 75% { box-shadow: 0 0 0 2px #f0c75e, 0 0 14px 4px rgba(240,199,94,.75); } }
+@media (prefers-reduced-motion: reduce) { .hand-card.received { animation: none; translate: 0 -30%; } .hand-card.received .card-face img { animation: none; box-shadow: 0 0 0 2px #f0c75e; } }
 /* The deal (deal.js): backs fly from the middle; your hand and the turn row wait, the fans fill up. */
 .deal-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
 .deal-layer .card-back { position: absolute; margin: 0; }
@@ -204,6 +210,18 @@ input { font: inherit; }
 .table[data-fan="2"] .seats .card-back:nth-child(n+3), .table[data-fan="3"] .seats .card-back:nth-child(n+4),
 .table[data-fan="4"] .seats .card-back:nth-child(n+5) { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .plate.turn, .stamp.landing { animation: none; } }
+/* Out of the round: a gold medal with their place where their cards were, and a dimmer name. */
+.medal { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 800 11px system-ui, sans-serif; color: #3a2a08;
+         background: radial-gradient(circle at 35% 30%, #fff1b8, #f0c75e 45%, #b8871f); box-shadow: 0 0 0 2px #fff3cf, 0 2px 6px rgba(0,0,0,.5); }
+.seat.out .plate { opacity: .75; }
+/* Someone went out and play goes on: a short note over the top of the pile. */
+.out-note { position: absolute; left: 50%; top: calc(var(--bar) + 106px); z-index: 6; translate: -50% -50%; display: grid; justify-items: center;
+            padding: 5px 16px; border-radius: 999px; background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; white-space: nowrap; pointer-events: none;
+            box-shadow: 0 3px 10px rgba(0,0,0,.45); animation: out-note 2.6s var(--since, 0ms) ease-out both; }
+.out-note-text { font-size: 14px; font-weight: 700; }
+.out-note-sub { font-size: 11px; font-weight: 600; opacity: .75; }
+@keyframes out-note { 0% { opacity: 0; scale: .8; } 10%, 80% { opacity: 1; scale: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .out-note { animation: none; } }
 /* Your name above your cards (clear of a lifted card), with the note beside it: only for the swap
    and the first lead, since whose turn it is shows on the names. */
 .my-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.14 + 6px); z-index: 5; transform: translateX(-50%);

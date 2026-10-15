@@ -12,7 +12,7 @@ game_over and blocks every move."""
 import random
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 from .cards import DECK, JOKERS, card_name, power, rank_of, sort_cards, sort_key, suit_of
@@ -41,6 +41,7 @@ class Rejected(Exception):
 class RoundResult:
     places: list[str]  # player ids, 1st place first; the last one is the loser
     points: list[int]  # what each side scored this round
+    pile: list[tuple[str, list[str]]] = field(default_factory=list)  # the last trick, as it lay when the round ended
 
     @property
     def winner(self) -> str:
@@ -470,7 +471,8 @@ class Game:
             points[self.side_of(player)] += PLACE_POINTS[len(self.seats)][place]
         self.scores = [s + p for s, p in zip(self.scores, points)]
         self.rounds_played += 1
-        self.last_result = RoundResult(order, points)
+        pile = [(p, list(cards)) for p, cards, _ in self.trick]  # still on show while the round's end sinks in
+        self.last_result = RoundResult(order, points, pile)
         best = max(self.scores)
         if best >= self.target and self.scores.count(best) == 1:
             self._clear_round()

@@ -177,6 +177,9 @@ def check_views(game: Game) -> None:
     public = {c for codes in game.reveal.cards.values() for c in codes} if showing else set()
     for p in game.seats:
         view = view_for(game, p)
+        if view["last_round"]:  # the last round's final trick, exactly as it lay on the pile, and no more
+            final = [{"player_id": q, "cards": cards} for q, cards in game.last_result.pile]
+            assert view["last_round"].pop("pile") == final
         allowed = set(game.hands[p]) | pile | public
         if game.phase == "cutting" and p == game.last_result.loser and game.cut_index is not None:
             allowed.add(game.deck[game.cut_index])
@@ -201,6 +204,18 @@ def test_no_view_ever_leaks_hidden_cards(n, seed):
             pytest.fail(f"bot move rejected: {e}")
     check_views(game)
     assert game.rounds_played >= 1 or game.phase == "game_over"
+
+
+def test_the_last_round_keeps_its_final_trick_so_everyone_sees_how_it_ended():
+    g = new_game(2)
+    rig(g, {"p0": ["3C", "9H"], "p1": ["4S", "5S"]}, "p0")
+    g.play("p0", ["3C"])
+    g.play("p1", ["4S"])
+    g.play("p0", ["9H"])  # p0 goes out: the round is over and the next one waits for the cut
+    assert g.phase == "cutting" and g.trick == []
+    final = [{"player_id": "p0", "cards": ["3C"]}, {"player_id": "p1", "cards": ["4S"]},
+             {"player_id": "p0", "cards": ["9H"]}]
+    assert all(view_for(g, p)["last_round"]["pile"] == final for p in g.seats)
 
 
 def test_a_won_trick_stays_on_show_until_the_next_lead():
