@@ -70,6 +70,8 @@
         <div class="hand"></div>
         <div class="seat seat-me"></div>
         <div class="deal-layer"></div>
+        <div class="spot-shade" hidden></div>
+        <div class="ribbon" role="status" hidden><span class="ribbon-text"></span><span class="ribbon-hint">Tap to continue</span></div>
         <div class="reveal" hidden></div>
         <div class="overlay" hidden></div>
         <div class="confirm" id="leave-confirm" role="dialog" aria-modal="true" aria-labelledby="leave-title" hidden>
@@ -114,9 +116,9 @@
       <button type="button" data-theme="kafeneio" class="swatch swatch-kafeneio"><span>Kafeneio</span></button>
     </div>
     <p class="sheet-sub">Cards</p>
-    <div class="segmented" id="card-styles">
-      <button type="button" data-cards="traditional">Traditional</button>
-      <button type="button" data-cards="vintage">Vintage</button>
+    <div class="style-tiles" id="card-styles">
+      <button type="button" data-cards="traditional" class="style-tile"><img src="/cards/AH.webp" alt="" />Traditional</button>
+      <button type="button" data-cards="vintage" class="style-tile style-vintage"><img src="/cards/AH.webp" alt="" />Vintage</button>
     </div>
   </section>
 

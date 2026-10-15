@@ -112,8 +112,14 @@ export function initMain({ store, enterRoom, applySettings }) {
 }
 
 function markSettings({ theme, cardStyle }) {
-  document.querySelectorAll('[data-theme]').forEach((b) => b.classList.toggle('on', b.dataset.theme === theme));
-  document.querySelectorAll('[data-cards]').forEach((b) => b.classList.toggle('on', b.dataset.cards === cardStyle));
+  for (const b of document.querySelectorAll('[data-theme]')) {
+    b.classList.toggle('on', b.dataset.theme === theme);
+    b.setAttribute('aria-pressed', String(b.dataset.theme === theme));
+  }
+  for (const b of document.querySelectorAll('[data-cards]')) {
+    b.classList.toggle('on', b.dataset.cards === cardStyle);
+    b.setAttribute('aria-pressed', String(b.dataset.cards === cardStyle));
+  }
 }
 
 function choice(label, onClick) {

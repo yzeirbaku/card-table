@@ -2,6 +2,7 @@ import { flyIn, playDeal, stopDeal } from './deal.js';
 import { button, div, face, span } from './dom.js';
 import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
+import { crowned, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
 import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
 import { toast } from './ui.js';
 
@@ -94,6 +95,7 @@ export function resetTable() {
   hadEmptyHand = null;
   lastPlay = undefined;
   lastPassed = [];
+  resetSpotlight();
   showLeaveConfirm(false);
   stopDeal();
 }
@@ -118,6 +120,7 @@ export function renderTable(state, meId) {
   const byId = Object.fromEntries(state.players.map((p) => [p.id, p]));
   const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name
   for (const p of state.players) names[p.id] = p.name;
+  updateSpotlight(game, names, () => { if (current) renderTable(current, currentMe); });
   const seated = game.seats.map((id) => byId[id] ?? { id, name: '?', connected: false });
   // A pass is new if this player hadn't passed on this pile; nothing pops on the first render.
   const passes = game.passed.map((id) => `${pileKey(game)}|${id}`);
@@ -132,7 +135,8 @@ export function renderTable(state, meId) {
   seatEls.set(meId, document.querySelector('.hand')); // yours come from your hand
   const me = byId[meId];
   document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me, game)] : []));
-  if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(passBubble(newPasses.includes(meId)));
+  document.querySelector('.seat-me').classList.toggle('spot-winner', crowned(meId));
+  if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(passStamp(newPasses.includes(meId)));
   renderScores(game, names);
   const dealt = hadEmptyHand === true && game.hand.length > 0; // seen empty, now full: a new deal
   hadEmptyHand = game.hand.length === 0;
@@ -141,13 +145,16 @@ export function renderTable(state, meId) {
   renderActions(game, meId);
   document.querySelector('.turn-note').textContent = turnNote(game, meId, names);
   renderReveal(document.querySelector('.reveal'), game, names);
-  renderOverlay(document.querySelector('.overlay'), game, meId, names, sendOnce);
+  const overlay = document.querySelector('.overlay');
+  if (spotlightOn()) overlay.hidden = true; // what comes next waits for the spotlight
+  else renderOverlay(overlay, game, meId, names, sendOnce);
+  renderSpotlight(() => { if (current) renderTable(current, currentMe); });
   if (dealt) playDeal(seatPositions(seated, meId).map(({ position }) => position), game.hand.length);
 }
 
-/** "Passed" on a player's cards (above your name for you); it pops in when the pass is new. */
-function passBubble(fresh) {
-  return span('Passed', fresh ? 'bubble pop' : 'bubble');
+/** A PASS stamp across a player's cards (above your name for you); it lands when the pass is new. */
+function passStamp(fresh) {
+  return span('PASS', fresh ? 'stamp landing' : 'stamp');
 }
 
 function seat(player, position, game, newPasses) {
@@ -156,7 +163,11 @@ function seat(player, position, game, newPasses) {
   const holding = ['swapping', 'playing'].includes(game.phase) && !game.places.includes(player.id);
   if (holding) for (let i = 0; i < FAN; i++) backs.append(div('card-back'));
   el.append(backs, plate(player, game));
-  if (game.passed.includes(player.id)) el.append(passBubble(newPasses.includes(player.id)));
+  el.classList.toggle('spot-winner', crowned(player.id));
+  if (game.passed.includes(player.id)) {
+    el.classList.add('passed'); // their cards grey out under the stamp
+    backs.append(passStamp(newPasses.includes(player.id)));
+  }
   return el;
 }
 
@@ -165,6 +176,7 @@ function plate(player, game) {
   el.classList.toggle('turn', game.turn === player.id);
   const place = game.places.indexOf(player.id);
   el.append(div('dot'), span(player.name));
+  if (crowned(player.id)) el.append(span('♛', 'crown'));
   if (place >= 0) el.append(span(placeLabel(place), 'count'));
   return el;
 }
@@ -181,6 +193,13 @@ function renderScores(game, names) {
   game.sides.forEach((side, i) => {
     const score = document.createElement('b');
     score.textContent = String(side.score);
+    const won = gains(game)?.[i];
+    if (won) { // the points this round just added, rising under the score
+      const gain = document.createElement('i');
+      gain.className = 'gain';
+      gain.textContent = `+${won}`;
+      score.append(gain);
+    }
     const name = document.createTextNode(sideName(side, names));
     if (i > 0) parts.push(document.createTextNode(' · '));
     parts.push(...(two && i === 1 ? [score, name] : [name, score]));

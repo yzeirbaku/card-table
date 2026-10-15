@@ -38,13 +38,13 @@ function cutting({ game, meId, names, act }) {
   const result = lastRound(game, names);
   if (cutter !== meId) return [...result, text(`${names[cutter]} is cutting…`)];
   if (card) {
-    return [...result, text('Your card'), face(card, 'cut-pick'),
+    return [title('Your card'), face(card, 'cut-pick'),
       row(button('Take it', () => act({ type: 'take_cut', take: true }), 'on'),
         button('Leave it', () => act({ type: 'take_cut', take: false })))];
   }
   const deck = div('cut-deck');
   for (let i = 0; i < size; i++) deck.append(button('', () => act({ type: 'cut', index: i }), 'cut-card'));
-  return [...result, text('Tap the deck to cut'), deck];
+  return [title('Cut the deck'), text('Tap anywhere in the deck'), deck]; // just the deck, so it fits a phone
 }
 
 function agreeing({ game, meId, names, act }) {

@@ -51,12 +51,16 @@ input { font: inherit; }
 .theme-swatches { display: flex; gap: 10px; }
 .swatch { position: relative; flex: 1; height: 64px; border-radius: 10px; border: 3px solid transparent; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 .swatch span { position: absolute; left: 6px; bottom: 4px; padding: 1px 6px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; font-size: 11px; font-weight: 700; }
-.swatch.on { border-color: #d4a640; }
-.segmented { display: flex; }
-.segmented button { flex: 1; padding: 10px; border: 1.5px solid #ddd2b8; background: #fffdf7; font-weight: 700; }
-.segmented button:first-child { border-radius: 10px 0 0 10px; }
-.segmented button:last-child { border-radius: 0 10px 10px 0; }
-.segmented button.on { background: #1a1a1a; color: #f6eedd; border-color: #1a1a1a; }
+.style-tiles { display: flex; gap: 10px; }
+.style-tile { position: relative; flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px;
+              border: 1.5px solid #ddd2b8; background: #f6f1e4; font-size: 15px; font-weight: 700; }
+.style-tile img { width: 30px; aspect-ratio: 320 / 466; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.style-vintage img { filter: sepia(.38) saturate(.85) contrast(.96) brightness(.98); }
+/* The chosen table or card style: a dark ring and a check in the corner. */
+.swatch.on, .style-tile.on { outline: 3px solid #1a1a1a; outline-offset: 2px; }
+.style-tile.on { border-color: #1a1a1a; }
+.swatch.on::after, .style-tile.on::after { content: "✓"; position: absolute; right: -8px; top: -8px; display: grid; place-items: center; width: 22px; height: 22px;
+                                           border-radius: 50%; background: #1a1a1a; color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 0 0 2px #fffdf7; }
 
 /* ---------- lobby ---------- */
 #view-lobby { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: max(60px, env(safe-area-inset-top)) 26px max(30px, env(safe-area-inset-bottom)); text-align: center; }
@@ -128,7 +132,7 @@ input { font: inherit; }
 .table { --bar: clamp(34px, 9cqh, 52px); }
 .surface { top: var(--bar); }
 /* Three columns with equal sides, so the scores sit on the table's centre line, above the top player and the hand. */
-.table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; height: var(--bar); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 14px;
+.table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 14px;
              background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); color: var(--plate-fg); font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 .table-menu-btn { justify-self: start; width: 34px; height: 100%; font-size: 18px; }
 .table-menu { position: absolute; top: calc(var(--bar) + 4px); left: 14px; z-index: 6; overflow: hidden; border-radius: 10px; background: #fffdf7; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
@@ -138,7 +142,7 @@ input { font: inherit; }
 .seat-left { left: 22px; top: 34%; }
 .seat-right { right: 22px; top: 34%; }
 .seat-me { left: 16px; bottom: 16px; }
-.plate { display: flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 999px; font-size: 13px; white-space: nowrap; background: var(--plate-bg); color: var(--plate-fg); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.plate { position: relative; display: flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 999px; font-size: 13px; white-space: nowrap; background: var(--plate-bg); color: var(--plate-fg); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
 .plate .count { font-weight: 700; color: var(--plate-count); }
 .plate .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
 .plate.offline { opacity: .6; }
@@ -156,12 +160,14 @@ input { font: inherit; }
               box-shadow: 0 0 0 2px #fff3cf, 0 0 10px 3px rgba(240,199,94,.7); animation: turn-glow 1.4s ease-in-out infinite alternate; }
 .plate.turn .count { color: #3a2a08; }
 @keyframes turn-glow { from { box-shadow: 0 0 0 2px #fff3cf, 0 0 6px 1px rgba(240,199,94,.45); } }
-.seat .bubble { position: absolute; left: 50%; top: 16px; translate: -50% -50%; } /* "Passed" lies on their cards */
-.seat-me .bubble { left: 0; top: auto; bottom: calc(100% + 4px); translate: none; } /* yours sits above your name */
-.bubble.pop { animation: pop .28s cubic-bezier(.3, 1.6, .5, 1); }
-@keyframes pop { from { opacity: 0; scale: .3; } }
-.bubble { z-index: 1; padding: 3px 11px; border-radius: 999px; background: #fffdf7; color: #1a1a1a; font-size: 13px; font-weight: 800; white-space: nowrap;
-          box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.45); }
+/* PASS: a red stamp across the player's cards, which grey out (above your name for you). */
+.backs { position: relative; }
+.seat.passed .card-back { filter: grayscale(.7) brightness(.7); }
+.stamp { position: absolute; left: 50%; top: 50%; z-index: 1; translate: -50% -50%; rotate: -14deg; padding: 1px 8px; border: 2.5px solid #e2464f; border-radius: 4px;
+         background: rgba(20,0,0,.4); color: #ff5a63; font: 900 14px/1.1 system-ui, sans-serif; letter-spacing: 2px; text-shadow: 0 1px 1px rgba(0,0,0,.5); white-space: nowrap; }
+.seat-me .stamp { top: auto; bottom: calc(100% + 8px); left: 50%; }
+.stamp.landing { animation: stamp .3s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes stamp { from { opacity: 0; scale: 1.8; } }
 .scoreboard { max-width: 50cqw; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scoreboard b { margin: 0 4px; font-size: 15px; color: var(--plate-count); }
 .score-round { justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; opacity: .7; }
@@ -190,7 +196,7 @@ input { font: inherit; }
 .table[data-fan="0"] .seats .card-back, .table[data-fan="1"] .seats .card-back:nth-child(n+2),
 .table[data-fan="2"] .seats .card-back:nth-child(n+3), .table[data-fan="3"] .seats .card-back:nth-child(n+4),
 .table[data-fan="4"] .seats .card-back:nth-child(n+5) { visibility: hidden; }
-@media (prefers-reduced-motion: reduce) { .plate.turn, .bubble.pop { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .plate.turn, .stamp.landing { animation: none; } }
 /* Pass and Play above the hand, clear of a lifted card. The note between them is only for the
    swap and the first lead; whose turn it is shows on the players' names. */
 .turn-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.14 + 4px); z-index: 5; transform: translateX(-50%);
@@ -205,6 +211,26 @@ input { font: inherit; }
 .reveal-title { align-self: center; font-weight: 700; }
 .reveal-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .reveal-item .card-face { width: calc(var(--card-w) * .7); }
+/* The end of a round (spotlight.js): the table dims under the bar, the winner's seat stays lit with a crown. */
+.spot-shade { position: absolute; inset: 0; z-index: 5; background: rgba(0,0,0,.55); animation: fade-in .4s; }
+.table.spotlight .spot-winner { z-index: 7; }
+.crown { position: absolute; left: 50%; bottom: calc(100% + 2px); translate: -50% 0; color: #f0c75e; font-size: 22px; line-height: 1;
+         text-shadow: 0 2px 4px rgba(0,0,0,.6); animation: crown .5s ease-out; }
+.seat-top .crown { position: static; translate: none; font-size: 16px; margin-right: -2px; order: -1; } /* no room above the top seat */
+.ribbon { position: absolute; left: 50%; top: 46%; z-index: 8; translate: -50% -50%; display: grid; justify-items: center; gap: 4px; max-width: 86cqw;
+          padding: 10px 26px; border-radius: 8px; background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; text-align: center;
+          box-shadow: 0 6px 20px rgba(0,0,0,.5); animation: ribbon .35s ease-out; }
+.ribbon-text { font: 700 20px Georgia, serif; }
+.ribbon.big { padding: 16px 34px; cursor: pointer; }
+.ribbon.big .ribbon-text { font-size: 28px; }
+.ribbon-hint { font-size: 12px; font-weight: 700; opacity: .7; }
+.scoreboard b { position: relative; }
+.gain { position: absolute; left: 50%; top: 100%; translate: -50% 0; color: #7fe08f; font-size: 12px; font-style: normal; font-weight: 800; animation: gain 1.8s .4s both; }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes crown { from { opacity: 0; translate: -50% 8px; } }
+@keyframes ribbon { from { opacity: 0; scale: .8; } }
+@keyframes gain { 0% { opacity: 0; translate: -50% -6px; } 25% { opacity: 1; translate: -50% 0; } 100% { opacity: 0; translate: -50% 8px; } }
+@media (prefers-reduced-motion: reduce) { .spot-shade, .crown, .ribbon, .gain { animation: none; } }
 .overlay { position: absolute; left: 50%; top: 45%; z-index: 8; transform: translate(-50%, -50%); width: max-content; max-width: 86cqw; max-height: 80cqh; overflow-y: auto;
            display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 22px; border-radius: 16px;
            background: #fffdf7; color: #1a1a1a; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
