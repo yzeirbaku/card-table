@@ -1,5 +1,5 @@
 const VIEWS = ['main', 'lobby', 'table'];
-const FELT = '#123d25'; // the felt's darkest green, as in index.html and the manifest
+const STATUS_BAR = '#24160b'; // dark walnut, as in index.html and the manifest: sits by the felt and the table alike (an iPhone reads it once, at launch)
 let toastTimer;
 
 /** name = null hides every view (neutral state while resuming a saved room). */
@@ -16,7 +16,7 @@ export function syncTableRotated() {
   // takes the colour at the page's edge: the table's edge at the table, the felt elsewhere.
   const edge = table.hidden ? '' : getComputedStyle(table).backgroundColor;
   document.documentElement.style.backgroundColor = edge;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', edge || FELT);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', edge || STATUS_BAR);
 }
 
 export function toast(message) {
