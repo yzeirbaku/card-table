@@ -4,6 +4,7 @@
   "description": "Card games with friends",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["fullscreen", "standalone"],
   "background_color": "#123d25",
   "theme_color": "#123d25",
   "icons": [

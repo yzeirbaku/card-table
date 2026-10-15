@@ -66,13 +66,28 @@ export function initTable({ onLeave, send: sendMessage }) {
     if (!menu.hidden && !menu.contains(event.target) && !menuButton.contains(event.target)) menu.hidden = true;
   });
   const ask = document.getElementById('leave-confirm');
+  const rules = document.getElementById('rules-dialog');
+  const closeRules = () => {
+    showModal(rules, false);
+    menuButton.focus();
+  };
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     menu.hidden = true;
+    if (!rules.hidden) return closeRules();
     if (ask.hidden) return;
     showLeaveConfirm(false);
     menuButton.focus();
   });
+  initFullscreen(menu);
+  document.getElementById('btn-table-rules').addEventListener('click', () => {
+    menu.hidden = true;
+    rules.querySelector('.rules-body').scrollTop = 0;
+    showModal(rules, true);
+    document.getElementById('btn-rules-close').focus();
+  });
+  document.getElementById('btn-rules-close').addEventListener('click', closeRules);
+  rules.addEventListener('click', (event) => { if (event.target === rules) closeRules(); }); // tap outside
   document.getElementById('btn-table-leave').addEventListener('click', () => {
     menu.hidden = true;
     const game = current?.game;
@@ -109,6 +124,21 @@ export function initTable({ onLeave, send: sendMessage }) {
   });
 }
 
+/** In a browser tab that allows it, ☰ → Full screen hides the address bar. The installed app is full screen already. */
+function initFullscreen(menu) {
+  const button = document.getElementById('btn-fullscreen');
+  const installed = matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+  button.hidden = installed || !document.fullscreenEnabled;
+  button.addEventListener('click', () => {
+    menu.hidden = true;
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => toast('Full screen isn’t available here'));
+  });
+  document.addEventListener('fullscreenchange', () => {
+    button.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+  });
+}
+
 /** A popup on the table; while one is up, the rest of the table can't be tabbed to or tapped. */
 function showModal(dialog, open) {
   dialog.hidden = !open;
@@ -127,6 +157,7 @@ export function showEnded(name, onDone) {
   stopDeal();
   resetSpotlight(); // its timer would redraw the old game behind the popup
   showLeaveConfirm(false);
+  showModal(document.getElementById('rules-dialog'), false);
   document.getElementById('table-menu').hidden = true;
   document.getElementById('ended-title').textContent = `${name} left the table`;
   document.getElementById('ended-text').textContent = over ? 'Everyone goes back to the lobby.' : 'The game has ended. Everyone goes back to the lobby.';
@@ -154,6 +185,7 @@ export function resetTable() {
   resetSpotlight();
   stopWaiting();
   showLeaveConfirm(false);
+  showModal(document.getElementById('rules-dialog'), false);
   showModal(document.getElementById('ended-notice'), false);
   stopDeal();
 }

@@ -32,7 +32,6 @@ input { font: inherit; }
 .tilt-left .card-face { rotate: -7deg; }
 .tilt-right .card-face { rotate: 6deg; }
 .tilt-slight .card-face { rotate: -2deg; }
-#btn-settings { grid-column: 1 / -1; }
 
 /* ---------- sheets ---------- */
 .sheet-backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.45); }
@@ -41,6 +40,13 @@ input { font: inherit; }
 .sheet-title { font-family: Georgia, serif; font-size: 22px; }
 .sheet-sub { font-size: 13px; color: #6b5f4a; }
 .sheet .small-btn { border-color: #ddd2b8; }
+.sheet-tall { max-height: 85dvh; overflow-y: auto; overscroll-behavior: contain; }
+/* How to play: one text, in a sheet on the main screen and in a popup on the table */
+.rules-body { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 14px; line-height: 1.45; color: #2a2418; }
+.rules-body .rules-title { font-family: Georgia, serif; font-size: 22px; }
+.rules-body h3 { margin-top: 6px; font-family: Georgia, serif; font-size: 16px; color: #1a1a1a; }
+.rules-body ul { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; }
+.rules-body .rules-order { font-weight: 700; }
 .choice-list { display: flex; flex-direction: column; gap: 10px; }
 .choice-row { display: flex; gap: 10px; }
 .choice-list button, .choice-row button { padding: 14px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-size: 16px; font-weight: 700; }
@@ -95,7 +101,7 @@ input { font: inherit; }
   .title { font-size: 76px; }
   .name-field { max-width: 440px; }
   .name-field input { padding: 15px 18px; font-size: 20px; border-radius: 12px; }
-  .menu-cards { grid-template-columns: repeat(3, auto); gap: 56px; margin-top: 10px; }
+  .menu-cards { grid-template-columns: repeat(4, auto); gap: 56px; margin-top: 10px; }
   #btn-settings { grid-column: auto; }
   .menu-card { gap: 16px; }
   .menu-card .card-face { width: 180px; }
@@ -280,6 +286,8 @@ input { font: inherit; }
 .confirm-box p { font-size: 14px; color: #4a4030; }
 .confirm-box .overlay-buttons { grid-template-columns: 1fr 1fr; }
 .confirm-box .overlay-buttons.one { grid-template-columns: 1fr; }
+.confirm-box.rules-box { width: min(560px, 90cqw); max-width: none; max-height: 88cqh; padding: 14px 18px; }
+.rules-box .rules-body { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; align-self: stretch; }
 .overlay-buttons button.danger { background: #b3121f; border-color: #b3121f; color: #fff; }
 .overlay .countdown { font-family: Georgia, serif; font-size: 34px; font-weight: 700; }
 .score-list { display: grid; gap: 3px; min-width: 200px; font-size: 14px; }
