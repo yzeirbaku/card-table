@@ -81,10 +81,10 @@ def test_pile_clears_when_the_turn_gets_back_to_the_last_player():
     g.play("p0", ["4S"])
     g.pass_turn("p1")
     g.pass_turn("p2")
-    assert g.turn == "p0" and g.top is None and g.passed == []
+    assert g.turn == "p0" and g.top is None and g.passed == ["p1", "p2"]  # the passes stay on show too
     assert g.trick_won and [cards for _, cards, _ in g.trick] == [["4S"]]  # still on show
     g.play("p0", ["3S"])  # leads anything, even lower than before
-    assert not g.trick_won and [cards for _, cards, _ in g.trick] == [["3S"]]
+    assert g.passed == [] and not g.trick_won and [cards for _, cards, _ in g.trick] == [["3S"]]
 
 
 def test_lead_moves_on_when_the_last_player_is_out():

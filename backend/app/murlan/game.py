@@ -105,7 +105,7 @@ class Game:
         self.turn: str | None = None
         self.trick: list[tuple[str, list[str], Play]] = []  # this trick's plays, oldest first
         self.trick_won = False  # everyone passed: the trick stays on show until the next lead
-        self.passed: list[str] = []  # who passed since the last play
+        self.passed: list[str] = []  # who passed since the last play (shown until the next one)
         self.places: list[str] = []  # who's out this round, in order
         self.must_include: str | None = None  # the first lead of a game must include this
         self.agree_picks: dict[str, str] = {}
@@ -438,9 +438,8 @@ class Game:
         for _ in range(2 * n):
             i = (i + 1) % n
             player = self.seats[i]
-            if player == last:  # everyone passed: the trick is won but stays on show
-                self.trick_won = True
-                self.passed = []
+            if player == last:  # everyone passed: the trick is won but stays on show,
+                self.trick_won = True  # and so do the passes, until the next lead
                 last = None
             if self.hands[player]:
                 self.turn = player

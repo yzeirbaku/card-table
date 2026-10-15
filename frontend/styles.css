@@ -210,7 +210,9 @@ input { font: inherit; }
            background: #fffdf7; color: #1a1a1a; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 .overlay h2 { font-family: Georgia, serif; font-size: 20px; }
 .overlay p { font-size: 14px; color: #4a4030; }
-.overlay .choice-row { min-width: 220px; }
+/* Same size as the leave popup's buttons. */
+.overlay .choice-row { width: 240px; }
+.overlay .choice-row button { padding: 12px; font-size: 15px; }
 .overlay button.on { background: linear-gradient(#f3d27a, #d4a640); border-color: #d4a640; color: #3a2a08; }
 .overlay-buttons { display: grid; gap: 8px; width: 240px; }
 .overlay-buttons button { padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-weight: 700; }
@@ -227,8 +229,11 @@ input { font: inherit; }
 .score-list div { display: flex; justify-content: space-between; gap: 16px; }
 .score-list div span:last-child { font-weight: 700; }
 .score-target { font-size: 12px; color: #6b5f4a; }
-.cut-deck { display: flex; flex-wrap: wrap; justify-content: center; row-gap: 8px; max-width: 64cqw; padding-left: 2.4cqw; }
-.cut-card { flex: none; width: 4.8cqw; aspect-ratio: 320 / 466; margin-left: -2.4cqw; border-radius: 3px; transition: translate .1s;
+/* The deck to cut: two rows of 27 overlapping backs, small enough that the panel never scrolls. */
+.cut-deck { --w: min(4.8cqw, 8cqh); --s: min(2.4cqw, calc((70cqw - var(--w)) / 26));
+            display: flex; flex-wrap: wrap; justify-content: center; row-gap: 8px;
+            max-width: calc(27 * var(--s) + var(--w) - var(--s) + 1px); padding-left: calc(var(--w) - var(--s)); }
+.cut-card { flex: none; width: var(--w); aspect-ratio: 320 / 466; margin-left: calc(var(--s) - var(--w)); border-radius: 3px; transition: translate .1s;
             background: var(--card-back); border: 1.5px solid var(--card-back-edge); box-shadow: 0 1px 2px rgba(0,0,0,.45); }
 .cut-card:hover { translate: 0 -5px; }
 .overlay .cut-pick { width: var(--card-w); }
