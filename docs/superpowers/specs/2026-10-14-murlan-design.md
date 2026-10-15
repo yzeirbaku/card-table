@@ -37,11 +37,12 @@ Suits never matter for beating anything.
 - **Pair**, **three of a kind**: same rank. Jokers are never part of a pair or
   any other combination; they are only played as singles.
 - **Bomb**: four of a kind.
-- **Straight**: 5 or more cards of consecutive rank, no jokers. Ace can be low
-  (A-2-3-4-5…) or high (…10-J-Q-K-A); 2 can only be at the low end
-  (A-2-3-… or 2-3-4-…). No wrapping: K-A-2 is not a straight. Positions in
-  straight order: A(low)=1, 2=2, 3…K=3…13, A(high)=14; a straight is a run of
-  consecutive positions, length ≥ 5.
+- **Straight**: 5 or more cards of consecutive rank, no jokers. A and 2 go at
+  either end: low (A-2-3-4-5…, 2-3-4-5-6…) or high (…10-J-Q-K-A, …J-Q-K-A-2).
+  No wrapping round the corner: K-A-2-3 is not a straight. Positions in
+  straight order, read one of two ways: A=1, 2=2, 3…K=3…13, or 3…K=3…13,
+  A=14, 2=15; a straight is a run of consecutive positions, length ≥ 5.
+  (Changed 2026-10-15 at the author's request: before, 2 could only be low.)
 - **Double straight**: 5 or more consecutive ranks, a pair of each (≥ 10 cards).
 - **Triple straight**: 5 or more consecutive ranks, three of each (≥ 15 cards).
 
@@ -216,8 +217,8 @@ player clockwise becomes creator.
 
 ## Testing
 
-- **combos (pytest):** every play type valid/invalid; ace low/high, 2 only
-  low, no K-A-2 wrap, jokers rejected in combos; beating rules (any higher for
+- **combos (pytest):** every play type valid/invalid; ace and 2 low/high,
+  no K-A-2-3 wrap, jokers rejected in combos; beating rules (any higher for
   singles/pairs/triples, exactly +1 and same length for straights of each
   multiplicity, bombs over everything, higher bomb over bomb).
 - **game (pytest):** deals per player count; first lead must include 3♠ /

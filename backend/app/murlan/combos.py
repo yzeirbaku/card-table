@@ -20,9 +20,12 @@ KIND_NAMES: dict[str, str] = {
 }
 MIN_STRAIGHT = 5
 _SAME_RANK: dict[int, Kind] = {1: "single", 2: "pair", 3: "triple", 4: "bomb"}
-# Position in straight order. Ace is 1 (low) or 14 (high); 2 only ever sits at 2.
-_POSITION = {"2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10,
+# Position in straight order, read one of two ways: A and 2 at the bottom (A=1, 2=2: A-2-3-4-5,
+# 2-3-4-5-6) or at the top (A=14, 2=15: 10-J-Q-K-A, J-Q-K-A-2). Never round the corner: K-A-2-3.
+_POSITION = {"3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10,
              "J": 11, "Q": 12, "K": 13}
+_LOW = {"A": 1, "2": 2}
+_HIGH = {"A": 14, "2": 15}
 
 
 @dataclass(frozen=True)
@@ -57,8 +60,8 @@ def classify(cards: list[str]) -> Play | None:
 
 def _run_start(ranks) -> int | None:
     """Lowest position if the ranks are consecutive in straight order, else None."""
-    for ace in (1, 14):
-        positions = sorted(ace if r == "A" else _POSITION[r] for r in ranks)
+    for ends in (_LOW, _HIGH):
+        positions = sorted(ends.get(r) or _POSITION[r] for r in ranks)
         if positions[-1] - positions[0] == len(positions) - 1:
             return positions[0]
     return None

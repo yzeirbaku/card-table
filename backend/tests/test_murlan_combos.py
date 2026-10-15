@@ -38,6 +38,9 @@ def test_card_helpers():
         (["2H", "3D", "4C", "5S", "6S"], Play("straight", 2, 5)),  # 2 at the low end
         (["10S", "JH", "QD", "KC", "AS"], Play("straight", 10, 5)),  # ace high
         (["9S", "10H", "JD", "QC", "KS", "AH"], Play("straight", 9, 6)),
+        (["JS", "QH", "KD", "AC", "2S"], Play("straight", 11, 5)),  # A-2 at the top end
+        (["10S", "JH", "QD", "KC", "AS", "2H"], Play("straight", 10, 6)),
+        (["JS", "JH", "QS", "QH", "KS", "KH", "AS", "AH", "2S", "2H"], Play("double_straight", 11, 5)),
         (["3S", "3H", "4S", "4H", "5S", "5H", "6S", "6H", "7S", "7H"], Play("double_straight", 3, 5)),
         (
             ["3S", "3H", "3D", "4S", "4H", "4D", "5S", "5H", "5D", "6S", "6H", "6D", "7S", "7H", "7D"],
@@ -58,8 +61,9 @@ def test_valid_plays(cards, expected):
         ["JB", "JR"],  # jokers never pair
         ["7H", "JB"],
         ["3S", "4H", "5D", "6C"],  # straights need 5 ranks
-        ["KS", "AH", "2D", "3C", "4S"],  # no wrapping K-A-2
+        ["KS", "AH", "2D", "3C", "4S"],  # no wrapping round from 2 to 3
         ["QS", "KH", "AD", "2C", "3S"],
+        ["KS", "2H", "3D", "4C", "5S"],  # K and 2 aren't neighbours without the A
         ["3S", "4H", "5D", "6C", "8S"],  # gap
         ["3S", "4H", "5D", "6C", "JB"],  # jokers never in straights
         ["3S", "3H", "4S", "4H", "5S", "5H", "6S", "6H", "7S"],  # mixed multiples
@@ -106,3 +110,12 @@ def test_bombs():
     assert beats(p("6H", "6S", "6D", "6C"), bomb)
     assert not beats(p("4H", "4S", "4D", "4C"), bomb)
     assert not beats(p("JR"), bomb)
+
+
+def test_a_straight_up_to_a_2_is_the_highest_of_its_length():
+    top_end = classify(["JS", "QH", "KD", "AC", "2S"])
+    assert beats(top_end, classify(["10S", "JH", "QD", "KC", "AS"]))  # one step above 10-to-A
+    assert not any(beats(other, top_end) for other in [
+        classify(["AS", "2H", "3D", "4C", "5S"]),
+        classify(["10S", "JH", "QD", "KC", "AH"]),
+    ])
