@@ -162,6 +162,8 @@ def random_step(game: Game, rng: random.Random, clock: FakeClock) -> None:
     elif game.phase == "agreeing_loser":
         voters = game.loser_voters()
         game.pick_loser(rng.choice(voters), rng.choice(voters))
+    elif game.phase == "playing" and rng.random() < 0.01:  # now and then someone throws their cards in
+        game.give_up(rng.choice([p for p in game.seats if game.hands[p]]))
     elif game.phase == "playing":
         player = game.turn
         cards = bot_play(game, player, rng)
@@ -172,7 +174,7 @@ def random_step(game: Game, rng: random.Random, clock: FakeClock) -> None:
 
 
 def check_views(game: Game) -> None:
-    pile = {c for _, cards, _ in game.trick for c in cards}
+    pile = {c for _, cards, _ in game.trick for c in cards} | {c for cards in game.thrown.values() for c in cards}
     showing = game.reveal is not None and game.clock() < game.reveal.until
     public = {c for codes in game.reveal.cards.values() for c in codes} if showing else set()
     for p in game.seats:
@@ -180,6 +182,7 @@ def check_views(game: Game) -> None:
         if view["last_round"]:  # the last round's final trick, exactly as it lay on the pile, and no more
             final = [{"player_id": q, "cards": cards} for q, cards in game.last_result.pile]
             assert view["last_round"].pop("pile") == final
+            assert view["last_round"].pop("thrown") == game.last_result.thrown
         allowed = set(game.hands[p]) | pile | public
         if game.phase == "cutting" and p == game.last_result.loser and game.cut_index is not None:
             allowed.add(game.deck[game.cut_index])

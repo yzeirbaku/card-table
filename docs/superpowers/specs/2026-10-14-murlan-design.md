@@ -127,6 +127,22 @@ Suits never matter for beating anything.
   wins**. On an exact tie for the highest score, play **one more round** at a
   time until one side is ahead.
 
+### Giving up (added 2026-10-15)
+
+- Any time in the playing phase, a player still holding cards can **give up
+  the round** (with an "are you sure" first). Not only on their turn.
+- Their cards are thrown **face up**: public to everyone until that round's
+  result has been shown.
+- They finish **last**; a second player to give up finishes second-last, and so
+  on. With 2 players the round ends at once and the other player wins it. With 3
+  or 4 the others play on for the places left; the round ends when one player is
+  left holding cards.
+- 4 players: if one team takes 1st and 2nd and one of the other team gave up,
+  there's no vote for last: the one who gave up is last.
+- If it was their turn, play moves on. If their play is on top of the pile, the
+  lead passes on as when a player goes out. If they held the 3♠ before the first
+  lead, the next player leads anything.
+
 ### Disconnects
 
 - If any seated player drops, the game **pauses** for everyone with

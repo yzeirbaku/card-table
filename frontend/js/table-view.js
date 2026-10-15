@@ -2,9 +2,10 @@ import { flyIn, playDeal, stopDeal } from './deal.js';
 import { button, div, face, span } from './dom.js';
 import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
-import { crowned, finalPile, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
+import { crowned, finalPile, finalThrown, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
 import { addReaction, REACTIONS, reactionEl, resetReactions } from './reactions.js';
 import { fillRules } from './rules.js';
+import { noteThrows, renderThrown, resetThrows } from './throw.js';
 import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
 import { toast } from './ui.js';
 
@@ -172,6 +173,40 @@ export function initTable({ onLeave, send: sendMessage }) {
   document.getElementById('btn-pass').addEventListener('click', () => {
     sendOnce({ type: 'action', action: { type: 'pass' } });
   });
+  document.getElementById('btn-clear').addEventListener('click', () => { // changed your mind: nothing picked
+    selected = [];
+    renderHand(current.game);
+    renderActions(current.game, currentMe);
+  });
+  const giveUp = document.getElementById('giveup-confirm');
+  const stay = () => {
+    showModal(giveUp, false);
+    document.getElementById('btn-giveup').focus();
+  };
+  document.getElementById('btn-giveup').addEventListener('click', () => {
+    if (!current?.game) return;
+    giveUpText(current);
+    showModal(giveUp, true);
+    document.getElementById('btn-giveup-stay').focus();
+  });
+  document.getElementById('btn-giveup-stay').addEventListener('click', stay);
+  document.getElementById('btn-giveup-go').addEventListener('click', () => {
+    showModal(giveUp, false);
+    send({ type: 'action', action: { type: 'give_up' } }); // not held back by a move still out: you meant it
+  });
+  giveUp.addEventListener('click', (event) => { if (event.target === giveUp) stay(); }); // tap outside: keep playing
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !giveUp.hidden) stay(); });
+}
+
+/** What giving up would mean right now, in the popup (kept up to date while it's open). */
+function giveUpText(state) {
+  const game = state.game;
+  const thrown = game.thrown ?? {};
+  const stillIn = game.seats.filter((id) => id !== currentMe && !game.places.includes(id) && !(id in thrown));
+  const name = (id) => state.players.find((p) => p.id === id)?.name ?? 'The other player';
+  let text = Object.keys(thrown).length ? 'You finish behind everyone still playing. The others play on.' : 'You take last place. The others play on.';
+  if (stillIn.length === 1) text = game.seats.length === 2 ? `${name(stillIn[0])} wins the round.` : `The round ends here, with ${name(stillIn[0])} ahead of you.`;
+  document.getElementById('giveup-text').textContent = text;
 }
 
 /** In a browser tab that allows it, ☰ → Full screen hides the address bar. The installed app is full screen already. */
@@ -209,6 +244,7 @@ export function showEnded(name, onDone) {
   resetReactions();
   showLeaveConfirm(false);
   showModal(document.getElementById('rules-dialog'), false);
+  showModal(document.getElementById('giveup-confirm'), false);
   document.getElementById('table-menu').hidden = true;
   document.getElementById('ended-title').textContent = `${name} left the table`;
   document.getElementById('ended-text').textContent = over ? 'Everyone goes back to the lobby.' : 'The game has ended. Everyone goes back to the lobby.';
@@ -239,7 +275,9 @@ export function resetTable() {
   stopWaiting();
   showLeaveConfirm(false);
   showModal(document.getElementById('rules-dialog'), false);
+  showModal(document.getElementById('giveup-confirm'), false);
   showModal(document.getElementById('ended-notice'), false);
+  resetThrows();
   stopDeal();
 }
 
@@ -254,6 +292,11 @@ export function renderTable(state, meId) {
   if (game.phase === 'game_over' && !document.getElementById('leave-confirm').hidden) { // leaving no longer ends anything
     showLeaveConfirm(false);
     document.getElementById('btn-table-menu').focus();
+  }
+  const canGiveUp = game.phase === 'playing' && !game.pause && game.hand.length > 0;
+  if (!document.getElementById('giveup-confirm').hidden) {
+    if (canGiveUp) giveUpText(state); // someone went out or gave up meanwhile
+    else showModal(document.getElementById('giveup-confirm'), false); // too late now
   }
   if (game.phase !== lastPhase || game.round !== lastRound) selected = [];
   lastPhase = game.phase;
@@ -274,7 +317,12 @@ export function renderTable(state, meId) {
   const final = finalPile(); // the round just ended: its last cards (and who went out) stay a while
   // While they do, the medals of those who went out stay too, until the next round is dealt.
   const dealing = ['swapping', 'playing'].includes(game.phase);
-  const seen = final && !dealing ? { ...game, places: game.last_round.places.slice(0, game.last_round.out) } : game;
+  const endThrown = finalThrown(); // a hand thrown in that round stays where it landed too
+  const seen = (final || endThrown) && !dealing
+    ? { ...game, places: game.last_round.places.slice(0, game.last_round.out), thrown: endThrown ?? {} }
+    : { ...game, thrown: game.thrown ?? {} };
+  noteThrows(seen.thrown, meId); // before the hand and seats are redrawn: a new throw flies from there
+  renderThrown(seen.thrown);
   document.querySelector('.seats').replaceChildren(...seatPositions(seated, meId).map(({ player, position }) => {
     const el = seat(player, position, seen, newPasses);
     seatEls.set(player.id, el);
@@ -288,6 +336,7 @@ export function renderTable(state, meId) {
   if (focused) seatMe.querySelector(focused === 'plate' ? '.plate' : `[data-reaction="${focused}"]`)?.focus(); // keyboard focus survives the redraw
   document.querySelector('.my-row').classList.toggle('spot-winner', crowned(meId));
   if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(passStamp(newPasses.includes(meId)));
+  if (me && meId in seen.thrown) document.querySelector('.seat-me').append(span('Gave up', 'gave-up-tag'));
   renderScores(game, names);
   const dealt = hadEmptyHand === true && game.hand.length > 0; // seen empty, now full: a new deal
   hadEmptyHand = game.hand.length === 0;
@@ -312,11 +361,16 @@ function passStamp(fresh) {
 function seat(player, position, game, newPasses) {
   const el = div(`seat seat-${position}`);
   const backs = div('backs');
-  const holding = ['swapping', 'playing'].includes(game.phase) && !game.places.includes(player.id);
+  const gaveUp = player.id in game.thrown;
+  const holding = ['swapping', 'playing'].includes(game.phase) && !game.places.includes(player.id) && !gaveUp;
   if (holding) for (let i = 0; i < FAN; i++) backs.append(div('card-back'));
   const place = game.places.indexOf(player.id);
   if (place >= 0) { // out: a medal where their cards were, all round
     backs.append(span(placeLabel(place), 'medal'));
+    el.classList.add('out');
+  }
+  if (gaveUp) {
+    backs.append(span('Gave up', 'gave-up-tag'));
     el.classList.add('out');
   }
   el.append(backs, plate(player, game, place < 0));
@@ -497,6 +551,7 @@ function pick(code) {
     selected = toggleCard(selected, code);
   }
   renderHand(game);
+  renderActions(game, currentMe); // Clear wakes up or greys out
 }
 
 function renderActions(game, meId) {
@@ -507,6 +562,10 @@ function renderActions(game, meId) {
   play.hidden = !(myTurn || giving);
   play.textContent = giving ? 'Give' : 'Play';
   document.getElementById('btn-pass').hidden = !myTurn || leading(game);
+  const clear = document.getElementById('btn-clear');
+  clear.hidden = play.hidden;
+  clear.disabled = selected.length === 0;
+  document.getElementById('btn-giveup').hidden = !(game.phase === 'playing' && !paused && game.hand.length > 0);
 }
 
 /** Nothing to beat: the pile is empty, or it's a won trick left on show until this lead. */

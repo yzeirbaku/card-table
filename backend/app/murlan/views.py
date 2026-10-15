@@ -27,6 +27,8 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
         "pile_won": game.trick_won,  # the pile is a won trick: the next play leads
         "passed": list(game.passed),
         "places": list(game.places),
+        # who gave up this round, and their hands: thrown face up, public until the round is over
+        "thrown": {p: list(cards) for p, cards in game.thrown.items()},
         "must_include": game.must_include if game.turn == player_id else None,
         "last_round": None,
         "winner_side": game.winner_side,
@@ -42,7 +44,8 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
                               "out": game.last_result.out,
                               # the round's last trick: it was face up on the pile
                               "pile": [{"player_id": p, "cards": list(cards)}
-                                       for p, cards in game.last_result.pile]}
+                                       for p, cards in game.last_result.pile],
+                              "thrown": {p: list(cards) for p, cards in game.last_result.thrown.items()}}
     if game.phase == "cutting":
         cutter = game.last_result.loser
         shown = player_id == cutter and game.cut_index is not None

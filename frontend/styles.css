@@ -146,7 +146,7 @@ input { font: inherit; }
              background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); box-shadow: 0 2px 6px rgba(0,0,0,.35); } /* the bar, drawn on out under the notch / home bar */
 .surface > * { position: absolute; display: none; } /* each theme turns on the layers it uses */
 /* The bar above the table: menu, scores, round. The table's surface starts below it. */
-.table { --hand-w: min(68cqw, 94cqw - 184px); } /* the widest a hand gets: clear of the corner buttons (3cqw + 84px + a gap, each side) */
+.table { --hand-w: min(68cqw, 94cqw - 164px); } /* the widest a hand gets: clear of the corner buttons (3cqw + 72px + a gap, each side) */
 /* Three columns with equal sides, so the scores sit on the table's centre line, above the top player and the hand. */
 .table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 14px;
              background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); color: var(--plate-fg); font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
@@ -173,6 +173,7 @@ input { font: inherit; }
 /* ---------- murlan table ---------- */
 /* Sizes follow the table box (cq units), so they're right when the table is turned on a portrait phone. */
 .table { container-type: size; --card-w: min(12cqh, 7.4cqw); }
+@container (max-height: 500px) { .table { --card-w: min(13.5cqh, 8.3cqw); } } /* phones: a touch bigger */
 .plate.turn { background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; font-weight: 700;
               box-shadow: 0 0 0 2px #fff3cf, 0 0 10px 3px rgba(240,199,94,.7); animation: turn-glow 1.4s ease-in-out infinite alternate; }
 .plate.turn .count { color: #3a2a08; }
@@ -292,11 +293,23 @@ input { font: inherit; }
 .my-row .seat-me { position: relative; }
 .turn-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
 .turn-note:empty { display: none; }
-/* Pass in the bottom-left corner, Play in the bottom-right: under your thumbs, clear of your cards. */
-.corner-btn { position: absolute; bottom: 4cqh; z-index: 5; width: auto; min-width: 84px; padding: 9px 20px; border-radius: 999px; font-size: 15px; }
-#btn-pass { left: 3cqw; }
-#btn-play { right: 3cqw; }
+/* Two stacked in each corner, under your thumbs and clear of your cards: Give up over Clear on the left,
+   Pass over Play on the right. The ones you use most sit at the bottom. */
+.corner-btn { position: absolute; bottom: 4cqh; z-index: 5; width: auto; min-width: 72px; padding: 6px 14px; border-radius: 999px; font-size: 13px; }
+#btn-giveup, #btn-clear { left: 3cqw; }
+#btn-pass, #btn-play { right: 3cqw; }
+#btn-giveup, #btn-pass { bottom: calc(4cqh + 36px); }
 .corner-btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
+#btn-giveup { color: #ffb4a8; }
+.corner-btn:disabled { opacity: .45; cursor: default; }
+/* A hand thrown in (see throw.js): face up all over the table, under the seats and the pile */
+.thrown-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.thrown-card { position: absolute; width: var(--card-w); translate: -50% -50%; opacity: .75; }
+.thrown-card.flying { animation: thrown .8s var(--since, 0ms) cubic-bezier(.2, .7, .3, 1) both; }
+@keyframes thrown { from { left: var(--from-x); top: var(--from-y); rotate: 0deg; opacity: 1; } 75% { opacity: 1; } }
+.seat-me .gave-up-tag { position: absolute; bottom: calc(100% + 4px); left: 50%; translate: -50% 0; }
+.gave-up-tag { padding: 3px 9px; border-radius: 999px; background: rgba(120, 20, 20, .8); color: #fff; font: 800 11px system-ui, sans-serif; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .thrown-card.flying { animation: none; } }
 .hand.locked .hand-card { cursor: default; }
 .reveal { position: absolute; left: 50%; top: calc(var(--bar) + 10px); z-index: 7; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 12px;
           padding: 8px 14px; border-radius: 14px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }

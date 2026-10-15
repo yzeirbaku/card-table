@@ -1,7 +1,7 @@
 import pytest
 
 from app.murlan.cards import DECK
-from app.murlan.game import PAUSE_SECONDS, REVEAL_SECONDS, Game, Rejected, Reveal
+from app.murlan.game import JOKERS_REVEAL_SECONDS, PAUSE_SECONDS, REVEAL_SECONDS, Game, Rejected, Reveal
 from app.murlan.views import view_for
 from tests.murlan_helpers import (
     FakeClock, Reverse, Rotate, later_round, new_game, rig, swap_ready,
@@ -343,6 +343,7 @@ def test_everyone_is_shown_the_loser_holds_both_jokers():
     g = swap_ready({"p0": ["9C"], "p1": ["4D"], "p2": ["6D"], "p3": ["JB", "JR", "4S"]})
     assert g.reveal.kind == "jokers" and g.reveal.cards == {"p3": ["JB", "JR"]}
     assert all(view_for(g, p)["reveal"] == {"kind": "jokers", "cards": {"p3": ["JB", "JR"]}} for p in g.seats)
+    assert g.reveal.until == g.clock() + JOKERS_REVEAL_SECONDS  # a little longer than the other reveals
 
 
 def test_two_players_swap_the_same_way():
@@ -469,7 +470,7 @@ def test_reveals_expire_on_tick():
     g.take_cut("p3", True)
     assert g.deadline() == clock.now + REVEAL_SECONDS
     queued = g.next_reveal is not None  # this deal gave the loser both jokers: that reveal follows
-    clock.now += REVEAL_SECONDS * (2 if queued else 1)
+    clock.now += REVEAL_SECONDS + (JOKERS_REVEAL_SECONDS if queued else 0)
     g.tick()
     assert g.reveal is None and g.deadline() is None
 

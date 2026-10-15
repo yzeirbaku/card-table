@@ -19,7 +19,7 @@ export function stopDeal() {
 }
 
 /** Where `el`'s centre and size are in the table's own (unrotated) coordinates. */
-function place(el, table) {
+export function place(el, table) {
   const r = el.getBoundingClientRect();
   const t = table.getBoundingClientRect();
   if (document.getElementById('view-table').classList.contains('rotated')) {

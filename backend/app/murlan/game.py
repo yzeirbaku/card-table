@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from .cards import DECK, JOKERS, card_name, power, rank_of, sort_cards, sort_key, suit_of
-from .combos import KIND_NAMES, STRAIGHTS, Play, beats, classify
+from .combos import KIND_NAMES, STRAIGHTS, Play, beats, classify, in_play_order
 
 TARGETS = (13, 21)
 # Points for 1st, 2nd, ... place. In 4-player games a team adds its two players,
@@ -24,6 +24,7 @@ TARGETS = (13, 21)
 PLACE_POINTS = {2: (1, 0), 3: (2, 1, 0), 4: (3, 2, 1, 0)}
 DEALT = {2: 36, 3: 54, 4: 54}  # 2 players: 18 each, the other 18 are out of play
 REVEAL_SECONDS = 5  # how long public reveals (first cards, partners' swap) stay up
+JOKERS_REVEAL_SECONDS = 7  # the loser's two jokers: a little longer, so nobody misses why there's no swap
 PAUSE_SECONDS = 120  # how long a dropped player has to come back before the round is cancelled
 SWAP_BACK_RANKS = frozenset({"3", "4", "5", "6", "7", "8", "9", "10"})
 
@@ -43,6 +44,7 @@ class RoundResult:
     points: list[int]  # what each side scored this round
     pile: list[tuple[str, list[str]]] = field(default_factory=list)  # the last trick, as it lay when the round ended
     out: int = 0  # how many of `places` really went out (the rest still held cards)
+    thrown: dict[str, list[str]] = field(default_factory=dict)  # who gave up, and the cards they threw face up
 
     @property
     def winner(self) -> str:
@@ -109,6 +111,7 @@ class Game:
         self.trick_won = False  # everyone passed: the trick stays on show until the next lead
         self.passed: list[str] = []  # who passed since the last play (shown until the next one)
         self.places: list[str] = []  # who's out this round, in order
+        self.thrown: dict[str, list[str]] = {}  # who gave up this round, in order, and the cards they threw face up
         self.must_include: str | None = None  # the first lead of a game must include this
         self.agree_picks: dict[str, str] = {}
         self.next_reveal = None
@@ -166,7 +169,7 @@ class Game:
             self.trick = []
             self.trick_won = False
         self.must_include = None
-        self.trick.append((player_id, sort_cards(cards), play))
+        self.trick.append((player_id, in_play_order(cards, play), play))
         self.passed = []
         if not hand:
             self.places.append(player_id)
@@ -181,6 +184,24 @@ class Game:
             raise Rejected("You lead: play something")
         self.passed.append(player_id)
         self._advance()
+
+    def give_up(self, player_id: str) -> None:
+        """Throw your cards in: you finish last this round (a second to give up, second last).
+        Any time in play, not only on your turn. The cards land face up and stay on show all round."""
+        self._check_can_move(player_id)
+        if self.phase != "playing":
+            raise Rejected("You can only give up while the cards are being played")
+        if player_id in self.places or player_id in self.gave_up:
+            raise Rejected("You're already out of this round")
+        thrown, self.hands[player_id] = self.hands[player_id], []
+        self.thrown[player_id] = thrown
+        self.passed = [p for p in self.passed if p != player_id]  # out of the trick, so not "passed" in it either
+        if self.must_include in thrown:  # the first lead's 3♠ went with them: the next player leads anything
+            self.must_include = None
+        if self._round_over():
+            self._end_round()
+        elif self.turn == player_id:
+            self._advance()
 
     def pick_loser(self, player_id: str, choice: str) -> None:
         self._check_can_move(player_id)
@@ -385,10 +406,11 @@ class Game:
     def _show(self, kind: Literal["first_cards", "swap", "jokers"], cards: dict[str, list[str]]) -> None:
         """Put cards up for everyone for a few seconds, after the reveal that's up now."""
         now = self.clock()
+        seconds = JOKERS_REVEAL_SECONDS if kind == "jokers" else REVEAL_SECONDS
         if self.reveal and now < self.reveal.until:  # the first cards are still up: wait
-            self.next_reveal = Reveal(kind, cards, self.reveal.until + REVEAL_SECONDS)
+            self.next_reveal = Reveal(kind, cards, self.reveal.until + seconds)
         else:
-            self.reveal = Reveal(kind, cards, now + REVEAL_SECONDS)
+            self.reveal = Reveal(kind, cards, now + seconds)
 
     # ---- rounds ----
 
@@ -430,6 +452,7 @@ class Game:
         self.trick_won = False
         self.passed = []
         self.places = []
+        self.thrown = {}
         self.must_include = None
 
     def _advance(self) -> None:
@@ -451,20 +474,27 @@ class Game:
                 return
         raise AssertionError("nobody has cards left")
 
+    @property
+    def gave_up(self) -> list[str]:
+        return list(self.thrown)
+
+    def _still_playing(self) -> list[str]:
+        return [p for p in self.seats if p not in self.places and p not in self.gave_up]
+
     def _round_over(self) -> bool:
-        n = len(self.seats)
-        if n == 4 and len(self.places) == 2:
-            return self.side_of(self.places[0]) == self.side_of(self.places[1])
-        return len(self.places) == n - 1
+        if len(self._still_playing()) <= 1:
+            return True
+        # 4 players: one team took 1st and 2nd
+        return len(self.seats) == 4 and len(self.places) >= 2 and self.side_of(self.places[0]) == self.side_of(self.places[1])
 
     def _end_round(self) -> None:
         self.turn = None
-        if len(self.places) < len(self.seats) - 1:  # 4 players: one team took 1st and 2nd
+        rest = self._still_playing()
+        if len(rest) == 2:  # 4 players, one team took 1st and 2nd: the other two agree who's last
             self.phase = "agreeing_loser"
             self.agree_picks = {}
             return
-        rest = [p for p in self.seats if p not in self.places]
-        self._finish_round(self.places + rest)
+        self._finish_round(self.places + rest + self.gave_up[::-1])  # the first to give up is last
 
     def _finish_round(self, order: list[str]) -> None:
         points = [0] * self.side_count
@@ -473,7 +503,8 @@ class Game:
         self.scores = [s + p for s, p in zip(self.scores, points)]
         self.rounds_played += 1
         pile = [(p, list(cards)) for p, cards, _ in self.trick]  # still on show while the round's end sinks in
-        self.last_result = RoundResult(order, points, pile, out=len(self.places))
+        thrown = {p: list(cards) for p, cards in self.thrown.items()}  # and so are any thrown hands
+        self.last_result = RoundResult(order, points, pile, out=len(self.places), thrown=thrown)
         best = max(self.scores)
         if best >= self.target and self.scores.count(best) == 1:
             self._clear_round()

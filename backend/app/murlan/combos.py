@@ -5,7 +5,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Literal
 
-from .cards import JOKERS, power, rank_of
+from .cards import JOKERS, power, rank_of, sort_key
 
 Kind = Literal["single", "pair", "triple", "bomb", "straight", "double_straight", "triple_straight"]
 STRAIGHTS: tuple[Kind, ...] = ("straight", "double_straight", "triple_straight")
@@ -58,13 +58,27 @@ def classify(cards: list[str]) -> Play | None:
     return Play(STRAIGHTS[multiple - 1], low, len(counts))
 
 
-def _run_start(ranks) -> int | None:
-    """Lowest position if the ranks are consecutive in straight order, else None."""
+def _run_ends(ranks) -> dict[str, int] | None:
+    """Where A and 2 sit (bottom or top) for these ranks to run on without a gap, or None."""
     for ends in (_LOW, _HIGH):
         positions = sorted(ends.get(r) or _POSITION[r] for r in ranks)
         if positions[-1] - positions[0] == len(positions) - 1:
-            return positions[0]
+            return ends
     return None
+
+
+def _run_start(ranks) -> int | None:
+    """Lowest position if the ranks are consecutive in straight order, else None."""
+    ends = _run_ends(ranks)
+    return None if ends is None else min(ends.get(r) or _POSITION[r] for r in ranks)
+
+
+def in_play_order(cards: list[str], play: Play) -> list[str]:
+    """The cards as they're laid down: a straight in run order (A-2-3-4-5, not 3-4-5-A-2), the rest low to high."""
+    if play.kind not in STRAIGHTS:
+        return sorted(cards, key=sort_key)
+    ends = _run_ends({rank_of(c) for c in cards})
+    return sorted(cards, key=lambda c: (ends.get(rank_of(c)) or _POSITION[rank_of(c)], sort_key(c)))
 
 
 def beats(new: Play, top: Play) -> bool:

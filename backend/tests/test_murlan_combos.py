@@ -1,7 +1,7 @@
 import pytest
 
 from app.murlan.cards import DECK, card_name, is_card, power, rank_of, sort_cards, suit_of
-from app.murlan.combos import Play, beats, classify
+from app.murlan.combos import Play, beats, classify, in_play_order
 
 
 def test_deck_has_54_distinct_cards():
@@ -119,3 +119,12 @@ def test_a_straight_up_to_a_2_is_the_highest_of_its_length():
         classify(["AS", "2H", "3D", "4C", "5S"]),
         classify(["10S", "JH", "QD", "KC", "AH"]),
     ])
+
+
+def test_straights_are_laid_down_in_run_order():
+    low = ["3S", "5H", "2D", "4C", "AS"]
+    assert in_play_order(low, classify(low)) == ["AS", "2D", "3S", "4C", "5H"]
+    high = ["2S", "JH", "AD", "QC", "KS"]
+    assert in_play_order(high, classify(high)) == ["JH", "QC", "KS", "AD", "2S"]
+    pair = ["7S", "7H"]
+    assert in_play_order(pair, classify(pair)) == ["7S", "7H"]

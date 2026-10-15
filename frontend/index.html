@@ -69,6 +69,7 @@
           <button id="btn-table-rules" type="button">How to play</button>
           <button id="btn-table-leave" type="button">Leave table</button>
         </div>
+        <div class="thrown-layer"></div>
         <div class="seats"></div>
         <div class="play-area"><div class="pile"></div></div>
         <div class="out-note" role="status" hidden><span class="out-note-text"></span><span class="out-note-sub">Play goes on</span></div>
@@ -77,6 +78,8 @@
           <p class="turn-note"></p>
         </div>
         <div class="hand"></div>
+        <button id="btn-giveup" class="btn ghost corner-btn" type="button" hidden>Give up</button>
+        <button id="btn-clear" class="btn ghost corner-btn" type="button" hidden>Clear</button>
         <button id="btn-pass" class="btn ghost corner-btn" type="button" hidden>Pass</button>
         <button id="btn-play" class="btn primary corner-btn" type="button" hidden>Play</button>
         <div class="deal-layer"></div>
@@ -91,6 +94,16 @@
             <div class="overlay-buttons">
               <button id="btn-leave-stay" type="button">Stay</button>
               <button id="btn-leave-go" class="danger" type="button">Leave</button>
+            </div>
+          </div>
+        </div>
+        <div class="confirm" id="giveup-confirm" role="dialog" aria-modal="true" aria-labelledby="giveup-title" aria-describedby="giveup-text" hidden>
+          <div class="confirm-box">
+            <h2 id="giveup-title">Give up this round?</h2>
+            <p id="giveup-text"></p>
+            <div class="overlay-buttons">
+              <button id="btn-giveup-stay" type="button">Keep playing</button>
+              <button id="btn-giveup-go" class="danger" type="button">Give up</button>
             </div>
           </div>
         </div>
@@ -204,6 +217,8 @@
       <li><b>The swap:</b> the loser gives the winner their highest card; the winner gives back any card from 3 to 10 (their lowest if they have none). If the winner and loser are teammates, everyone sees both cards.</li>
       <li>A loser dealt both jokers shows them to everyone and keeps them: no swap, and the winner leads.</li>
     </ul>
+    <h3>Giving up</h3>
+    <p>You can give up a round at any time while the cards are being played. Your cards go down face up for everyone to see, and you finish last (if someone gave up before you, just ahead of them). With 2 players the round ends there; otherwise the others play it out. In a 4-player game, if the other team then takes 1st and 2nd, there's no vote: you're last.</p>
     <h3>If someone drops out</h3>
     <p>The game pauses for 2:00 while they come back. If they don't, the round is cancelled and you choose to keep waiting or end the game. Leaving the table ends the game for everyone.</p>
   </template>

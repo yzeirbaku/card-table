@@ -43,6 +43,10 @@ class Pass(_Msg):
     type: Literal["pass"]
 
 
+class GiveUp(_Msg):
+    type: Literal["give_up"]
+
+
 class PickLoser(_Msg):
     type: Literal["pick_loser"]
     player_id: Id
@@ -54,7 +58,7 @@ class Decide(_Msg):
 
 
 Action = Annotated[
-    ChooseTarget | Cut | TakeCut | Give | PlayCards | Pass | PickLoser | Decide,
+    ChooseTarget | Cut | TakeCut | Give | PlayCards | Pass | GiveUp | PickLoser | Decide,
     Field(discriminator="type"),
 ]
 ACTION_ADAPTER: TypeAdapter[Action] = TypeAdapter(Action)
@@ -78,6 +82,8 @@ def apply_action(game: Game, player_id: str, raw: object) -> None:
             game.play(player_id, action.cards)
         case Pass():
             game.pass_turn(player_id)
+        case GiveUp():
+            game.give_up(player_id)
         case PickLoser():
             game.pick_loser(player_id, action.player_id)
         case Decide():

@@ -40,6 +40,11 @@ export function finalPile() {
   return active?.pile ?? null;
 }
 
+/** The hands thrown in during the round that just ended ({ player id: cards }), or null. */
+export function finalThrown() {
+  return active?.thrown ?? null;
+}
+
 /** Past the moment for the final cards: the result is showing. */
 function lit() {
   return active !== null && !active.holding;
@@ -64,6 +69,7 @@ export function updateSpotlight(game, names, redraw) {
   shown = key;
   const points = fresh ? result.points : null;
   const pile = fresh && result.pile?.length ? result.pile : null; // new cards: show them first
+  const thrown = fresh && Object.keys(result.thrown ?? {}).length ? result.thrown : null; // and any hand thrown in
   clearTimeout(timer);
   const sideOf = (id) => game.sides.find((side) => side.players.includes(id));
   if (over) {
@@ -75,7 +81,8 @@ export function updateSpotlight(game, names, redraw) {
       game: true,
       points,
       pile,
-      holding: pile !== null,
+      thrown,
+      holding: pile !== null || thrown !== null,
     };
     hold(redraw, () => {}); // then stays until a tap
     return;
@@ -88,7 +95,8 @@ export function updateSpotlight(game, names, redraw) {
     game: false,
     points,
     pile,
-    holding: pile !== null,
+    thrown,
+    holding: pile !== null || thrown !== null,
   };
   const spot = active;
   hold(redraw, () => {
