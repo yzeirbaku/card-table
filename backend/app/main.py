@@ -132,7 +132,8 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
                 return False
         except Rejected as e:
             await ws.send_json({"type": "error", "message": str(e)})
-            await send_state(room, player)
+            if not await send_state(room, player):  # their socket died: the game paused, tell the rest
+                await broadcast(room)
             return False
         await broadcast(room)
         return False

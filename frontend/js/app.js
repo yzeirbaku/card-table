@@ -6,7 +6,7 @@ import { initMain } from './main-view.js';
 import { shouldRotate } from './orientation.js';
 import { closeSheets } from './sheets.js';
 import { createStore } from './storage.js';
-import { initTable, renderTable, resetTable } from './table-view.js';
+import { initTable, moveRejected, renderTable, resetTable, showEnded } from './table-view.js';
 import { stopCountdown } from './table-overlay.js';
 import { setReconnecting, showView, syncTableRotated, toast } from './ui.js';
 
@@ -14,6 +14,7 @@ const store = createStore();
 const gameNames = {};
 let connection = null;
 let meId = null;
+let heldLobby = null; // the lobby state waiting behind the "X left the table" popup
 
 function applySettings({ theme, cardStyle }) {
   // classList, not className: keep other body classes such as table-rotated.
@@ -33,18 +34,33 @@ function send(message) {
 
 function render(state) {
   if (state.room.status === 'playing') {
+    if (heldLobby) resetTable(); // a new game started behind the "X left" popup
+    heldLobby = null;
     showView('table');
     renderTable(state, meId);
-  } else {
-    stopCountdown();
-    resetTable();
-    showView('lobby');
-    renderLobby(state, meId, gameName(state.room.game));
+    return;
   }
+  stopCountdown();
+  const atTable = !document.getElementById('view-table').hidden;
+  if (heldLobby || (atTable && state.room.ended_by)) { // someone left: say so before the lobby
+    if (!heldLobby) showEnded(state.room.ended_by, () => showLobby(heldLobby));
+    heldLobby = state; // the lobby, as it is when they tap
+    return;
+  }
+  showLobby(state);
+}
+
+function showLobby(state) {
+  heldLobby = null;
+  stopCountdown();
+  resetTable();
+  showView('lobby');
+  renderLobby(state, meId, gameName(state.room.game));
 }
 
 function enterRoom(code, { resume = false } = {}) {
   connection?.close();
+  heldLobby = null;
   resetTable();
   meId = null;
   if (resume) {
@@ -59,11 +75,13 @@ function enterRoom(code, { resume = false } = {}) {
     urlFor: socketUrl,
     onWelcome: (id) => { meId = id; },
     onState: render,
-    onError: toast,
+    onError: (message) => { moveRejected(); toast(message); },
     onReconnecting: setReconnecting,
     onClosed: (message) => {
       connection = null;
+      heldLobby = null;
       stopCountdown();
+      resetTable();
       setReconnecting(false);
       showView('main');
       toast(message);
@@ -75,6 +93,7 @@ function enterRoom(code, { resume = false } = {}) {
 function leaveRoom() {
   connection?.leave();
   connection = null;
+  heldLobby = null;
   stopCountdown();
   resetTable();
   setReconnecting(false);

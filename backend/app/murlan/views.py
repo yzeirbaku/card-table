@@ -59,7 +59,8 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
     if game.phase == "agreeing_loser":
         view["agree"] = {"voters": game.loser_voters(), "picks": dict(game.agree_picks)}
     if game.reveal and game.clock() < game.reveal.until:
-        view["reveal"] = {"kind": game.reveal.kind, "cards": dict(game.reveal.cards)}
+        view["reveal"] = {"kind": game.reveal.kind,
+                          "cards": {p: list(codes) for p, codes in game.reveal.cards.items()}}
     if game.pause:
         deadline = game.pause.deadline
         view["pause"] = {

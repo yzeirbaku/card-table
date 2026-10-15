@@ -263,9 +263,9 @@ def test_take_it_deals_the_cut_card_to_the_loser_and_shows_everyones_first_card(
     card = g.deck[10]
     g.take_cut("p3", True)
     assert g.reveal.kind == "first_cards"
-    assert g.reveal.cards["p3"] == card
+    assert g.reveal.cards["p3"] == [card]
     assert set(g.reveal.cards) == set(g.seats)
-    assert len(set(g.reveal.cards.values())) == 4
+    assert len({c for codes in g.reveal.cards.values() for c in codes}) == 4
     assert g.reveal.until == clock.now + REVEAL_SECONDS
     assert card in g.hands["p3"] or g.swap_given.get("p3") == card
     # dealt from the loser: p3 and p0 got the two extra cards (the swap only moves cards between them)
@@ -329,13 +329,19 @@ def test_the_swap_is_public_between_partners():
     g.give("p2", "JR")
     g.give("p0", "9C")
     assert g.reveal.kind == "swap"
-    assert g.reveal.cards == {"p2": "JR", "p0": "9C"}
+    assert g.reveal.cards == {"p2": ["JR"], "p0": ["9C"]}
 
 
 def test_no_swap_when_the_loser_was_dealt_both_jokers_and_the_winner_leads():
     g = swap_ready({"p0": ["9C"], "p1": ["4D"], "p2": ["6D"], "p3": ["JB", "JR", "4S"]})
     assert g.phase == "playing" and g.turn == "p0"
     assert g.hands["p3"] == ["JB", "JR", "4S"] and g.hands["p0"] == ["9C"]
+
+
+def test_everyone_is_shown_the_loser_holds_both_jokers():
+    g = swap_ready({"p0": ["9C"], "p1": ["4D"], "p2": ["6D"], "p3": ["JB", "JR", "4S"]})
+    assert g.reveal.kind == "jokers" and g.reveal.cards == {"p3": ["JB", "JR"]}
+    assert all(view_for(g, p)["reveal"] == {"kind": "jokers", "cards": {"p3": ["JB", "JR"]}} for p in g.seats)
 
 
 def test_two_players_swap_the_same_way():
@@ -461,7 +467,8 @@ def test_reveals_expire_on_tick():
     g.cut("p3", 0)
     g.take_cut("p3", True)
     assert g.deadline() == clock.now + REVEAL_SECONDS
-    clock.now += REVEAL_SECONDS
+    queued = g.next_reveal is not None  # this deal gave the loser both jokers: that reveal follows
+    clock.now += REVEAL_SECONDS * (2 if queued else 1)
     g.tick()
     assert g.reveal is None and g.deadline() is None
 
@@ -500,7 +507,7 @@ def test_a_swap_reveal_waits_for_the_first_cards_reveal():
     g.deck = []
     for p, hand in {"p0": ["9C", "KC"], "p1": ["4D"], "p2": ["JR", "4S"], "p3": ["6D"]}.items():
         g.hands[p] = hand
-    g.reveal = Reveal("first_cards", {p: "3S" for p in g.seats}, clock.now + REVEAL_SECONDS)
+    g.reveal = Reveal("first_cards", {p: ["3S"] for p in g.seats}, clock.now + REVEAL_SECONDS)
     g._after_deal()
     g.give("p2", "JR")
     g.give("p0", "9C")
@@ -511,7 +518,7 @@ def test_a_swap_reveal_waits_for_the_first_cards_reveal():
     clock.now += REVEAL_SECONDS
     g.tick()
     assert g.reveal.kind == "swap" and g.next_reveal is None
-    assert g.reveal.cards == {"p2": "JR", "p0": "9C"}
+    assert g.reveal.cards == {"p2": ["JR"], "p0": ["9C"]}
     assert g.deadline() == clock.now + REVEAL_SECONDS
     clock.now += REVEAL_SECONDS
     g.tick()

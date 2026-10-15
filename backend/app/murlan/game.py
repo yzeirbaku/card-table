@@ -55,8 +55,8 @@ class RoundResult:
 class Reveal:
     """Cards everyone may see for a few seconds."""
 
-    kind: Literal["first_cards", "swap"]
-    cards: dict[str, str]  # player id -> their first card, or the card they gave
+    kind: Literal["first_cards", "swap", "jokers"]
+    cards: dict[str, list[str]]  # player id -> their first card, the card they gave, or both jokers
     until: float
 
 
@@ -212,8 +212,7 @@ class Game:
             i = self.cut_index
             self.deck = self.deck[i:] + self.deck[:i]  # the cut card is dealt first, to the loser
             order = self._deal(player_id)
-            first = {p: self.deck[k] for k, p in enumerate(order)}
-            self.reveal = Reveal("first_cards", first, self.clock() + REVEAL_SECONDS)
+            self._show("first_cards", {p: [self.deck[k]] for k, p in enumerate(order)})
         else:
             self.rng.shuffle(self.deck)  # the loser saw a card: hide where it goes
             self._deal(player_id)
@@ -359,6 +358,7 @@ class Game:
     def _after_deal(self) -> None:
         result = self.last_result
         if all(j in self.hands[result.loser] for j in JOKERS):
+            self._show("jokers", {result.loser: list(JOKERS)})  # everyone sees why there's no swap
             self._start_play(result.winner)  # no swap, and the winner leads
             return
         self.phase = "swapping"
@@ -377,13 +377,16 @@ class Game:
             self.swap_step = "winner"
             return
         if self.teammates(result.winner, result.loser):
-            now = self.clock()
-            if self.reveal and now < self.reveal.until:  # the first cards are still up: wait
-                self.next_reveal = Reveal("swap", dict(self.swap_given),
-                                          self.reveal.until + REVEAL_SECONDS)
-            else:
-                self.reveal = Reveal("swap", dict(self.swap_given), now + REVEAL_SECONDS)
+            self._show("swap", {p: [c] for p, c in self.swap_given.items()})
         self._start_play(result.loser)
+
+    def _show(self, kind: Literal["first_cards", "swap", "jokers"], cards: dict[str, list[str]]) -> None:
+        """Put cards up for everyone for a few seconds, after the reveal that's up now."""
+        now = self.clock()
+        if self.reveal and now < self.reveal.until:  # the first cards are still up: wait
+            self.next_reveal = Reveal(kind, cards, self.reveal.until + REVEAL_SECONDS)
+        else:
+            self.reveal = Reveal(kind, cards, now + REVEAL_SECONDS)
 
     # ---- rounds ----
 

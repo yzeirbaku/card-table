@@ -59,7 +59,8 @@ function agreeing({ game, meId, names, act }) {
     title("Who's last?"),
     text(said),
     row(...voters.map((id) => button(id === meId ? 'Me' : names[id],
-      () => act({ type: 'pick_loser', player_id: id }), picks[meId] === id ? 'on' : ''))),
+      () => { if (picks[meId] !== id) act({ type: 'pick_loser', player_id: id }); }, // already picked: nothing to send
+      picks[meId] === id ? 'on' : ''))),
   ];
 }
 
@@ -123,12 +124,16 @@ export function renderReveal(el, game, names) {
   el.hidden = !reveal;
   if (!reveal) return el.replaceChildren();
   const swap = reveal.kind === 'swap';
-  const items = Object.entries(reveal.cards).map(([id, code]) => {
+  const jokers = reveal.kind === 'jokers';
+  const items = Object.entries(reveal.cards).map(([id, codes]) => {
     const item = div('reveal-item');
-    item.append(face(code), span(swap ? `${names[id]} gave` : names[id]));
+    const cards = div('reveal-cards');
+    cards.append(...codes.map((code) => face(code)));
+    item.append(cards, span(swap ? `${names[id]} gave` : jokers ? `${names[id]} has both jokers` : names[id]));
     return item;
   });
-  el.replaceChildren(span(swap ? 'The swap' : 'First cards', 'reveal-title'), ...items);
+  const heading = swap ? 'The swap' : jokers ? 'No swap' : 'First cards';
+  el.replaceChildren(span(heading, 'reveal-title'), ...items);
 }
 
 function title(value) {

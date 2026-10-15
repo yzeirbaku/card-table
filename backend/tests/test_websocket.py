@@ -82,7 +82,7 @@ def test_create_and_join(client):
         assert welcome["code"] == code
         assert s["players"] == [{"id": welcome["player_id"], "name": "Ana", "connected": True,
                                  "seat": None, "is_creator": True}]
-        assert s["room"] == {"game": "murlan", "seats": 2, "status": "lobby"}
+        assert s["room"] == {"game": "murlan", "seats": 2, "status": "lobby", "ended_by": None}
         assert s["game"] is None
 
 

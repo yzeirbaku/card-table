@@ -20,16 +20,21 @@ export function initMain({ store, enterRoom, applySettings }) {
   };
 
   // New table: pick game, then player count, then the room is created.
+  let gamesRequest = 0; // the newest games fetch; an older one's answer is dropped
   document.getElementById('btn-new').addEventListener('click', async () => {
     if (!hasName()) return;
     showStep('game');
     openSheet('sheet-new');
     const list = document.getElementById('game-list');
     list.replaceChildren();
+    const mine = ++gamesRequest;
+    const stale = () => mine !== gamesRequest || document.getElementById('sheet-new').hidden; // closed, or tapped again
     try {
       const games = await fetchGames();
+      if (stale()) return;
       list.replaceChildren(...games.map((game) => choice(game.name, () => pickPlayers(game))));
     } catch (err) {
+      if (stale()) return;
       closeSheets();
       toast(err.message);
     }

@@ -71,7 +71,9 @@ def main() -> int:
         return 1
     DEV_STATE_DIR.mkdir(exist_ok=True)
     backend = start(
-        [venv_python(), "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", str(BACKEND_PORT)],
+        # --reload: a code change restarts the backend (live rooms drop), so it never runs stale code
+        [venv_python(), "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", str(BACKEND_PORT),
+         "--reload", "--reload-dir", "app"],
         BACKEND_DIR,
         "backend.log",
     )

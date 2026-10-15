@@ -49,6 +49,7 @@ class Room:
     seating: list[str | None] = field(default_factory=list)  # seat index (clockwise) -> player id
     creator_id: str | None = None
     game: Game | None = None  # exists from the moment every seat is taken
+    ended_by: str | None = None  # the name of whoever left and so ended the last game (until the next starts)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     def __post_init__(self) -> None:
@@ -101,6 +102,8 @@ class Room:
 
     def leave(self, player_id: str) -> None:
         seat = self.seat_of(player_id)
+        if self.game is not None and seat is not None:  # the others are told why their game ended
+            self.ended_by = next(p.name for p in self.players if p.id == player_id)
         self.players = [p for p in self.players if p.id != player_id]
         self._unseat(player_id)
         self.game = None  # a game can't go on with an empty seat
@@ -140,7 +143,8 @@ class Room:
             self.game.disconnect(player_id)
 
     def _new_game(self) -> None:
-        self.game = Game(list(self.seating), self.creator_id, rng=self.rng, clock=self.clock)
+        self.ended_by = None
+        self.game =Game(list(self.seating), self.creator_id, rng=self.rng, clock=self.clock)
         for p in self.players:
             if p.socket is None:
                 self.game.disconnect(p.id)
@@ -170,7 +174,7 @@ class Room:
         return self.players[0].id if self.players else None
 
     def room_view(self) -> dict[str, Any]:
-        return {"game": self.game_id, "seats": self.seats, "status": self.status}
+        return {"game": self.game_id, "seats": self.seats, "status": self.status, "ended_by": self.ended_by}
 
     def players_view(self) -> list[dict[str, Any]]:
         return [

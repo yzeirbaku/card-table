@@ -174,7 +174,7 @@ def random_step(game: Game, rng: random.Random, clock: FakeClock) -> None:
 def check_views(game: Game) -> None:
     pile = {c for _, cards, _ in game.trick for c in cards}
     showing = game.reveal is not None and game.clock() < game.reveal.until
-    public = set(game.reveal.cards.values()) if showing else set()
+    public = {c for codes in game.reveal.cards.values() for c in codes} if showing else set()
     for p in game.seats:
         view = view_for(game, p)
         allowed = set(game.hands[p]) | pile | public

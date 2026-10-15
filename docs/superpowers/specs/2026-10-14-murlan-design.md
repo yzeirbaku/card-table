@@ -61,8 +61,9 @@ Suits never matter for beating anything.
 - **Passing only skips that turn.** You can play again next time it's your turn.
 - **Passing is always your own choice.** The game never passes for you, even when
   nothing in your hand beats the pile: when you pass is part of the strategy.
-- The pile clears when the turn comes back to the player who made the last play
-  (everyone else passed). That player leads anything.
+- When the turn comes back to the player who made the last play (everyone else
+  passed), the trick is won and that player leads anything. The won trick (dimmed)
+  and who passed stay on show until that lead clears them.
 - If the player who made the last play has already gone out, the lead goes to
   the next player clockwise who still has cards.
 - A player who plays their last card is **out** and takes the next finishing
@@ -112,7 +113,8 @@ Suits never matter for beating anything.
 - The swap is **hidden**, except when the winner and loser are **teammates**
   (their team scored 3): then **everyone sees both cards** for a few seconds.
 - If the **loser was dealt both jokers**, there is **no swap** and the
-  **winner leads** the round.
+  **winner leads** the round. Everyone is shown the loser's two jokers for a few
+  seconds, so it's clear why there's no swap.
 - 2- and 3-player games swap the same way.
 
 ### Winning the game
@@ -158,7 +160,8 @@ joins is in the room but **unseated** until they tap an empty seat. In a
 4-player Murlan, teammates are the two seats across from each other, so
 choosing a seat chooses your partner; the lobby labels the two teams. The room
 moves on (to the target pick) when every seat is taken. Leaving frees your
-seat. The room creator is the first player in the room; if they leave, the next
+seat; leaving mid-game ends the game, and the others are first told who left
+(a popup on the table) before going back to the lobby. The room creator is the first player in the room; if they leave, the next
 player clockwise becomes creator.
 
 ## Architecture
@@ -171,15 +174,15 @@ player clockwise becomes creator.
     its rank or lowest position and length) or reject it; `beats(new, top)`.
     Pure functions, no state.
   - `game.py`: the round/game state machine, as phases:
-    `choosing_target → cutting → dealing → swapping → playing →
-    agreeing_loser → round_over → … → game_over`, plus `paused` overlaying
-    any phase. Pure Python with an injectable clock and RNG; methods take a
+    `choosing_target → cutting → swapping → playing → agreeing_loser → … →
+    game_over`, plus `round_cancelled` after a pause runs out; a pause
+    (someone dropped) can overlay any phase. Pure Python with an injectable clock and RNG; methods take a
     player id and an action and either change state or raise a rejection with
     a message for the player.
   - `views.py`: `view_for(game, player_id)` builds what one player may see:
     their own hand, the pile, scores, phase, whose turn, and any public
     reveals (swap between teammates, face-up first cards during
-    a "take it" deal). **No view ever contains another player's hidden cards**,
+    a "take it" deal, the loser's two jokers when there's no swap). **No view ever contains another player's hidden cards**,
     nor how many cards anyone else holds (players finishing are still shown).
 - **Rooms** (`backend/app/rooms.py`) gain seats (`seat_index → player`),
   unseated players, the creator, and the game instance. The WebSocket handler
@@ -196,7 +199,12 @@ player clockwise becomes creator.
   illegal play comes back as a toast with the server's reason), the pile as a
   compact messy stack (each play lands slightly turned on the last), opponents'
   card backs (a fixed fan, no count), whose turn, and the scores in a bar above
-  the table with the menu. Pass and Play sit either side of the turn note. Each
+  the table with the menu. Your name sits above your hand (gold on your turn),
+  Pass in the bottom-left corner and Play in the bottom-right; a pass shows as a
+  red PASS stamp on that player's cards (above your name for you). The end of a
+  round dims the table and spotlights the winner (crown, gold banner, points
+  rising by the scores) for a few seconds before what comes next; a won game's
+  banner stays until tapped. Each
   new deal is animated: backs go out round the table one at a time and your
   hand turns face up at the end. Plus overlays for the
   target pick, the cut (spread deck, tap, Take it / Leave it), the swap
@@ -213,8 +221,8 @@ player clockwise becomes creator.
   singles/pairs/triples, exactly +1 and same length for straights of each
   multiplicity, bombs over everything, higher bomb over bomb).
 - **game (pytest):** deals per player count; first lead must include 3♠ /
-  lowest spade (2 players); pass doesn't lock out; pile clears on return to the
-  last player; lead passes when the last player is out; finishing places and
+  lowest spade (2 players); pass doesn't lock out; the trick is won on return
+  to the last player and stays on show until the next lead; lead passes when the last player is out; finishing places and
   points per player count; 4-player early end (1st+2nd same team) with loser
   agreement; swap (highest card with tie choice, 3–10 or lowest back, public
   only between teammates, skipped with both jokers and winner leads); cut take

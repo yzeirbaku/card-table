@@ -121,9 +121,11 @@ input { font: inherit; }
 
 /* ---------- table ---------- */
 #view-table { overflow: hidden; background: #000; }
-.table-frame { position: absolute; inset: 0; }
+.table-frame { position: absolute; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); } /* clear of the notch and home bar */
 /* Portrait phone: lay the landscape table on its side so it reads with the phone turned. */
-#view-table.rotated .table-frame { inset: auto; top: 0; left: 0; width: 100vh; height: 100vw; width: 100dvh; height: 100dvw;
+#view-table.rotated .table-frame { inset: auto; top: env(safe-area-inset-top); left: env(safe-area-inset-left);
+                                   width: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
+                                   width: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(100dvw - env(safe-area-inset-left) - env(safe-area-inset-right));
                                    transform-origin: top left; transform: rotate(90deg) translateY(-100%); }
 .table { position: absolute; inset: 0; overflow: hidden; }
 .surface { position: absolute; inset: 0; }
@@ -136,13 +138,14 @@ input { font: inherit; }
 .table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 14px;
              background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); color: var(--plate-fg); font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 .table-menu-btn { justify-self: start; width: 34px; height: 100%; font-size: 18px; }
-.table-menu { position: absolute; top: calc(var(--bar) + 4px); left: 14px; z-index: 6; overflow: hidden; border-radius: 10px; background: #fffdf7; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+.table-menu { position: absolute; top: calc(var(--bar) + 4px); left: 14px; z-index: 10; overflow: hidden; border-radius: 10px; background: #fffdf7; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 .table-menu button { display: block; padding: 12px 18px; color: #1a1a1a; font-weight: 700; }
 .seat { position: absolute; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .seat-top { top: calc(var(--bar) + 10px); left: 50%; transform: translateX(-50%); }
 .seat-left { left: 22px; top: 34%; }
 .seat-right { right: 22px; top: 34%; }
 .plate { position: relative; display: flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 999px; font-size: 13px; white-space: nowrap; background: var(--plate-bg); color: var(--plate-fg); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.plate .name { max-width: 18cqw; overflow: hidden; text-overflow: ellipsis; } /* long names stay clear of the play area */
 .plate .count { font-weight: 700; color: var(--plate-count); }
 .plate .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
 .plate.offline { opacity: .6; }
@@ -166,10 +169,14 @@ input { font: inherit; }
 .stamp { position: absolute; left: 50%; top: 50%; z-index: 1; translate: -50% -50%; rotate: -14deg; padding: 1px 8px; border: 2.5px solid #e2464f; border-radius: 4px;
          background: rgba(20,0,0,.4); color: #ff5a63; font: 900 14px/1.1 system-ui, sans-serif; letter-spacing: 2px; text-shadow: 0 1px 1px rgba(0,0,0,.5); white-space: nowrap; }
 .seat-me .stamp { top: auto; bottom: calc(100% + 4px); left: 50%; translate: -50% 0; }
+@container (max-height: 340px) { .seat-me .stamp { top: 50%; bottom: auto; left: auto; right: calc(100% + 8px); translate: 0 -50%; } } /* no room above on the smallest phones */
 .stamp.landing { animation: stamp .3s cubic-bezier(.3, 1.4, .5, 1); }
 @keyframes stamp { from { opacity: 0; scale: 1.8; } }
-.scoreboard { max-width: 50cqw; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.scoreboard b { margin: 0 4px; font-size: 15px; color: var(--plate-count); }
+/* Names shrink (ellipsis) so the scores always show; no overflow clip, so the +N under a score shows too. */
+.scoreboard { display: flex; justify-content: center; align-items: center; gap: 6px; min-width: 0; max-width: 50cqw; white-space: nowrap; }
+.scoreboard span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.scoreboard .sep { flex: none; }
+.scoreboard b { flex: none; font-size: 15px; color: var(--plate-count); }
 .score-round { justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; opacity: .7; }
 /* The pile: this trick's plays stacked, each a little turned, the newest on top. */
 .pile { position: absolute; inset: 0; }
@@ -200,9 +207,9 @@ input { font: inherit; }
 /* Your name above your cards (clear of a lifted card), with the note beside it: only for the swap
    and the first lead, since whose turn it is shows on the names. */
 .my-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.14 + 6px); z-index: 5; transform: translateX(-50%);
-          display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+          display: flex; align-items: center; gap: 8px; width: max-content; max-width: 94cqw; white-space: nowrap; }
 .my-row .seat-me { position: relative; }
-.turn-note { padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
+.turn-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
 .turn-note:empty { display: none; }
 /* Pass in the bottom-left corner, Play in the bottom-right: under your thumbs, clear of your cards. */
 .corner-btn { position: absolute; bottom: 4cqh; z-index: 5; width: auto; min-width: 84px; padding: 9px 20px; border-radius: 999px; font-size: 15px; }
@@ -214,6 +221,7 @@ input { font: inherit; }
           padding: 8px 14px; border-radius: 14px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
 .reveal-title { align-self: center; font-weight: 700; }
 .reveal-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.reveal-cards { display: flex; gap: 4px; }
 .reveal-item .card-face { width: calc(var(--card-w) * .7); }
 /* The end of a round (spotlight.js): the table dims under the bar, the winner's seat stays lit with a crown. */
 .spot-shade { position: absolute; inset: 0; z-index: 5; background: rgba(0,0,0,.55); animation: fade-in .4s; }
@@ -221,7 +229,7 @@ input { font: inherit; }
 .crown { position: absolute; left: 50%; bottom: calc(100% + 2px); translate: -50% 0; color: #f0c75e; font-size: 22px; line-height: 1;
          text-shadow: 0 2px 4px rgba(0,0,0,.6); animation: crown .5s ease-out; }
 .seat-top .crown { position: static; translate: none; font-size: 16px; margin-right: -2px; order: -1; } /* no room above the top seat */
-.ribbon { position: absolute; left: 50%; top: 46%; z-index: 8; translate: -50% -50%; display: grid; justify-items: center; gap: 4px; max-width: 86cqw;
+.ribbon { position: absolute; left: 50%; top: 46%; z-index: 8; translate: -50% -50%; display: grid; justify-items: center; gap: 4px; width: max-content; max-width: min(86cqw, 64cqw - 132px); /* clear of the side seats */
           padding: 10px 26px; border-radius: 8px; background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; text-align: center;
           box-shadow: 0 6px 20px rgba(0,0,0,.5); animation: ribbon .35s ease-out; }
 .ribbon-text { font: 700 20px Georgia, serif; }
@@ -241,8 +249,8 @@ input { font: inherit; }
 .overlay h2 { font-family: Georgia, serif; font-size: 20px; }
 .overlay p { font-size: 14px; color: #4a4030; }
 /* Same size as the leave popup's buttons. */
-.overlay .choice-row { width: 240px; }
-.overlay .choice-row button { padding: 12px; font-size: 15px; }
+.overlay .choice-row { width: auto; min-width: 240px; max-width: 100%; }
+.overlay .choice-row button { padding: 12px; font-size: 15px; overflow-wrap: anywhere; }
 .overlay button.on { background: linear-gradient(#f3d27a, #d4a640); border-color: #d4a640; color: #3a2a08; }
 .overlay-buttons { display: grid; gap: 8px; width: 240px; }
 .overlay-buttons button { padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-weight: 700; }
@@ -253,6 +261,7 @@ input { font: inherit; }
 .confirm-box h2 { font-family: Georgia, serif; font-size: 20px; }
 .confirm-box p { font-size: 14px; color: #4a4030; }
 .confirm-box .overlay-buttons { grid-template-columns: 1fr 1fr; }
+.confirm-box .overlay-buttons.one { grid-template-columns: 1fr; }
 .overlay-buttons button.danger { background: #b3121f; border-color: #b3121f; color: #fff; }
 .overlay .countdown { font-family: Georgia, serif; font-size: 34px; font-weight: 700; }
 .score-list { display: grid; gap: 3px; min-width: 200px; font-size: 14px; }

@@ -17,23 +17,38 @@ let current = null; // the last state drawn, to redraw the hand after a tap
 let currentMe = null; // your player id in that state
 let lastPhase = null; // the phase of the last render: a new phase starts with nothing selected
 let lastRound = null; // the round of the last render: a new round starts with nothing selected
-let waiting = false; // a move is out: ignore taps until the next state arrives
+let waiting = false; // a move is out: ignore taps until the game changes, the server says no, or a few seconds pass
+let waitingOn = null; // the game as it was when the move went out
+let waitTimer = null;
+const WAIT_MS = 4000; // a move lost on a dropped connection doesn't lock you out
 let hadEmptyHand = null; // whether the last render had no cards in your hand: cards arriving after that are a deal
 let lastPlay; // the newest play on the pile at the last render (null: empty), so only a new one lands
 let lastPassed = []; // the passes (pile + player) at the last render, so only a new Pass pops in
 
-/** Draw the last state again (the spotlight ending), keeping a move that's still out. */
+/** Draw the last state again (the spotlight ending); a move that's still out stays out. */
 function redraw() {
-  if (!current) return;
-  const out = waiting;
-  renderTable(current, currentMe);
-  waiting = out;
+  if (current) renderTable(current, currentMe);
 }
 
-/** Send a move once; further taps are ignored until the server answers with a state. */
+function stopWaiting() {
+  waiting = false;
+  waitingOn = null;
+  clearTimeout(waitTimer);
+}
+
+/** Send a move once; further taps are ignored until it's answered (another player's news doesn't count). */
 function sendOnce(message) {
   if (waiting) return;
-  if (send(message) !== false) waiting = true;
+  if (send(message) === false) return;
+  waiting = true;
+  waitingOn = JSON.stringify(current?.game ?? null);
+  clearTimeout(waitTimer);
+  waitTimer = setTimeout(stopWaiting, WAIT_MS);
+}
+
+/** The server turned a move down: taps work again. */
+export function moveRejected() {
+  stopWaiting();
 }
 
 export function initTable({ onLeave, send: sendMessage }) {
@@ -88,11 +103,34 @@ export function initTable({ onLeave, send: sendMessage }) {
   });
 }
 
-/** The leave popup; while it's up, the rest of the table can't be tabbed to or tapped. */
+/** A popup on the table; while one is up, the rest of the table can't be tabbed to or tapped. */
+function showModal(dialog, open) {
+  dialog.hidden = !open;
+  const up = document.querySelector('.table > .confirm:not([hidden])');
+  for (const el of document.querySelector('.table').children) el.inert = up !== null && el !== up;
+}
+
 function showLeaveConfirm(open) {
-  const ask = document.getElementById('leave-confirm');
-  ask.hidden = !open;
-  for (const el of document.querySelector('.table').children) if (el !== ask) el.inert = open;
+  showModal(document.getElementById('leave-confirm'), open);
+}
+
+/** Someone left: say who, and that the game is over, before going back to the lobby (`onDone`). */
+export function showEnded(name, onDone) {
+  const over = current?.game?.phase === 'game_over';
+  const notice = document.getElementById('ended-notice');
+  stopDeal();
+  resetSpotlight(); // its timer would redraw the old game behind the popup
+  showLeaveConfirm(false);
+  document.getElementById('table-menu').hidden = true;
+  document.getElementById('ended-title').textContent = `${name} left the table`;
+  document.getElementById('ended-text').textContent = over ? 'Everyone goes back to the lobby.' : 'The game has ended. Everyone goes back to the lobby.';
+  showModal(notice, true);
+  const ok = document.getElementById('btn-ended-ok');
+  ok.onclick = () => {
+    showModal(notice, false);
+    onDone();
+  };
+  ok.focus();
 }
 
 /** Forget the selection and the remembered phase and round (table left or no game). */
@@ -104,13 +142,15 @@ export function resetTable() {
   lastPlay = undefined;
   lastPassed = [];
   resetSpotlight();
+  stopWaiting();
   showLeaveConfirm(false);
+  showModal(document.getElementById('ended-notice'), false);
   stopDeal();
 }
 
 export function renderTable(state, meId) {
   const game = state.game;
-  waiting = false;
+  if (!game || JSON.stringify(game) !== waitingOn) stopWaiting();
   if (!game) {
     stopCountdown();
     resetTable();
@@ -183,7 +223,7 @@ function plate(player, game) {
   const el = div(player.connected ? 'plate' : 'plate offline');
   el.classList.toggle('turn', game.turn === player.id);
   const place = game.places.indexOf(player.id);
-  el.append(div('dot'), span(player.name));
+  el.append(div('dot'), span(player.name, 'name'));
   if (crowned(player.id)) el.append(span('♛', 'crown'));
   if (place >= 0) el.append(span(placeLabel(place), 'count'));
   return el;
@@ -208,8 +248,8 @@ function renderScores(game, names) {
       gain.textContent = `+${won}`;
       score.append(gain);
     }
-    const name = document.createTextNode(sideName(side, names));
-    if (i > 0) parts.push(document.createTextNode(' · '));
+    const name = span(sideName(side, names));
+    if (i > 0) parts.push(span('·', 'sep'));
     parts.push(...(two && i === 1 ? [score, name] : [name, score]));
   });
   document.querySelector('.scoreboard').replaceChildren(...parts);

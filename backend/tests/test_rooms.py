@@ -148,6 +148,23 @@ def test_leaving_mid_game_returns_everyone_to_the_lobby():
     assert room.status == "playing"
 
 
+def test_the_others_are_told_who_left_and_ended_the_game_until_the_next_starts():
+    room, (ana, ben) = full_room(2)
+    assert room.room_view()["ended_by"] is None
+    room.leave(ben.id)
+    assert room.room_view()["ended_by"] == "Ben"
+    cleo = room.join("Cleo", None)
+    room.sit(cleo.id, 1)
+    assert room.room_view()["ended_by"] is None
+
+
+def test_leaving_the_lobby_ends_nothing():
+    room, (ana, ben, cleo) = room_with(3, "Ana", "Ben", "Cleo")
+    room.sit(ben.id, 0)
+    room.leave(ben.id)
+    assert room.ended_by is None
+
+
 def test_the_creator_role_passes_clockwise():
     room, (ana, ben, cleo, _) = room_with(4, *NAMES)
     room.sit(ana.id, 2)
@@ -289,7 +306,7 @@ def test_room_and_player_views():
     room, (ana, ben) = room_with(3, "Ana", "Ben")
     room.sit(ben.id, 2)
     ana.socket = None
-    assert room.room_view() == {"game": "murlan", "seats": 3, "status": "lobby"}
+    assert room.room_view() == {"game": "murlan", "seats": 3, "status": "lobby", "ended_by": None}
     assert room.players_view() == [
         {"id": ana.id, "name": "Ana", "connected": False, "seat": None, "is_creator": True},
         {"id": ben.id, "name": "Ben", "connected": True, "seat": 2, "is_creator": False},
