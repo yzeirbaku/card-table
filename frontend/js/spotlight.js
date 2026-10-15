@@ -7,11 +7,13 @@ import { sideName } from './murlan.js';
 const ROUND_MS = 3200;
 
 let shown; // the last result already shown (undefined: nothing drawn yet, so don't replay one)
-let active = null; // { crowned: [player ids], text, game: bool } while the spotlight is up
+let shownResult = null; // that result without the game-over flag, to tell new points from old
+let active = null; // { crowned: [player ids], text, game: bool, points } while the spotlight is up
 let timer = null;
 
 export function resetSpotlight() {
   shown = undefined;
+  shownResult = null;
   active = null;
   clearTimeout(timer);
 }
@@ -27,8 +29,8 @@ export function crowned(playerId) {
 }
 
 /** Points each side just won, while the spotlight is up (else nothing). */
-export function gains(game) {
-  return active && game.last_round ? game.last_round.points : null;
+export function gains() {
+  return active?.points ?? null;
 }
 
 /**
@@ -38,12 +40,17 @@ export function gains(game) {
 export function updateSpotlight(game, names, redraw) {
   const result = game.last_round;
   const over = game.phase === 'game_over';
-  const key = result ? `${game.round}:${result.places.join()}:${game.sides.map((s) => s.score).join()}:${over}` : null;
+  if (active?.game && !over) active = null; // play again or shuffle: the old game's banner goes
+  const resultKey = result ? `${game.round}:${result.places.join()}:${game.sides.map((s) => s.score).join()}` : null;
+  const key = resultKey && `${resultKey}:${over}`;
+  const fresh = resultKey !== shownResult; // new points, not just the game ending on old ones
+  shownResult = resultKey;
   if (shown === undefined || key === null || key === shown) {
     shown = key;
     return;
   }
   shown = key;
+  const points = fresh ? result.points : null;
   clearTimeout(timer);
   const sideOf = (id) => game.sides.find((side) => side.players.includes(id));
   if (over) {
@@ -53,6 +60,7 @@ export function updateSpotlight(game, names, redraw) {
       crowned: side ? side.players : [],
       text: side ? `${sideName(side, names)} ${many ? 'win' : 'wins'} the game!` : "It's a draw",
       game: true,
+      points,
     };
     return; // stays until a tap
   }
@@ -62,6 +70,7 @@ export function updateSpotlight(game, names, redraw) {
     crowned: [winner],
     text: `${sideName(side, names)} ${side.players.length > 1 ? 'win' : 'wins'} the round`,
     game: false,
+    points,
   };
   timer = setTimeout(() => {
     active = null;

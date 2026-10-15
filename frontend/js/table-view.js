@@ -22,6 +22,14 @@ let hadEmptyHand = null; // whether the last render had no cards in your hand: c
 let lastPlay; // the newest play on the pile at the last render (null: empty), so only a new one lands
 let lastPassed = []; // the passes (pile + player) at the last render, so only a new Pass pops in
 
+/** Draw the last state again (the spotlight ending), keeping a move that's still out. */
+function redraw() {
+  if (!current) return;
+  const out = waiting;
+  renderTable(current, currentMe);
+  waiting = out;
+}
+
 /** Send a move once; further taps are ignored until the server answers with a state. */
 function sendOnce(message) {
   if (waiting) return;
@@ -120,7 +128,7 @@ export function renderTable(state, meId) {
   const byId = Object.fromEntries(state.players.map((p) => [p.id, p]));
   const names = Object.fromEntries(game.seats.map((id) => [id, '?'])); // every seat has a name
   for (const p of state.players) names[p.id] = p.name;
-  updateSpotlight(game, names, () => { if (current) renderTable(current, currentMe); });
+  updateSpotlight(game, names, redraw);
   const seated = game.seats.map((id) => byId[id] ?? { id, name: '?', connected: false });
   // A pass is new if this player hadn't passed on this pile; nothing pops on the first render.
   const passes = game.passed.map((id) => `${pileKey(game)}|${id}`);
@@ -148,7 +156,7 @@ export function renderTable(state, meId) {
   const overlay = document.querySelector('.overlay');
   if (spotlightOn()) overlay.hidden = true; // what comes next waits for the spotlight
   else renderOverlay(overlay, game, meId, names, sendOnce);
-  renderSpotlight(() => { if (current) renderTable(current, currentMe); });
+  renderSpotlight(redraw);
   if (dealt) playDeal(seatPositions(seated, meId).map(({ position }) => position), game.hand.length);
 }
 
@@ -193,7 +201,7 @@ function renderScores(game, names) {
   game.sides.forEach((side, i) => {
     const score = document.createElement('b');
     score.textContent = String(side.score);
-    const won = gains(game)?.[i];
+    const won = gains()?.[i];
     if (won) { // the points this round just added, rising under the score
       const gain = document.createElement('i');
       gain.className = 'gain';
