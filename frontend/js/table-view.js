@@ -3,6 +3,7 @@ import { button, div, face, span } from './dom.js';
 import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
 import { crowned, finalPile, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
+import { fillRules } from './rules.js';
 import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
 import { toast } from './ui.js';
 
@@ -82,7 +83,7 @@ export function initTable({ onLeave, send: sendMessage }) {
   initFullscreen(menu);
   document.getElementById('btn-table-rules').addEventListener('click', () => {
     menu.hidden = true;
-    rules.querySelector('.rules-body').scrollTop = 0;
+    fillRules(rules.querySelector('.rules-body'), current?.room?.game);
     showModal(rules, true);
     document.getElementById('btn-rules-close').focus();
   });

@@ -4,7 +4,6 @@ import { stopDeal } from './deal.js';
 import { initLobby, renderLobby, showLobbyLoading } from './lobby-view.js';
 import { initMain } from './main-view.js';
 import { shouldRotate } from './orientation.js';
-import { fillRules } from './rules.js';
 import { closeSheets } from './sheets.js';
 import { createStore } from './storage.js';
 import { initTable, moveRejected, renderTable, resetTable, showEnded } from './table-view.js';
@@ -37,6 +36,7 @@ function render(state) {
   if (state.room.status === 'playing') {
     if (heldLobby) resetTable(); // a new game started behind the "X left" popup
     heldLobby = null;
+    if (!document.getElementById('sheet-rules').hidden) closeSheets(); // read in the lobby; the game has started
     showView('table');
     renderTable(state, meId);
     return;
@@ -114,7 +114,6 @@ for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(
 document.addEventListener('touchmove', (event) => { if (event.touches.length > 1) event.preventDefault(); }, { passive: false });
 
 applySettings(store.getSettings());
-fillRules();
 initMain({ store, enterRoom, applySettings });
 initLobby({ onLeave: leaveRoom, send });
 initTable({ onLeave: leaveRoom, send });

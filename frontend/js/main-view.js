@@ -95,11 +95,6 @@ export function initMain({ store, enterRoom, applySettings }) {
     enterRoom(code);
   });
 
-  document.getElementById('btn-rules').addEventListener('click', () => {
-    openSheet('sheet-rules');
-    document.getElementById('sheet-rules').scrollTop = 0;
-  });
-
   // Settings: theme + card style, applied immediately.
   document.getElementById('btn-settings').addEventListener('click', () => {
     markSettings(store.getSettings());

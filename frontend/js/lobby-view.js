@@ -1,8 +1,11 @@
 import { copyText } from './clipboard.js';
 import { div, span } from './dom.js';
 import { seatGroups } from './murlan.js';
+import { fillRules, hasRules } from './rules.js';
+import { openSheet } from './sheets.js';
 
 let send = () => {};
+let lobbyGame = null; // the room's game id, for How to play
 
 export function initLobby({ onLeave, send: sendMessage }) {
   send = sendMessage;
@@ -14,11 +17,18 @@ export function initLobby({ onLeave, send: sendMessage }) {
     setTimeout(() => show(0), 1500);
   });
   document.getElementById('btn-lobby-leave').addEventListener('click', onLeave);
+  document.getElementById('btn-lobby-rules').addEventListener('click', () => {
+    const sheet = document.getElementById('sheet-rules');
+    fillRules(sheet.querySelector('.rules-body'), lobbyGame);
+    openSheet('sheet-rules');
+    sheet.scrollTop = 0;
+  });
 }
 
 /** Before the first state arrives: show the code so it can be shared right away. */
 export function showLobbyLoading(code) {
   document.querySelector('.lobby-game').textContent = '';
+  document.getElementById('btn-lobby-rules').style.visibility = 'hidden'; // keeps its place: nothing jumps when it shows
   document.querySelector('.lobby-code').textContent = code;
   document.querySelector('.lobby-count').textContent = 'Connecting…';
   document.querySelector('.lobby-groups').replaceChildren();
@@ -30,6 +40,8 @@ export function renderLobby(state, meId, gameName) {
   const bySeat = Array(seats).fill(null);
   for (const p of state.players) if (p.seat !== null) bySeat[p.seat] = p;
   document.querySelector('.lobby-game').textContent = gameName;
+  lobbyGame = state.room.game;
+  document.getElementById('btn-lobby-rules').style.visibility = hasRules(lobbyGame) ? '' : 'hidden';
   document.querySelector('.lobby-code').textContent = state.code;
   document.querySelector('.lobby-count').textContent = `${bySeat.filter(Boolean).length}/${seats} seated`;
 

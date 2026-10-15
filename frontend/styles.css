@@ -32,6 +32,7 @@ input { font: inherit; }
 .tilt-left .card-face { rotate: -7deg; }
 .tilt-right .card-face { rotate: 6deg; }
 .tilt-slight .card-face { rotate: -2deg; }
+#btn-settings { grid-column: 1 / -1; }
 
 /* ---------- sheets ---------- */
 .sheet-backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.45); }
@@ -101,7 +102,7 @@ input { font: inherit; }
   .title { font-size: 76px; }
   .name-field { max-width: 440px; }
   .name-field input { padding: 15px 18px; font-size: 20px; border-radius: 12px; }
-  .menu-cards { grid-template-columns: repeat(4, auto); gap: 56px; margin-top: 10px; }
+  .menu-cards { grid-template-columns: repeat(3, auto); gap: 56px; margin-top: 10px; }
   #btn-settings { grid-column: auto; }
   .menu-card { gap: 16px; }
   .menu-card .card-face { width: 180px; }
@@ -112,6 +113,7 @@ input { font: inherit; }
   .lobby-code-row { gap: 22px; margin-top: 8px; }
   .lobby-code { font-size: 120px; line-height: 1.1; }
   #btn-copy { padding: 12px 22px; font-size: 20px; border-radius: 10px; }
+  #btn-lobby-rules { padding: 8px 16px; font-size: 16px; border-radius: 10px; }
   .lobby-hint { max-width: none; font-size: 18px; }
   .lobby-count { margin-top: 30px; font-size: 20px; }
   .lobby-seats { grid-template-columns: 1fr 1fr; gap: 14px; max-width: 720px; }
