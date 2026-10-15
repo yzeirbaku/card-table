@@ -11,10 +11,10 @@ const RETRY_MS = [500, 1000, 2000, 4000, 8000];
 
 /** One player's WebSocket to a room: saves the seat token, reconnects after drops. */
 export class RoomConnection {
-  constructor({ code, store, urlFor, onWelcome, onState, onError, onReconnecting, onClosed,
+  constructor({ code, store, urlFor, onWelcome, onState, onError, onReconnecting, onClosed, onReaction = () => {},
     // Wrap setTimeout: a stored browser setTimeout called as a method throws "Illegal invocation".
     WebSocketImpl = globalThis.WebSocket, wait = (fn, ms) => setTimeout(fn, ms) }) {
-    Object.assign(this, { code, store, urlFor, onWelcome, onState, onError, onReconnecting, onClosed, WebSocketImpl, wait });
+    Object.assign(this, { code, store, urlFor, onWelcome, onState, onError, onReconnecting, onClosed, onReaction, WebSocketImpl, wait });
     this.stopped = false;
     this.attempt = 0;
     this.opened = false; // has any socket opened since connect()?
@@ -62,6 +62,8 @@ export class RoomConnection {
       this.onState(msg);
     } else if (msg.type === 'error') {
       this.onError(msg.message);
+    } else if (msg.type === 'reaction') {
+      this.onReaction(msg.player_id, msg.reaction);
     }
   }
 

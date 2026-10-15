@@ -18,6 +18,9 @@ from .murlan.game import Rejected
 from .rooms import JoinRejected, Player, Room, RoomManager
 from .timers import RoomTimer
 
+REACTIONS = frozenset({"shocked", "laughing", "angry", "asleep"})
+REACTION_GAP_SECONDS = 1.0  # a player's reactions closer together than this are dropped
+
 # Local dev: the frontend is served on :5520 from localhost or a private-network address.
 DEV_ORIGINS = (
     r"https?://(localhost|127\.0\.0\.1|10(\.\d{1,3}){3}|192\.168(\.\d{1,3}){2}"
@@ -86,6 +89,24 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
                 room.game.tick()
             await broadcast(room)
 
+    async def react(room: Room, player: Player, ws: WebSocket, reaction: Any) -> None:
+        """A seated player's emoji, shown to everyone at the table. Nothing in the game changes."""
+        if not isinstance(reaction, str) or reaction not in REACTIONS:
+            await ws.send_json({"type": "error", "message": "Unknown reaction"})
+            return
+        if room.game is None or player.id not in room.game.seats:
+            await ws.send_json({"type": "error", "message": "Reactions are for players at the table"})
+            return
+        now = rooms.clock()
+        if now - player.reacted_at < REACTION_GAP_SECONDS:
+            return
+        player.reacted_at = now
+        message = {"type": "reaction", "player_id": player.id, "reaction": reaction}
+        for p in list(room.players):
+            if p.socket is not None:
+                with suppress(Exception):  # a dead socket is cleaned up by its own receive loop
+                    await p.socket.send_json(message)
+
     async def close_expired() -> None:
         for room in rooms.purge_expired():
             timer = timers.pop(id(room), None)
@@ -113,6 +134,9 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
             return False
         rooms.touch(room)
         kind = msg.get("type")
+        if kind == "react":
+            await react(room, player, ws, msg.get("reaction"))
+            return False
         if kind == "leave":
             room.leave(player.id)
             player.socket = None

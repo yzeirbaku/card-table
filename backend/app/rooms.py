@@ -35,6 +35,7 @@ class Player:
     name: str
     token: str  # secret; lets the same phone reclaim this player after a drop
     socket: Any = None  # the live WebSocket, or None while disconnected
+    reacted_at: float = float("-inf")  # their last reaction, to keep a fast tapper from flooding the table
 
 
 @dataclass

@@ -6,7 +6,7 @@ import { initMain } from './main-view.js';
 import { shouldRotate } from './orientation.js';
 import { closeSheets } from './sheets.js';
 import { createStore } from './storage.js';
-import { initTable, moveRejected, renderTable, resetTable, showEnded } from './table-view.js';
+import { initTable, moveRejected, reacted, renderTable, resetTable, showEnded } from './table-view.js';
 import { stopCountdown } from './table-overlay.js';
 import { setReconnecting, showView, syncTableRotated, toast } from './ui.js';
 
@@ -77,6 +77,7 @@ function enterRoom(code, { resume = false } = {}) {
     onWelcome: (id) => { meId = id; },
     onState: render,
     onError: (message) => { moveRejected(); toast(message); },
+    onReaction: reacted,
     onReconnecting: setReconnecting,
     onClosed: (message) => {
       connection = null;
@@ -84,6 +85,7 @@ function enterRoom(code, { resume = false } = {}) {
       stopCountdown();
       resetTable();
       setReconnecting(false);
+      closeSheets(); // How to play, opened in the lobby
       showView('main');
       toast(message);
     },
@@ -98,6 +100,7 @@ function leaveRoom() {
   stopCountdown();
   resetTable();
   setReconnecting(false);
+  closeSheets();
   showView('main');
 }
 

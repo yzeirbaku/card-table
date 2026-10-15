@@ -3,6 +3,7 @@ import { button, div, face, span } from './dom.js';
 import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
 import { crowned, finalPile, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
+import { addReaction, REACTIONS, reactionEl, resetReactions } from './reactions.js';
 import { fillRules } from './rules.js';
 import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
 import { toast } from './ui.js';
@@ -31,6 +32,7 @@ const WAIT_MS = 4000; // a move lost on a dropped connection doesn't lock you ou
 let hadEmptyHand = null; // whether the last render had no cards in your hand: cards arriving after that are a deal
 let lastPlay; // the newest play on the pile at the last render (null: empty), so only a new one lands
 let lastPassed = []; // the passes (pile + player) at the last render, so only a new Pass pops in
+let picking = false; // the reaction picker over your name is open
 
 /** Draw the last state again (the spotlight ending); a move that's still out stays out. */
 function redraw() {
@@ -53,6 +55,31 @@ function sendOnce(message) {
   waitTimer = setTimeout(stopWaiting, WAIT_MS);
 }
 
+/** Someone at the table reacted (yours too, as it comes back from the server). */
+export function reacted(playerId, kind) {
+  if (current) addReaction(playerId, kind, paintReaction);
+}
+
+/** Put a player's reaction (or none) on their plate in place: a full redraw would swallow taps on the cards. */
+function paintReaction(playerId) {
+  for (const el of document.querySelectorAll('.table .plate')) {
+    if (el.dataset.player !== playerId) continue;
+    el.querySelector('.reaction')?.remove();
+    const reaction = reactionEl(playerId);
+    if (reaction) el.append(reaction);
+  }
+}
+
+/** Open or close the picker over your name in place, for the same reason. */
+function setPicking(open) {
+  if (picking === open) return;
+  picking = open;
+  const seatMe = document.querySelector('.seat-me');
+  seatMe.querySelector('.react-picker')?.remove();
+  seatMe.querySelector('.plate')?.setAttribute('aria-expanded', String(open));
+  if (open) seatMe.append(reactionPicker());
+}
+
 /** The server turned a move down: taps work again. */
 export function moveRejected() {
   stopWaiting();
@@ -63,8 +90,26 @@ export function initTable({ onLeave, send: sendMessage }) {
   const menu = document.getElementById('table-menu');
   const menuButton = document.getElementById('btn-table-menu');
   menuButton.addEventListener('click', () => { menu.hidden = !menu.hidden; });
-  document.addEventListener('pointerdown', (event) => { // a tap anywhere else closes the menu
+  const seatMe = document.querySelector('.seat-me');
+  document.addEventListener('pointerdown', (event) => { // a tap anywhere else closes the menu and the picker
     if (!menu.hidden && !menu.contains(event.target) && !menuButton.contains(event.target)) menu.hidden = true;
+    if (picking && !seatMe.contains(event.target)) setPicking(false);
+  });
+  seatMe.addEventListener('click', (event) => { // tap your name to react
+    const choice = event.target.closest('[data-reaction]');
+    if (choice) {
+      send({ type: 'react', reaction: choice.dataset.reaction });
+      setPicking(false);
+      if (event.detail === 0) seatMe.querySelector('.plate')?.focus(); // from the keyboard: back to your name
+    } else if (event.target.closest('.plate')) {
+      setPicking(!picking);
+      if (event.detail === 0) seatMe.querySelector('[data-reaction]')?.focus();
+    }
+  });
+  seatMe.addEventListener('keydown', (event) => {
+    if (!['Enter', ' '].includes(event.key) || !event.target.matches('.plate')) return;
+    event.preventDefault();
+    event.target.click();
   });
   const ask = document.getElementById('leave-confirm');
   const rules = document.getElementById('rules-dialog');
@@ -75,6 +120,10 @@ export function initTable({ onLeave, send: sendMessage }) {
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
     menu.hidden = true;
+    if (picking) {
+      setPicking(false);
+      if (seatMe.contains(document.activeElement)) seatMe.querySelector('.plate')?.focus();
+    }
     if (!rules.hidden) return closeRules();
     if (ask.hidden) return;
     showLeaveConfirm(false);
@@ -157,6 +206,7 @@ export function showEnded(name, onDone) {
   const notice = document.getElementById('ended-notice');
   stopDeal();
   resetSpotlight(); // its timer would redraw the old game behind the popup
+  resetReactions();
   showLeaveConfirm(false);
   showModal(document.getElementById('rules-dialog'), false);
   document.getElementById('table-menu').hidden = true;
@@ -183,6 +233,8 @@ export function resetTable() {
   hadEmptyHand = null;
   lastPlay = undefined;
   lastPassed = [];
+  picking = false;
+  resetReactions();
   resetSpotlight();
   stopWaiting();
   showLeaveConfirm(false);
@@ -230,7 +282,10 @@ export function renderTable(state, meId) {
   }));
   seatEls.set(meId, document.querySelector('.hand')); // yours come from your hand
   const me = byId[meId];
-  document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me, seen)] : []));
+  const seatMe = document.querySelector('.seat-me');
+  const focused = seatMe.contains(document.activeElement) ? document.activeElement.dataset.reaction ?? 'plate' : null;
+  seatMe.replaceChildren(...(me ? myPlate(me, seen) : []));
+  if (focused) seatMe.querySelector(focused === 'plate' ? '.plate' : `[data-reaction="${focused}"]`)?.focus(); // keyboard focus survives the redraw
   document.querySelector('.my-row').classList.toggle('spot-winner', crowned(meId));
   if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(passStamp(newPasses.includes(meId)));
   renderScores(game, names);
@@ -278,10 +333,35 @@ function plate(player, game, showPlace = true) {
   const el = div(player.connected ? 'plate' : 'plate offline');
   el.classList.toggle('turn', game.turn === player.id);
   const place = game.places.indexOf(player.id);
+  el.dataset.player = player.id;
   el.append(div('dot'), span(player.name, 'name'));
   if (crowned(player.id)) el.append(span('♛', 'crown'));
   if (place >= 0 && showPlace) el.append(span(placeLabel(place), 'count'));
+  const reaction = reactionEl(player.id);
+  if (reaction) el.append(reaction);
   return el;
+}
+
+/** Your plate, which you tap for the reaction picker, and the picker while it's open. */
+function myPlate(me, game) {
+  const el = plate(me, game);
+  el.classList.add('mine');
+  el.tabIndex = 0;
+  el.setAttribute('role', 'button');
+  el.setAttribute('aria-label', `${me.name}: react`);
+  el.setAttribute('aria-expanded', String(picking));
+  return picking ? [el, reactionPicker()] : [el];
+}
+
+function reactionPicker() {
+  const picker = div('react-picker');
+  for (const [kind, emoji] of REACTIONS) {
+    const choice = button(emoji, () => {}, 'react-choice');
+    choice.dataset.reaction = kind;
+    choice.setAttribute('aria-label', kind);
+    picker.append(choice);
+  }
+  return picker;
 }
 
 /** Someone just went out and the round goes on: note it for a moment. Nothing pops on the first render. */

@@ -39,6 +39,7 @@ function setup({ deferWait = false } = {}) {
     onWelcome: (id) => events.push(['welcome', id]),
     onState: (msg) => events.push(['state', msg.code]),
     onError: (m) => events.push(['error', m]),
+    onReaction: (id, kind) => events.push(['reaction', id, kind]),
     onReconnecting: (on) => events.push(['reconnecting', on]),
     onClosed: (m) => events.push(['closed', m]),
     WebSocketImpl: FakeSocket,
@@ -64,6 +65,13 @@ test('state and error messages are passed on; garbage is ignored', () => {
   socket().message({ type: 'state', code: 'ABCD' });
   socket().message({ type: 'error', message: 'Nope' });
   assert.deepEqual(events.slice(-2), [['state', 'ABCD'], ['error', 'Nope']]);
+});
+
+test('reactions are passed on with who sent them', () => {
+  const { events, socket } = setup();
+  socket().open();
+  socket().message({ type: 'reaction', player_id: 'p2', reaction: 'asleep' });
+  assert.deepEqual(events.at(-1), ['reaction', 'p2', 'asleep']);
 });
 
 test('network drop reconnects with the saved token', () => {

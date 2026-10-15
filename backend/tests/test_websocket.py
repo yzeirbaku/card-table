@@ -366,3 +366,37 @@ def test_a_message_on_a_replaced_socket_is_not_applied():
             ws.receive_json()
         assert room.seat_of(player.id) is None  # and the message was not applied
         assert player.socket is newer
+
+
+def test_a_reaction_goes_to_everyone_at_the_table(client):
+    with started_game(client) as (ana, ben, a, _b, _sa, _sb):
+        send(ana, type="react", reaction="laughing")
+        expected = {"type": "reaction", "player_id": a["player_id"], "reaction": "laughing"}
+        assert ana.receive_json() == expected
+        assert ben.receive_json() == expected
+
+
+def test_unknown_reactions_and_reactions_outside_a_game_are_refused(client):
+    with started_game(client) as (ana, ben, _a, _b, _sa, _sb):
+        send(ana, type="react", reaction="dancing")
+        assert ana.receive_json()["type"] == "error"
+        send(ana, type="react", reaction=["shocked"])
+        assert ana.receive_json()["type"] == "error"
+    code = new_room(client)
+    with connect(client, code, "Ana") as ana:
+        join(ana)
+        send(ana, type="react", reaction="shocked")  # in the lobby: nobody's at a table
+        assert ana.receive_json()["type"] == "error"
+
+
+def test_reactions_faster_than_one_a_second_are_dropped(client, clock):
+    with started_game(client) as (ana, ben, a, _b, _sa, _sb):
+        send(ana, type="react", reaction="shocked")
+        assert ana.receive_json()["reaction"] == "shocked"
+        send(ana, type="react", reaction="angry")  # too soon: nothing happens
+        send(ana, type="nonsense")  # its error proves the server got past the dropped one
+        assert ana.receive_json()["type"] == "error"
+        clock.now += 1
+        send(ana, type="react", reaction="asleep")
+        assert ana.receive_json()["reaction"] == "asleep"
+        assert [ben.receive_json()["reaction"] for _ in range(2)] == ["shocked", "asleep"]
