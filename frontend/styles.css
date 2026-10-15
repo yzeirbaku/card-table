@@ -196,10 +196,10 @@ input { font: inherit; }
 .hand-card.selected .card-face img { box-shadow: 0 0 0 2px #f0c75e, 0 4px 12px rgba(0,0,0,.45); }
 .hand-card.dim { filter: brightness(.55); }
 /* The card you were just given in the swap stands up out of your hand, glowing, then settles in. */
-.hand-card.received { animation: received 2.4s var(--since, 0ms) ease-in-out both; }
-.hand-card.received .card-face img { animation: received-glow 2.4s var(--since, 0ms) ease-in-out both; }
-@keyframes received { 0% { translate: 0 0; } 15%, 75% { translate: 0 -30%; } 100% { translate: 0 0; } }
-@keyframes received-glow { 0%, 100% { box-shadow: none; } 15%, 75% { box-shadow: 0 0 0 2px #f0c75e, 0 0 14px 4px rgba(240,199,94,.75); } }
+.hand-card.received { animation: received 3.6s var(--since, 0ms) ease-in-out both; }
+.hand-card.received .card-face img { animation: received-glow 3.6s var(--since, 0ms) ease-in-out both; }
+@keyframes received { 0% { translate: 0 0; } 11%, 81% { translate: 0 -30%; } 100% { translate: 0 0; } }
+@keyframes received-glow { 0%, 100% { box-shadow: none; } 11%, 81% { box-shadow: 0 0 0 2px #f0c75e, 0 0 14px 4px rgba(240,199,94,.75); } }
 @media (prefers-reduced-motion: reduce) { .hand-card.received { animation: none; translate: 0 -30%; } .hand-card.received .card-face img { animation: none; box-shadow: 0 0 0 2px #f0c75e; } }
 /* The deal (deal.js): backs fly from the middle; your hand and the turn row wait, the fans fill up. */
 .deal-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }

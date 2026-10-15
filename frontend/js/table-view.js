@@ -10,7 +10,7 @@ const FAN = 5; // card backs drawn per opponent: how many they really hold isn't
 // How each play in a trick lies on the pile (offset x, offset y in px, turn in degrees), by its place in the trick.
 const LIE = [[-3, 2, -7], [4, -2, 6], [-2, -3, -2], [3, 3, 9], [-4, 1, -4], [2, -2, 3], [-1, 3, -9], [4, 0, 4]];
 const PILE_SHOWN = 4; // older plays are buried under these
-const RECEIVED_MS = 2400; // a card given to you in the swap stands up this long (the CSS animation's length)
+const RECEIVED_MS = 3600; // a card given to you in the swap stands up this long (the CSS animation's length)
 const OUT_MS = 2600; // "Ana is out · 1st" shows this long (the CSS animation's length)
 
 let send = () => {};
