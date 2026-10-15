@@ -156,7 +156,6 @@ input { font: inherit; }
               box-shadow: 0 0 0 2px #fff3cf, 0 0 10px 3px rgba(240,199,94,.7); animation: turn-glow 1.4s ease-in-out infinite alternate; }
 .plate.turn .count { color: #3a2a08; }
 @keyframes turn-glow { from { box-shadow: 0 0 0 2px #fff3cf, 0 0 6px 1px rgba(240,199,94,.45); } }
-/* "Pass" sits beside the name (inward on the right seat), so a seat never gets taller. */
 .seat .bubble { position: absolute; left: 50%; top: 16px; translate: -50% -50%; } /* "Passed" lies on their cards */
 .seat-me .bubble { left: 0; top: auto; bottom: calc(100% + 4px); translate: none; } /* yours sits above your name */
 .bubble.pop { animation: pop .28s cubic-bezier(.3, 1.6, .5, 1); }
