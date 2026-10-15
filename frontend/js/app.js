@@ -3,7 +3,7 @@ import { RoomConnection } from './connection.js';
 import { stopDeal } from './deal.js';
 import { initLobby, renderLobby, showLobbyLoading } from './lobby-view.js';
 import { initMain } from './main-view.js';
-import { appSize, shouldRotate } from './orientation.js';
+import { shouldRotate } from './orientation.js';
 import { closeSheets } from './sheets.js';
 import { createStore } from './storage.js';
 import { initTable, moveRejected, reacted, renderTable, resetTable, showEnded } from './table-view.js';
@@ -104,18 +104,7 @@ function leaveRoom() {
   showView('main');
 }
 
-/** --app-w / --app-h: the app's real size (see appSize); --short-y: how far that runs past the viewport. */
-function updateAppSize() {
-  const { width, height } = appSize({ standalone: navigator.standalone === true, innerWidth, innerHeight,
-    screenWidth: screen.width, screenHeight: screen.height });
-  const root = document.documentElement.style;
-  root.setProperty('--app-w', `${width}px`);
-  root.setProperty('--app-h', `${height}px`);
-  root.setProperty('--short-y', `${height - innerHeight}px`);
-}
-
 function updateRotation() {
-  updateAppSize();
   const table = document.getElementById('view-table');
   const rotated = shouldRotate(innerWidth, innerHeight);
   if (rotated !== table.classList.contains('rotated')) stopDeal(); // the deal's positions no longer hold

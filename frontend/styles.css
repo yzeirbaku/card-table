@@ -9,7 +9,7 @@ input { font: inherit; }
 
 /* ---------- shared ---------- */
 .felt { background: radial-gradient(ellipse at 50% 30%, #2f7d4f 0%, #1d5a37 55%, #123d25 100%); }
-.view { position: fixed; top: 0; left: 0; width: var(--app-w, 100%); height: var(--app-h, 100%); overflow-y: auto; } /* --app-*: app.js, the real screen on an iPhone home-screen app */
+.view { position: fixed; inset: 0; overflow-y: auto; }
 .label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px 2px; opacity: .75; }
 .btn { display: block; width: 100%; padding: 13px; border-radius: 12px; font-size: 15px; font-weight: 700; text-align: center; }
 .btn.primary { background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; box-shadow: 0 3px 6px rgba(0,0,0,.35); }
@@ -35,8 +35,8 @@ input { font: inherit; }
 #btn-settings { grid-column: 1 / -1; }
 
 /* ---------- sheets ---------- */
-.sheet-backdrop { position: fixed; top: 0; left: 0; width: var(--app-w, 100%); height: var(--app-h, 100%); z-index: 20; background: rgba(0,0,0,.45); }
-.sheet { position: fixed; left: 0; right: 0; bottom: calc(-1 * var(--short-y, 0px)); z-index: 21; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;
+.sheet-backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.45); }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px;
          padding: 22px 22px max(26px, env(safe-area-inset-bottom)); background: #fffdf7; color: #1a1a1a; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 24px rgba(0,0,0,.35); }
 .sheet-title { font-family: Georgia, serif; font-size: 22px; }
 .sheet-sub { font-size: 13px; color: #6b5f4a; }
@@ -133,7 +133,7 @@ input { font: inherit; }
 /* Portrait phone: lay the landscape table on its side so it reads with the phone turned. */
 #view-table.rotated .table-frame { inset: auto; top: env(safe-area-inset-top); left: env(safe-area-inset-left);
                                    width: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
-                                   width: calc(var(--app-h, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(var(--app-w, 100dvw) - env(safe-area-inset-left) - env(safe-area-inset-right));
+                                   width: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(100dvw - env(safe-area-inset-left) - env(safe-area-inset-right));
                                    transform-origin: top left; transform: rotate(90deg) translateY(-100%); }
 .table { position: absolute; inset: 0; overflow: hidden; }
 .surface { position: absolute; inset: 0; }
@@ -355,7 +355,7 @@ input { font: inherit; }
 .overlay .cut-pick { width: var(--card-w); }
 
 /* ---------- toast & banner ---------- */
-.toast { position: fixed; left: 50%; bottom: calc(max(24px, env(safe-area-inset-bottom)) - var(--short-y, 0px)); z-index: 40; max-width: 90vw; transform: translateX(-50%);
+.toast { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); z-index: 40; max-width: 90vw; transform: translateX(-50%);
          padding: 11px 16px; border-radius: 12px; background: #1a1a1a; color: #fff; font-size: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 body.table-rotated .toast { left: max(40px, env(safe-area-inset-left)); bottom: auto; top: 50%; max-width: 90vh; transform: translate(-50%, -50%) rotate(90deg); }
 body.table-rotated .banner { left: auto; right: max(24px, env(safe-area-inset-right)); top: 50%; transform: translate(50%, -50%) rotate(90deg); }
