@@ -1,4 +1,5 @@
 const VIEWS = ['main', 'lobby', 'table'];
+const FELT = '#123d25'; // the felt's darkest green, as in index.html and the manifest
 let toastTimer;
 
 /** name = null hides every view (neutral state while resuming a saved room). */
@@ -11,6 +12,11 @@ export function showView(name) {
 export function syncTableRotated() {
   const table = document.getElementById('view-table');
   document.body.classList.toggle('table-rotated', !table.hidden && table.classList.contains('rotated'));
+  // Whatever shows past the page (an installed app's system bars, the strip an iPhone leaves under it)
+  // takes the colour at the page's edge: the table's edge at the table, the felt elsewhere.
+  const edge = table.hidden ? '' : getComputedStyle(table).backgroundColor;
+  document.documentElement.style.backgroundColor = edge;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', edge || FELT);
 }
 
 export function toast(message) {

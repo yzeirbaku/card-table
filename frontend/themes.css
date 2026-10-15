@@ -6,6 +6,7 @@
   --card-back: repeating-linear-gradient(45deg, #8e1b22 0 4px, #a8262e 4px 8px); --card-back-edge: #fff;
   --zone-line: rgba(243,230,196,.35);
   --bar-bg: #24160b; --bar-edge: #8a5a2f;
+  --edge: #5b3a1e; /* round the table, out to the screen's edges: the wooden rail */
 }
 .theme-classic .surface { background: radial-gradient(ellipse at 50% 45%, #2f7d4f 0%, #1d5a37 55%, #123d25 100%); }
 .theme-classic .surface::before { content: ""; position: absolute; inset: 0; box-shadow: inset 0 0 0 10px #5b3a1e, inset 0 0 0 13px #8a5a2f, inset 0 0 40px rgba(0,0,0,.5); }
@@ -17,6 +18,7 @@
   --card-back-edge: #fbf7ec;
   --zone-line: rgba(90,60,30,.45);
   --bar-bg: #1d1a17; --bar-edge: #6b3d22;
+  --edge: #4a2814; /* the walnut */
 }
 .theme-qendisje .surface { background: repeating-linear-gradient(92deg, rgba(0,0,0,.07) 0 2px, transparent 2px 9px), repeating-linear-gradient(88deg, rgba(255,255,255,.03) 0 1px, transparent 1px 23px), linear-gradient(180deg, #6b3d22, #4a2814); }
 .theme-qendisje .cloth { display: block; inset: 10px 12px; border-radius: 6px; background-color: #f1ebdc; box-shadow: 0 4px 14px rgba(0,0,0,.5);
@@ -34,6 +36,7 @@
   --card-back-edge: #fbf7ec;
   --zone-line: rgba(20,48,94,.4);
   --bar-bg: #14305e; --bar-edge: #fbf7ec;
+  --edge: #e4e4e8; /* the marble */
 }
 .theme-kafeneio .surface { background: linear-gradient(115deg, transparent 38%, rgba(130,130,145,.28) 39.5%, transparent 41%), linear-gradient(62deg, transparent 70%, rgba(130,130,145,.22) 71%, transparent 72.5%), linear-gradient(150deg, transparent 15%, rgba(130,130,145,.18) 16%, transparent 17.5%), radial-gradient(ellipse at 30% 25%, #ffffff, #e4e4e8 80%); }
 .theme-kafeneio .runner { display: block; left: 0; right: 0; top: 22%; height: 44%; border-top: 6px solid #fff; border-bottom: 6px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.25);

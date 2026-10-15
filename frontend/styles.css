@@ -128,7 +128,7 @@ input { font: inherit; }
 }
 
 /* ---------- table ---------- */
-#view-table { overflow: hidden; background: #000; }
+#view-table { overflow: hidden; background: var(--edge, #000); } /* the strips by the notch and home bar look like more table */
 .table-frame { position: absolute; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); } /* clear of the notch and home bar */
 /* Portrait phone: lay the landscape table on its side so it reads with the phone turned. */
 #view-table.rotated .table-frame { inset: auto; top: env(safe-area-inset-top); left: env(safe-area-inset-left);
