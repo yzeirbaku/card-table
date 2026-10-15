@@ -206,7 +206,8 @@ def test_no_view_ever_leaks_hidden_cards(n, seed):
 def test_a_won_trick_stays_on_show_until_the_next_lead():
     g = new_game(2)
     rig(g, {"p0": ["JR", "3C"], "p1": ["4S", "5S"]}, "p0")
-    g.play("p0", ["JR"])  # p1 can't beat it and passes automatically
+    g.play("p0", ["JR"])
+    g.pass_turn("p1")  # nothing beats the red joker
     v = view_for(g, "p1")
     assert v["pile"] == [{"player_id": "p0", "cards": ["JR"], "kind": "single"}]
     assert v["pile_won"] is True and v["turn"] == "p0"

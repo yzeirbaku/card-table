@@ -97,21 +97,17 @@ def test_lead_moves_on_when_the_last_player_is_out():
     assert g.turn == "p1" and g.top is None
 
 
-def test_a_player_who_cannot_beat_the_pile_passes_automatically():
+def test_nobody_passes_without_choosing_to():
     g = new_game(3)
     rig(g, {"p0": ["9S", "3D"], "p1": ["5H", "6H"], "p2": ["4H", "KH"]}, "p0")
     g.play("p0", ["9S"])
-    assert g.turn == "p2" and g.passed == ["p1"]  # p1 has nothing above a 9
+    assert g.turn == "p1" and g.passed == []  # nothing above a 9, but it's still p1's call
+    g.pass_turn("p1")
     g.play("p2", ["KH"])
-    assert g.turn == "p2" and g.top is None  # neither p0 nor p1 beats a king: p2 leads again
+    g.pass_turn("p0")
+    g.pass_turn("p1")
+    assert g.turn == "p2" and g.top is None  # p2 leads again
     assert g.trick_won and g.trick[-1][1] == ["KH"]  # and everyone still sees the king
-
-
-def test_automatic_passes_go_on_when_the_last_player_is_out():
-    g = new_game(3)
-    rig(g, {"p0": ["AS"], "p1": ["5H", "6H"], "p2": ["4H", "7H"]}, "p0")
-    g.play("p0", ["AS"])
-    assert g.places == ["p0"] and g.turn == "p1" and g.top is None
 
 
 def test_moves_that_are_not_allowed():
@@ -131,7 +127,7 @@ def test_moves_that_are_not_allowed():
     with pytest.raises(Rejected, match="Play a pair or a bomb"):
         g.play("p1", ["JB"])
     g.play("p1", ["9H", "9S"])
-    assert g.turn == "p1" and g.top is None  # p0 has no pair above the 9s: passed for them
+    assert g.top.kind == "pair"
 
 
 def test_a_lower_card_does_not_beat_the_pile():
@@ -308,14 +304,21 @@ def test_loser_picks_among_tied_highest_then_winner_gives_back_3_to_10():
     assert g.reveal is None  # winner and loser aren't partners: the swap stays hidden
 
 
-def test_a_single_choice_is_given_automatically():
+def test_a_single_choice_is_still_given_by_hand():
     g = swap_ready({"p0": ["9C", "KC"], "p1": ["4D"], "p2": ["6D"], "p3": ["JR", "4S"]})
+    assert g.phase == "swapping" and g.swap_giver() == "p3" and g.swap_choices("p3") == ["JR"]
+    g.give("p3", "JR")
+    assert g.swap_giver() == "p0" and g.swap_choices("p0") == ["9C"]
+    g.give("p0", "9C")
     assert g.phase == "playing" and g.turn == "p3"
     assert "JR" in g.hands["p0"] and "9C" in g.hands["p3"]
 
 
 def test_a_winner_with_nothing_from_3_to_10_gives_their_lowest():
     g = swap_ready({"p0": ["QC", "JC", "KD"], "p1": ["4D"], "p2": ["6D"], "p3": ["AS", "4H"]})
+    g.give("p3", "AS")
+    assert g.swap_choices("p0") == ["JC"]
+    g.give("p0", "JC")
     assert g.hands["p3"] == ["4H", "JC"]
     assert g.hands["p0"] == ["QC", "KD", "AS"]
 
@@ -323,6 +326,8 @@ def test_a_winner_with_nothing_from_3_to_10_gives_their_lowest():
 def test_the_swap_is_public_between_partners():
     g = swap_ready({"p0": ["9C", "KC"], "p1": ["4D"], "p2": ["JR", "4S"], "p3": ["6D"]},
                    places=["p0", "p1", "p3", "p2"])  # winner p0, loser p2: seats 0 and 2
+    g.give("p2", "JR")
+    g.give("p0", "9C")
     assert g.reveal.kind == "swap"
     assert g.reveal.cards == {"p2": "JR", "p0": "9C"}
 
@@ -335,6 +340,8 @@ def test_no_swap_when_the_loser_was_dealt_both_jokers_and_the_winner_leads():
 
 def test_two_players_swap_the_same_way():
     g = swap_ready({"p0": ["4C", "9H"], "p1": ["KS", "3D"]}, n=2)
+    assert g.swap_giver() == "p1"
+    g.give("p1", "KS")
     assert g.swap_giver() == "p0" and g.hands["p0"] == ["4C", "9H", "KS"]
     g.give("p0", "9H")
     assert g.hands["p1"] == ["3D", "9H"] and g.turn == "p1"
@@ -495,6 +502,8 @@ def test_a_swap_reveal_waits_for_the_first_cards_reveal():
         g.hands[p] = hand
     g.reveal = Reveal("first_cards", {p: "3S" for p in g.seats}, clock.now + REVEAL_SECONDS)
     g._after_deal()
+    g.give("p2", "JR")
+    g.give("p0", "9C")
     assert g.phase == "playing"
     assert g.reveal.kind == "first_cards" and g.next_reveal.kind == "swap"
     assert all(view_for(g, p)["reveal"]["kind"] == "first_cards" for p in g.seats)

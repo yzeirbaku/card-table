@@ -145,9 +145,9 @@ export function renderTable(state, meId) {
   if (dealt) playDeal(seatPositions(seated, meId).map(({ position }) => position), game.hand.length);
 }
 
-/** "Pass" beside a name; it pops in when the pass is new. */
+/** "Passed" on a player's cards (above your name for you); it pops in when the pass is new. */
 function passBubble(fresh) {
-  return span('Pass', fresh ? 'bubble pop' : 'bubble');
+  return span('Passed', fresh ? 'bubble pop' : 'bubble');
 }
 
 function seat(player, position, game, newPasses) {

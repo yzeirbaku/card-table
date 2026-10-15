@@ -59,6 +59,8 @@ Suits never matter for beating anything.
 - Play goes **clockwise** by seat. On your turn: play something that beats the
   top of the pile, or **pass**.
 - **Passing only skips that turn.** You can play again next time it's your turn.
+- **Passing is always your own choice.** The game never passes for you, even when
+  nothing in your hand beats the pile: when you pass is part of the strategy.
 - The pile clears when the turn comes back to the player who made the last play
   (everyone else passed). That player leads anything.
 - If the player who made the last play has already gone out, the lead goes to
@@ -198,7 +200,8 @@ player clockwise becomes creator.
   new deal is animated: backs go out round the table one at a time and your
   hand turns face up at the end. Plus overlays for the
   target pick, the cut (spread deck, tap, Take it / Leave it), the swap
-  (pick your card when you have a choice), agreeing the loser, the pause
+  (you always pick and give your card yourself, even when only one is
+  allowed), agreeing the loser, the pause
   countdown with Keep waiting / End game, round result, and game over with the
   three options. Lobby gets the seat picker. Themes and card styles from the
   PWA spec apply throughout (card backs use the theme's back).

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from .cards import DECK, JOKERS, card_name, power, rank_of, sort_cards, sort_key, suit_of
-from .combos import KIND_NAMES, STRAIGHTS, Play, beats, can_beat, classify
+from .combos import KIND_NAMES, STRAIGHTS, Play, beats, classify
 
 TARGETS = (13, 21)
 # Points for 1st, 2nd, ... place. In 4-player games a team adds its two players,
@@ -233,7 +233,6 @@ class Game:
                 raise Rejected("Give your highest card")
             raise Rejected("Give back a card from 3 to 10, or your lowest card if you have none")
         self._give(card)
-        self._auto_give()
 
     # ---- disconnects and time ----
 
@@ -363,16 +362,7 @@ class Game:
             self._start_play(result.winner)  # no swap, and the winner leads
             return
         self.phase = "swapping"
-        self.swap_step = "loser"
-        self._auto_give()
-
-    def _auto_give(self) -> None:
-        """A giver with only one allowed card gives it without being asked."""
-        while (giver := self.swap_giver()) is not None:
-            choices = self.swap_choices(giver)
-            if len(choices) != 1:
-                return
-            self._give(choices[0])
+        self.swap_step = "loser"  # each giver gives by hand, even with only one card allowed
 
     def _give(self, card: str) -> None:
         result = self.last_result
@@ -441,8 +431,7 @@ class Game:
         """Next player clockwise. When the turn gets back to whoever made the last
         play (everyone else passed), the trick is won and they lead; its cards stay
         on show until that lead. If they're already out, the next player clockwise
-        who still has cards leads. A player with nothing that beats the pile passes
-        without being asked."""
+        who still has cards leads."""
         n = len(self.seats)
         i = self.seats.index(self.turn)
         last = self.trick[-1][0] if self.top is not None else None
@@ -454,10 +443,6 @@ class Game:
                 self.passed = []
                 last = None
             if self.hands[player]:
-                top = self.top
-                if top is not None and not can_beat(self.hands[player], top):
-                    self.passed.append(player)
-                    continue
                 self.turn = player
                 return
         raise AssertionError("nobody has cards left")
