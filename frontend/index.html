@@ -52,11 +52,13 @@
 
   <section id="view-table" class="view" hidden>
     <div class="table-frame">
+      <!-- The cloth and the bar's colour run on out to the screen's edges; what's played stays on .table. -->
+      <div class="surface">
+        <div class="cloth"></div><div class="stitch"></div><div class="runner"></div>
+        <div class="prop cup"></div><div class="prop glass"></div>
+      </div>
+      <div class="bar-bleed"></div>
       <div class="table">
-        <div class="surface">
-          <div class="cloth"></div><div class="stitch"></div><div class="runner"></div>
-          <div class="prop cup"></div><div class="prop glass"></div>
-        </div>
         <div class="table-bar">
           <button id="btn-table-menu" class="table-menu-btn" type="button" aria-label="Menu">☰</button>
           <p class="scoreboard"></p>

@@ -129,19 +129,24 @@ input { font: inherit; }
 
 /* ---------- table ---------- */
 #view-table { overflow: hidden; background: var(--edge, #000); } /* the strips by the notch and home bar look like more table */
-.table-frame { position: absolute; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); } /* clear of the notch and home bar */
+.table-frame { position: absolute; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); /* clear of the notch and home bar */
+               container-type: size; --bar: clamp(34px, 9cqh, 52px);
+               /* How far past the frame, on each of the table's own sides, the screen goes on (the notch and home-bar strips). */
+               --bleed-t: env(safe-area-inset-top); --bleed-r: env(safe-area-inset-right); --bleed-b: env(safe-area-inset-bottom); --bleed-l: env(safe-area-inset-left); }
 /* Portrait phone: lay the landscape table on its side so it reads with the phone turned. */
 #view-table.rotated .table-frame { inset: auto; top: env(safe-area-inset-top); left: env(safe-area-inset-left);
                                    width: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(100vw - env(safe-area-inset-left) - env(safe-area-inset-right));
                                    width: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(100dvw - env(safe-area-inset-left) - env(safe-area-inset-right));
-                                   transform-origin: top left; transform: rotate(90deg) translateY(-100%); }
+                                   transform-origin: top left; transform: rotate(90deg) translateY(-100%);
+                                   /* turned a quarter: the table's top faces the screen's right, its right the screen's bottom, and so on */
+                                   --bleed-t: env(safe-area-inset-right); --bleed-r: env(safe-area-inset-bottom); --bleed-b: env(safe-area-inset-left); --bleed-l: env(safe-area-inset-top); }
 .table { position: absolute; inset: 0; overflow: hidden; }
-.surface { position: absolute; inset: 0; }
+.surface { position: absolute; inset: var(--bar) calc(-1 * var(--bleed-r)) calc(-1 * var(--bleed-b)) calc(-1 * var(--bleed-l)); }
+.bar-bleed { position: absolute; top: calc(-1 * var(--bleed-t)); left: calc(-1 * var(--bleed-l)); right: calc(-1 * var(--bleed-r)); height: calc(var(--bar) + var(--bleed-t));
+             background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); box-shadow: 0 2px 6px rgba(0,0,0,.35); } /* the bar, drawn on out under the notch / home bar */
 .surface > * { position: absolute; display: none; } /* each theme turns on the layers it uses */
 /* The bar above the table: menu, scores, round. The table's surface starts below it. */
-.table { --bar: clamp(34px, 9cqh, 52px);
-         --hand-w: min(68cqw, 94cqw - 184px); } /* the widest a hand gets: clear of the corner buttons (3cqw + 84px + a gap, each side) */
-.surface { top: var(--bar); }
+.table { --hand-w: min(68cqw, 94cqw - 184px); } /* the widest a hand gets: clear of the corner buttons (3cqw + 84px + a gap, each side) */
 /* Three columns with equal sides, so the scores sit on the table's centre line, above the top player and the hand. */
 .table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 14px;
              background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); color: var(--plate-fg); font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
