@@ -18,7 +18,7 @@ from typing import Literal
 from .cards import DECK, JOKERS, card_name, power, rank_of, sort_cards, sort_key, suit_of
 from .combos import KIND_NAMES, STRAIGHTS, Play, beats, classify, in_play_order
 
-TARGETS = (13, 21)
+TARGETS = (5, 10, 13, 21)
 # Points for 1st, 2nd, ... place. In 4-player games a team adds its two players,
 # so one team taking 1st and 2nd scores 5 against 1 (and the round ends early).
 PLACE_POINTS = {2: (1, 0), 3: (2, 1, 0), 4: (3, 2, 1, 0)}
@@ -146,7 +146,7 @@ class Game:
         if player_id != self.creator:
             raise Rejected("The room creator picks the target")
         if target not in TARGETS:
-            raise Rejected("The target is 13 or 21")
+            raise Rejected("The target is 5, 10, 13 or 21")
         self.target = target
         self._start_round()
 

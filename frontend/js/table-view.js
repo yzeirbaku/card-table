@@ -561,7 +561,9 @@ function renderActions(game, meId) {
   const play = document.getElementById('btn-play');
   play.hidden = !(myTurn || giving);
   play.textContent = giving ? 'Give' : 'Play';
-  document.getElementById('btn-pass').hidden = !myTurn || leading(game);
+  const pass = document.getElementById('btn-pass'); // there with Play, greyed out when you can't pass
+  pass.hidden = play.hidden;
+  pass.disabled = !myTurn || leading(game);
   const clear = document.getElementById('btn-clear');
   clear.hidden = play.hidden;
   clear.disabled = selected.length === 0;

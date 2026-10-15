@@ -28,8 +28,7 @@ function target({ game, meId, names, act }) {
   if (game.creator !== meId) return [title('Murlan'), text(`Waiting for ${names[game.creator]} to choose the target…`)];
   return [
     title('Play to'),
-    row(button('13', () => act({ type: 'choose_target', target: 13 })),
-      button('21', () => act({ type: 'choose_target', target: 21 }))),
+    row(...[5, 10, 13, 21].map((n) => button(String(n), () => act({ type: 'choose_target', target: n })))),
   ];
 }
 

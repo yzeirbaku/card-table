@@ -16,7 +16,7 @@ class _Msg(BaseModel):
 
 class ChooseTarget(_Msg):
     type: Literal["choose_target"]
-    target: Literal[13, 21]
+    target: Literal[5, 10, 13, 21]
 
 
 class Cut(_Msg):

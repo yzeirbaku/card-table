@@ -13,12 +13,19 @@ def test_creator_picks_the_target_and_the_first_round_starts():
     assert g.phase == "choosing_target"
     with pytest.raises(Rejected, match="creator"):
         g.choose_target("p1", 13)
-    with pytest.raises(Rejected, match="13 or 21"):
+    with pytest.raises(Rejected, match="5, 10, 13 or 21"):
         g.choose_target("p0", 15)
     g.choose_target("p0", 21)
     assert g.target == 21 and g.phase == "playing"
     with pytest.raises(Rejected, match="already"):
         g.choose_target("p0", 13)
+
+
+@pytest.mark.parametrize("target", [5, 10, 13, 21])
+def test_every_listed_target_can_be_picked(target):
+    g = new_game(2)
+    g.choose_target("p0", target)
+    assert g.target == target
 
 
 def test_strangers_cannot_move():

@@ -146,7 +146,8 @@ input { font: inherit; }
              background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); box-shadow: 0 2px 6px rgba(0,0,0,.35); } /* the bar, drawn on out under the notch / home bar */
 .surface > * { position: absolute; display: none; } /* each theme turns on the layers it uses */
 /* The bar above the table: menu, scores, round. The table's surface starts below it. */
-.table { --hand-w: min(68cqw, 94cqw - 164px); } /* the widest a hand gets: clear of the corner buttons (3cqw + 72px + a gap, each side) */
+.table { --hand-w: min(68cqw, 94cqw - 208px); } /* the widest a hand gets: clear of the corner buttons (3cqw + 96px + a gap, each side) */
+@container (max-height: 500px) { .table { --hand-w: min(68cqw, 94cqw - 164px); } } /* phones: smaller corner buttons (72px) */
 /* Three columns with equal sides, so the scores sit on the table's centre line, above the top player and the hand. */
 .table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 14px;
              background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); color: var(--plate-fg); font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
@@ -295,10 +296,14 @@ input { font: inherit; }
 .turn-note:empty { display: none; }
 /* Two stacked in each corner, under your thumbs and clear of your cards: Give up over Clear on the left,
    Pass over Play on the right. The ones you use most sit at the bottom. */
-.corner-btn { position: absolute; bottom: 4cqh; z-index: 5; width: auto; min-width: 72px; padding: 6px 14px; border-radius: 999px; font-size: 13px; }
+.corner-btn { position: absolute; bottom: 4cqh; z-index: 5; width: auto; min-width: 96px; padding: 9px 20px; border-radius: 999px; font-size: 16px; }
 #btn-giveup, #btn-clear { left: 3cqw; }
 #btn-pass, #btn-play { right: 3cqw; }
-#btn-giveup, #btn-pass { bottom: calc(4cqh + 36px); }
+#btn-giveup, #btn-pass { bottom: calc(4cqh + 46px); }
+@container (max-height: 500px) { /* phones: smaller, so they stay clear of your cards */
+  .corner-btn { min-width: 72px; padding: 6px 14px; font-size: 13px; }
+  #btn-giveup, #btn-pass { bottom: calc(4cqh + 36px); }
+}
 .corner-btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
 #btn-giveup { color: #ffb4a8; }
 .corner-btn:disabled { opacity: .45; cursor: default; }
@@ -347,14 +352,14 @@ input { font: inherit; }
 .overlay .choice-row button { padding: 12px; font-size: 15px; overflow-wrap: anywhere; }
 .overlay button.on { background: linear-gradient(#f3d27a, #d4a640); border-color: #d4a640; color: #3a2a08; }
 .overlay-buttons { display: grid; gap: 8px; width: 240px; }
-.overlay-buttons button { padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-weight: 700; }
+.overlay-buttons button { padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-weight: 700; white-space: nowrap; }
 /* Our own confirm, drawn on the table so it turns with it on a portrait phone. */
 .confirm { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(0,0,0,.45); }
 .confirm-box { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 86cqw; padding: 18px 24px; border-radius: 16px;
                background: #fffdf7; color: #1a1a1a; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 .confirm-box h2 { font-family: Georgia, serif; font-size: 20px; }
 .confirm-box p { font-size: 14px; color: #4a4030; }
-.confirm-box .overlay-buttons { grid-template-columns: 1fr 1fr; }
+.confirm-box .overlay-buttons { grid-template-columns: 1fr 1fr; width: auto; min-width: 240px; } /* one line each: wider for a longer label */
 .confirm-box .overlay-buttons.one { grid-template-columns: 1fr; }
 .confirm-box.rules-box { width: min(560px, 90cqw); max-width: none; max-height: 88cqh; padding: 14px 18px; }
 .rules-box .rules-body { overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; align-self: stretch; }

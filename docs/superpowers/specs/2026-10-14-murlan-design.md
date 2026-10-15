@@ -120,8 +120,8 @@ Suits never matter for beating anything.
 
 ### Winning the game
 
-- When all seats are filled, the **room creator** picks the target: **13 or
-  21**. Everyone else sees "Waiting for Yzeir to choose the target…". The game
+- When all seats are filled, the **room creator** picks the target: **5, 10, 13
+  or 21**. Everyone else sees "Waiting for Yzeir to choose the target…". The game
   starts when it's picked.
 - After each round, if any side has reached the target, the **highest score
   wins**. On an exact tie for the highest score, play **one more round** at a
@@ -163,7 +163,7 @@ Suits never matter for beating anything.
 ### After a game
 
 Final scores for everyone, and the room creator picks:
-- **Play again, same teams**: same seats; the creator picks 13 or 21 again.
+- **Play again, same teams**: same seats; the creator picks the target again.
 - **Shuffle teams** (4 players only): seats are randomly reassigned (so
   partners change), then target pick.
 - **Back to the lobby**: everyone is unseated and picks a seat again; players
