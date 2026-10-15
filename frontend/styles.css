@@ -129,7 +129,8 @@ input { font: inherit; }
 .surface { position: absolute; inset: 0; }
 .surface > * { position: absolute; display: none; } /* each theme turns on the layers it uses */
 /* The bar above the table: menu, scores, round. The table's surface starts below it. */
-.table { --bar: clamp(34px, 9cqh, 52px); }
+.table { --bar: clamp(34px, 9cqh, 52px);
+         --hand-w: min(68cqw, 94cqw - 184px); } /* the widest a hand gets: clear of the corner buttons (3cqw + 84px + a gap, each side) */
 .surface { top: var(--bar); }
 /* Three columns with equal sides, so the scores sit on the table's centre line, above the top player and the hand. */
 .table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 14px;
@@ -164,7 +165,7 @@ input { font: inherit; }
 .seat.passed .card-back { filter: grayscale(.7) brightness(.7); }
 .stamp { position: absolute; left: 50%; top: 50%; z-index: 1; translate: -50% -50%; rotate: -14deg; padding: 1px 8px; border: 2.5px solid #e2464f; border-radius: 4px;
          background: rgba(20,0,0,.4); color: #ff5a63; font: 900 14px/1.1 system-ui, sans-serif; letter-spacing: 2px; text-shadow: 0 1px 1px rgba(0,0,0,.5); white-space: nowrap; }
-.seat-me .stamp { top: auto; bottom: calc(100% + 8px); left: 50%; translate: -50% 0; }
+.seat-me .stamp { top: auto; bottom: calc(100% + 4px); left: 50%; translate: -50% 0; }
 .stamp.landing { animation: stamp .3s cubic-bezier(.3, 1.4, .5, 1); }
 @keyframes stamp { from { opacity: 0; scale: 1.8; } }
 .scoreboard { max-width: 50cqw; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -181,7 +182,7 @@ input { font: inherit; }
 .pile-who { position: absolute; left: 50%; top: calc(46% + var(--card-w) * 1.46 / 2 + 8px); transform: translateX(-50%); white-space: nowrap;
             padding: 2px 9px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
 .hand { position: absolute; left: 50%; bottom: 3cqh; z-index: 4; width: max-content; transform: translateX(-50%); display: flex;
-        --gap: min(4px, calc((68cqw - var(--n, 1) * var(--card-w)) / max(1, var(--n, 1) - 1))); }
+        --gap: min(4px, calc((var(--hand-w) - var(--n, 1) * var(--card-w)) / max(1, var(--n, 1) - 1))); }
 .hand-card { flex: none; width: var(--card-w); margin-left: var(--gap); transition: translate .12s; }
 .hand-card:first-child { margin-left: 0; }
 .hand-card.selected { translate: 0 -14%; }
