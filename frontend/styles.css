@@ -141,7 +141,6 @@ input { font: inherit; }
 .seat-top { top: calc(var(--bar) + 10px); left: 50%; transform: translateX(-50%); }
 .seat-left { left: 22px; top: 34%; }
 .seat-right { right: 22px; top: 34%; }
-.seat-me { left: 16px; bottom: 16px; }
 .plate { position: relative; display: flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 999px; font-size: 13px; white-space: nowrap; background: var(--plate-bg); color: var(--plate-fg); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
 .plate .count { font-weight: 700; color: var(--plate-count); }
 .plate .dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; }
@@ -151,7 +150,7 @@ input { font: inherit; }
 .card-back { width: 22px; height: 32px; margin-left: -14px; border-radius: 3px; background: var(--card-back); border: 1.5px solid var(--card-back-edge); box-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .card-back:first-child { margin-left: 0; }
 /* Between the top player's name and the turn row, so it never covers either. */
-.play-area { position: absolute; left: 50%; top: calc(var(--bar) + 80px); bottom: calc(3cqh + var(--card-w) * 1.66 + 42px); z-index: 3; width: 42%; transform: translateX(-50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
+.play-area { position: absolute; left: 50%; top: calc(var(--bar) + 80px); bottom: calc(3cqh + var(--card-w) * 1.66 + 60px); z-index: 3; width: 42%; transform: translateX(-50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
 
 /* ---------- murlan table ---------- */
 /* Sizes follow the table box (cq units), so they're right when the table is turned on a portrait phone. */
@@ -192,19 +191,23 @@ input { font: inherit; }
 .deal-layer { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
 .deal-layer .card-back { position: absolute; margin: 0; }
 .deal-card, .deal-deck { width: calc(var(--card-w) * .55); height: auto; aspect-ratio: 320 / 466; transform: translate(-50%, -50%); }
-.table.dealing .hand, .table.dealing .turn-row { visibility: hidden; }
+.table.dealing .hand, .table.dealing .turn-note, .table.dealing .corner-btn { visibility: hidden; }
 .table[data-fan="0"] .seats .card-back, .table[data-fan="1"] .seats .card-back:nth-child(n+2),
 .table[data-fan="2"] .seats .card-back:nth-child(n+3), .table[data-fan="3"] .seats .card-back:nth-child(n+4),
 .table[data-fan="4"] .seats .card-back:nth-child(n+5) { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .plate.turn, .stamp.landing { animation: none; } }
-/* Pass and Play above the hand, clear of a lifted card. The note between them is only for the
-   swap and the first lead; whose turn it is shows on the players' names. */
-.turn-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.14 + 4px); z-index: 5; transform: translateX(-50%);
-            display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+/* Your name above your cards (clear of a lifted card), with the note beside it: only for the swap
+   and the first lead, since whose turn it is shows on the names. */
+.my-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.14 + 6px); z-index: 5; transform: translateX(-50%);
+          display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.my-row .seat-me { position: relative; }
 .turn-note { padding: 3px 12px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 13px; font-weight: 700; }
 .turn-note:empty { display: none; }
-.turn-row .btn { width: auto; min-width: 76px; padding: 7px 18px; border-radius: 999px; font-size: 14px; }
-.turn-row .btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
+/* Pass in the bottom-left corner, Play in the bottom-right: under your thumbs, clear of your cards. */
+.corner-btn { position: absolute; bottom: 4cqh; z-index: 5; width: auto; min-width: 84px; padding: 9px 20px; border-radius: 999px; font-size: 15px; }
+#btn-pass { left: 3cqw; }
+#btn-play { right: 3cqw; }
+.corner-btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
 .hand.locked .hand-card { cursor: default; }
 .reveal { position: absolute; left: 50%; top: calc(var(--bar) + 10px); z-index: 7; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 12px;
           padding: 8px 14px; border-radius: 14px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }

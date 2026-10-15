@@ -143,7 +143,7 @@ export function renderTable(state, meId) {
   seatEls.set(meId, document.querySelector('.hand')); // yours come from your hand
   const me = byId[meId];
   document.querySelector('.seat-me').replaceChildren(...(me ? [plate(me, game)] : []));
-  document.querySelector('.seat-me').classList.toggle('spot-winner', crowned(meId));
+  document.querySelector('.my-row').classList.toggle('spot-winner', crowned(meId));
   if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(passStamp(newPasses.includes(meId)));
   renderScores(game, names);
   const dealt = hadEmptyHand === true && game.hand.length > 0; // seen empty, now full: a new deal
