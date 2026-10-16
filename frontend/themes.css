@@ -4,7 +4,6 @@
 .theme-classic {
   --plate-bg: rgba(0,0,0,.45); --plate-fg: #f3e6c4; --plate-count: #f0c75e;
   --card-back: repeating-linear-gradient(45deg, #8e1b22 0 4px, #a8262e 4px 8px); --card-back-edge: #fff;
-  --zone-line: rgba(243,230,196,.35);
   --bar-bg: #24160b; --bar-edge: #8a5a2f;
   --edge: #5b3a1e; /* round the table, out to the screen's edges: the wooden rail */
 }
@@ -16,7 +15,6 @@
   --plate-bg: #1d1a17; --plate-fg: #f6efe0; --plate-count: #e8b33a;
   --card-back: repeating-linear-gradient(45deg, transparent 0 3px, rgba(0,0,0,.65) 3px 4px), repeating-linear-gradient(-45deg, transparent 0 3px, rgba(0,0,0,.65) 3px 4px), #b3121f;
   --card-back-edge: #fbf7ec;
-  --zone-line: rgba(90,60,30,.45);
   --bar-bg: #1d1a17; --bar-edge: #6b3d22;
   --edge: #4a2814; /* the walnut */
 }
@@ -34,9 +32,6 @@
   --plate-bg: #14305e; --plate-fg: #fff; --plate-count: #9cc3ff;
   --card-back: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path d='M0 14.5H16M13 14.5V1.5H2.5V11.5H9.5V5H6V8.5' fill='none' stroke='%23161616' stroke-width='1.8'/></svg>") 0 0 / 8px 8px, #c4622d;
   --card-back-edge: #fbf7ec;
-  --zone-line: rgba(20,48,94,.8); /* over the checked runner: needs to be strong */
-  --zone-width: 2.5px;
-  --zone-fill: rgba(251,251,253,.86); /* a calm patch of cloth to play on, off the checks */
   --bar-bg: #14305e; --bar-edge: #fbf7ec;
   --edge: #e4e4e8; /* the marble */
 }
