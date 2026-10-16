@@ -34,7 +34,9 @@
   --plate-bg: #14305e; --plate-fg: #fff; --plate-count: #9cc3ff;
   --card-back: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path d='M0 14.5H16M13 14.5V1.5H2.5V11.5H9.5V5H6V8.5' fill='none' stroke='%23161616' stroke-width='1.8'/></svg>") 0 0 / 8px 8px, #c4622d;
   --card-back-edge: #fbf7ec;
-  --zone-line: rgba(20,48,94,.4);
+  --zone-line: rgba(20,48,94,.8); /* over the checked runner: needs to be strong */
+  --zone-width: 2.5px;
+  --zone-fill: rgba(251,251,253,.86); /* a calm patch of cloth to play on, off the checks */
   --bar-bg: #14305e; --bar-edge: #fbf7ec;
   --edge: #e4e4e8; /* the marble */
 }

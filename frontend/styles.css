@@ -179,7 +179,7 @@ input { font: inherit; }
 .card-back { width: 22px; height: 32px; margin-left: -14px; border-radius: 3px; background: var(--card-back); border: 1.5px solid var(--card-back-edge); box-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .card-back:first-child { margin-left: 0; }
 /* Between the top player's name and the turn row, so it never covers either. */
-.play-area { position: absolute; left: 50%; top: calc(var(--bar) + 80px); bottom: calc(3cqh + var(--card-w) * 1.66 + 60px); z-index: 3; width: 42%; transform: translateX(-50%); border-radius: 16px; border: 1.5px dashed var(--zone-line); }
+.play-area { position: absolute; left: 50%; top: calc(var(--bar) + 80px); bottom: calc(3cqh + var(--card-w) * 1.66 + 60px); z-index: 3; width: 42%; transform: translateX(-50%); border-radius: 16px; border: var(--zone-width, 1.5px) dashed var(--zone-line); background: var(--zone-fill, none); }
 
 /* ---------- murlan table ---------- */
 /* Sizes follow the table box (cq units), so they're right when the table is turned on a portrait phone. */
