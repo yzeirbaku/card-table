@@ -211,7 +211,16 @@ input { font: inherit; }
             padding: 2px 9px; border-radius: 999px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
 .hand { position: absolute; left: 50%; bottom: 3cqh; z-index: 4; width: max-content; transform: translateX(-50%); display: flex;
         --gap: min(4px, calc((var(--hand-w) - var(--n, 1) * var(--card-w)) / max(1, var(--n, 1) - 1))); }
-.hand-card { flex: none; width: var(--card-w); margin-left: var(--gap); transition: translate .12s; }
+.hand-card { flex: none; width: var(--card-w); margin-left: var(--gap); transition: translate .12s, transform .18s ease-out;
+             touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.hand-card img { -webkit-user-drag: none; }
+/* Dragged to the pile (drag.js): the cards follow your finger, the pile lights up while they're over it. */
+.hand-card.dragging { z-index: 1; transition: translate .12s; cursor: grabbing; }
+.hand-card.dragging .card-face img { box-shadow: 0 0 0 2px #f0c75e, 0 10px 22px rgba(0,0,0,.55); }
+.hand-card.dropped { transition: translate .12s; }
+.play-area { transition: background-color .12s, border-color .12s; }
+.play-area.drag-on { border-color: rgba(240,199,94,.55); }
+.play-area.drop-over { border-style: solid; border-color: #f0c75e; background: rgba(240,199,94,.14); }
 .hand-card:first-child { margin-left: 0; }
 .hand-card.selected { translate: 0 -14%; }
 .hand-card.selected .card-face img { box-shadow: 0 0 0 2px #f0c75e, 0 4px 12px rgba(0,0,0,.45); }
@@ -304,10 +313,10 @@ input { font: inherit; }
 .corner-btn { position: absolute; bottom: 4cqh; z-index: 5; width: auto; min-width: 96px; padding: 9px 20px; border-radius: 999px; font-size: 16px; }
 #btn-giveup, #btn-clear { left: 3cqw; }
 #btn-pass, #btn-play { right: 3cqw; }
-#btn-giveup, #btn-pass { bottom: calc(4cqh + 46px); }
+#btn-giveup, #btn-pass { bottom: calc(4cqh + 56px); } /* a gap between the two, so Pass isn't hit for Play */
 @container (max-height: 500px) { /* phones: smaller, so they stay clear of your cards */
   .corner-btn { min-width: 72px; padding: 6px 14px; font-size: 13px; }
-  #btn-giveup, #btn-pass { bottom: calc(4cqh + 36px); }
+  #btn-giveup, #btn-pass { bottom: calc(4cqh + 44px); }
 }
 .corner-btn.ghost { border: none; background: var(--plate-bg); color: var(--plate-fg); }
 #btn-giveup { color: #ffb4a8; }

@@ -1,4 +1,5 @@
 import { flyIn, playDeal, stopDeal } from './deal.js';
+import { cancelDrag, dragGroup, initDrag, justDropped, settleDropped } from './drag.js';
 import { button, div, face, span } from './dom.js';
 import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
@@ -54,7 +55,35 @@ function sendOnce(message) {
   waiting = true;
   waitingOn = JSON.stringify(current?.game ?? null);
   clearTimeout(waitTimer);
-  waitTimer = setTimeout(stopWaiting, WAIT_MS);
+  waitTimer = setTimeout(() => {
+    stopWaiting();
+    settleDropped();
+  }, WAIT_MS);
+}
+
+/** Play (or give) the cards picked: Play, or a drop on the pile. */
+function playSelected() {
+  const game = current?.game;
+  if (!game) return;
+  if (game.phase === 'swapping') {
+    if (selected.length !== 1) return toast('Pick the card to give');
+    sendOnce({ type: 'action', action: { type: 'give', card: selected[0] } });
+  } else {
+    if (!selected.length) return toast('Pick the cards to play');
+    sendOnce({ type: 'action', action: { type: 'play', cards: selected } });
+  }
+}
+
+/** A card in your hand starts moving: the cards that go with it, now picked (null: they can't move now). */
+function dragStart(code) {
+  const game = current?.game;
+  if (!game || waiting || !yourMove(game, currentMe) || game.pause) return null;
+  const group = dragGroup(selected, code, game.swap?.choices ?? []);
+  if (!group) return null;
+  selected = group;
+  for (const el of document.querySelectorAll('.hand .hand-card')) el.classList.toggle('selected', selected.includes(el.dataset.code)); // in place: a redraw would drop the drag
+  renderActions(game, currentMe);
+  return group;
 }
 
 /** Someone at the table reacted (yours too, as it comes back from the server). */
@@ -85,6 +114,7 @@ function setPicking(open) {
 /** The server turned a move down: taps work again. */
 export function moveRejected() {
   stopWaiting();
+  settleDropped();
 }
 
 export function initTable({ onLeave, send: sendMessage }) {
@@ -161,16 +191,13 @@ export function initTable({ onLeave, send: sendMessage }) {
     showLeaveConfirm(false);
     menuButton.focus();
   });
-  document.getElementById('btn-play').addEventListener('click', () => {
-    const game = current?.game;
-    if (!game) return;
-    if (game.phase === 'swapping') {
-      if (selected.length !== 1) return toast('Pick the card to give');
-      sendOnce({ type: 'action', action: { type: 'give', card: selected[0] } });
-    } else {
-      if (!selected.length) return toast('Pick the cards to play');
-      sendOnce({ type: 'action', action: { type: 'play', cards: selected } });
-    }
+  document.getElementById('btn-play').addEventListener('click', playSelected);
+  initDrag(document.querySelector('.hand'), document.querySelector('.play-area'), {
+    start: dragStart,
+    drop: () => {
+      playSelected();
+      if (!waiting) settleDropped(); // it never went out
+    },
   });
   document.getElementById('btn-pass').addEventListener('click', () => {
     sendOnce({ type: 'action', action: { type: 'pass' } });
@@ -499,7 +526,8 @@ function renderPile(game, names, seatEls) {
   const landed = key !== lastPlay && lastPlay !== undefined;
   lastPlay = key;
   pile.replaceChildren(...plays, span(names[top.player_id] ?? '', 'pile-who'));
-  if (landed) flyIn(plays.at(-1), seatEls.get(top.player_id)); // slides in from whoever played it
+  const dropped = top.player_id === currentMe && justDropped(); // you put it there yourself
+  if (landed && !dropped) flyIn(plays.at(-1), seatEls.get(top.player_id)); // slides in from whoever played it
 }
 
 /** Your cards are in play on your turn, or when you have a card to give in the swap. */
@@ -526,11 +554,13 @@ function renderHand(game) {
   if (!mine) selected = []; // a pause keeps what you picked; it only stops new taps
   const locked = !mine || Boolean(game.pause);
   const hand = document.querySelector('.hand');
+  cancelDrag();
   hand.classList.toggle('locked', locked);
   hand.style.setProperty('--n', String(game.hand.length));
   hand.replaceChildren(...game.hand.map((code) => {
     const card = button('', () => pick(code), 'hand-card');
     card.setAttribute('aria-label', cardName(code));
+    card.dataset.code = code;
     if (locked) card.setAttribute('aria-disabled', 'true');
     card.classList.toggle('selected', selected.includes(code));
     card.classList.toggle('dim', giving && !choices.includes(code));
@@ -566,7 +596,7 @@ function renderActions(game, meId) {
   play.textContent = giving ? 'Give' : 'Play';
   const pass = document.getElementById('btn-pass'); // there with Play, greyed out when you can't pass
   pass.hidden = play.hidden;
-  pass.disabled = !myTurn || leading(game);
+  pass.disabled = !myTurn || leading(game) || selected.length > 0; // cards picked: you mean to play (Clear, then Pass)
   const clear = document.getElementById('btn-clear');
   clear.hidden = play.hidden;
   clear.disabled = selected.length === 0;

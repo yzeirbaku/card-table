@@ -212,12 +212,14 @@ player clockwise becomes creator.
   single worker; game logic reads time from the injectable clock so tests
   drive it without sleeping.
 - **Frontend** (no game logic): table screen renders the view — your hand
-  (tap cards to select; **Play** sends the selection, **Pass** passes; an
+  (tap cards to select; **Play** sends the selection, **Pass** passes, and is
+  greyed out while cards are picked so it isn't hit for Play; or drag cards onto
+  the pile to play them, your picks coming along; an
   illegal play comes back as a toast with the server's reason), the pile as a
   compact messy stack (each play lands slightly turned on the last), opponents'
   card backs (a fixed fan, no count), whose turn, and the scores in a bar above
   the table with the menu. Your name sits above your hand (gold on your turn),
-  Pass in the bottom-left corner and Play in the bottom-right; a pass shows as a
+  Pass stacked over Play in the bottom-right, with a gap between them; a pass shows as a
   red PASS stamp on that player's cards (above your name for you). The end of a
   round dims the table and spotlights the winner (crown, gold banner, points
   rising by the scores) for a few seconds before what comes next; a won game's
