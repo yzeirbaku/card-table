@@ -39,6 +39,15 @@ Murlan (the first game) is `2026-10-14-murlan-design.md`.
   `innerHTML`.
 - Dev ports: backend 8020, frontend 5520 (`scripts/dev_up.py`).
 
+## Production
+
+Frontend: Cloudflare Pages, `https://card-table-e61.pages.dev`, redeploys on every
+push to `main`. Backend: Docker on the shared Oracle VM behind Caddy,
+`https://yzeir-cards.duckdns.org`; deploy with the `deploy` skill
+(`.claude/skills/deploy/SKILL.md`). A backend deploy ends live games. If either
+host changes, update the backend's `CORS_ORIGIN_REGEX` (VM `.env`), the Pages
+build command, and `connect-src` in `frontend/_headers` together.
+
 ## Git
 
 Remote: `origin` = https://github.com/yzeirbaku/card-table (personal account
