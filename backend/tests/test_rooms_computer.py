@@ -91,7 +91,7 @@ def test_a_whole_game_against_the_computer_where_you_always_pass_or_lead_low():
     game = room.game
 
     def your_moves():
-        if game.phase == "playing" and game.turn == you.id and not game.pause:
+        if game.phase == "playing" and game.turn == you.id and not game.pause and not game.reveal:  # play waits for a reveal
             if game.top is None:
                 card = game.must_include or game.hands[you.id][0]
                 room.act(you.id, {"type": "play", "cards": [card]})

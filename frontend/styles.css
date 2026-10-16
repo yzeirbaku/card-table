@@ -8,7 +8,9 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 input { font: inherit; }
 
 /* ---------- shared ---------- */
-.felt { background: radial-gradient(ellipse at 50% 30%, #2f7d4f 0%, #1d5a37 55%, #123d25 100%); }
+/* A solid colour under the gradient: iOS 26 tints the status bar from the background colour of the view at the top, and
+   with none (a gradient is an image) it kept the table's brown after you left the table. */
+.felt { background: radial-gradient(ellipse at 50% 30%, #2f7d4f 0%, #1d5a37 55%, #123d25 100%) #123d25; }
 .view { position: fixed; inset: 0; overflow-y: auto; }
 .label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px 2px; opacity: .75; }
 .btn { display: block; width: 100%; padding: 13px; border-radius: 12px; font-size: 15px; font-weight: 700; text-align: center; }

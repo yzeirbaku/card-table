@@ -183,7 +183,7 @@ def check_views(game: Game) -> None:
     for p in game.seats:
         view = view_for(game, p)
         if view["last_round"]:  # the last round's final trick, exactly as it lay on the pile, and no more
-            final = [{"player_id": q, "cards": cards} for q, cards in game.last_result.pile]
+            final = [{"player_id": q, "cards": cards, "kind": classify(cards).kind} for q, cards in game.last_result.pile]
             assert view["last_round"].pop("pile") == final
             assert view["last_round"].pop("thrown") == game.last_result.thrown
         allowed = set(game.hands[p]) | pile | public
@@ -219,8 +219,8 @@ def test_the_last_round_keeps_its_final_trick_so_everyone_sees_how_it_ended():
     g.play("p1", ["4S"])
     g.play("p0", ["9H"])  # p0 goes out: the round is over and the next one waits for the cut
     assert g.phase == "cutting" and g.trick == []
-    final = [{"player_id": "p0", "cards": ["3C"]}, {"player_id": "p1", "cards": ["4S"]},
-             {"player_id": "p0", "cards": ["9H"]}]
+    final = [{"player_id": "p0", "cards": ["3C"], "kind": "single"}, {"player_id": "p1", "cards": ["4S"], "kind": "single"},
+             {"player_id": "p0", "cards": ["9H"], "kind": "single"}]
     assert all(view_for(g, p)["last_round"]["pile"] == final for p in g.seats)
     assert view_for(g, "p1")["last_round"]["out"] == 1  # only p0 went out; p1 still held cards
 

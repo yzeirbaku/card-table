@@ -7,6 +7,7 @@ or the cut card shown to the cutter."""
 import math
 from typing import Any
 
+from .combos import classify
 from .game import Game
 
 
@@ -44,7 +45,7 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
                               "points": list(game.last_result.points),
                               "out": game.last_result.out,
                               # the round's last trick: it was face up on the pile
-                              "pile": [{"player_id": p, "cards": list(cards)}
+                              "pile": [{"player_id": p, "cards": list(cards), "kind": classify(cards).kind}  # a bomb still shakes
                                        for p, cards in game.last_result.pile],
                               "thrown": {p: list(cards) for p, cards in game.last_result.thrown.items()}}
     if game.phase == "cutting":
