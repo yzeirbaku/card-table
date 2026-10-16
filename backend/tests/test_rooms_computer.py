@@ -36,7 +36,7 @@ def test_the_computer_players_are_seated_and_the_game_starts_as_you_join(seats):
     room, _ = computer_room(seats)
     assert room.game is None and room.seating[0] is None
     assert [p["name"] for p in room.players_view()] == (
-        ["Computer"] if seats == 2 else [f"Computer {i}" for i in range(1, seats)])
+        ["Bip", "Bop", "Zip"][:seats - 1])
     assert all(p["computer"] and p["connected"] for p in room.players_view())
     you = join_you(room)
     assert room.game is not None and room.seating[0] == you.id

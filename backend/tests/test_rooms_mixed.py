@@ -16,7 +16,7 @@ def test_the_creator_seats_one_computer_at_a_table_of_3():
     room.sit(ana.id, 0)
     assert room.room_view()["computer_seats_left"] == 1
     room.add_computer(ana.id, 2)
-    assert names(room) == ["Computer 1"] and room.seating[2] in room.bots
+    assert names(room) == ["Bip"] and room.seating[2] in room.bots
     assert room.room_view()["computer_seats_left"] == 0
     with pytest.raises(Rejected):
         room.add_computer(ana.id, 1)  # two people at least
@@ -31,7 +31,7 @@ def test_two_computers_at_a_table_of_4_and_adding_the_last_starts_the_game():
     room.sit(ben.id, 1)
     room.add_computer(ana.id, 2)
     room.add_computer(ana.id, 3)
-    assert names(room) == ["Computer 1", "Computer 2"]
+    assert names(room) == ["Bip", "Bop"]
     assert room.game is not None and room.status == "playing"
 
 
@@ -78,9 +78,9 @@ def test_removing_a_computer_frees_its_seat_and_its_name():
     room.add_computer(ana.id, 2)
     room.add_computer(ana.id, 3)
     room.remove_computer(ana.id, 2)
-    assert room.seating[2] is None and names(room) == ["Computer 2"] and len(room.bots) == 1
+    assert room.seating[2] is None and names(room) == ["Bop"] and len(room.bots) == 1
     room.add_computer(ana.id, 2)
-    assert sorted(names(room)) == ["Computer 1", "Computer 2"]
+    assert sorted(names(room)) == ["Bip", "Bop"]
     with pytest.raises(Rejected):
         room.remove_computer(ana.id, 0)  # nobody there
 

@@ -414,7 +414,7 @@ def test_a_table_against_the_computer_starts_on_join_and_the_computer_moves_by_i
             welcome, s = join(ana)
             me = welcome["player_id"]
             assert s["room"]["computer"] is True and s["room"]["status"] == "playing"
-            assert [p["name"] for p in s["players"] if p["computer"]] == ["Computer"]
+            assert [p["name"] for p in s["players"] if p["computer"]] == ["Bip"]
             act(ana, type="choose_target", target=5)
             s = state(ana)
             game = s["game"]

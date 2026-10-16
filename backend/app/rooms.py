@@ -30,6 +30,7 @@ CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I/O: easy to read aloud
 CODE_LENGTH = 4
 MAX_NAME_LENGTH = 20
 IDLE_EXPIRY_SECONDS = 2 * 60 * 60
+BOT_NAMES = ("Bip", "Bop", "Zip")  # short: the 🤖 by the name already says it's a computer
 # A computer player takes its time, so you see each move happen: it waits out the deal animation
 # and the end-of-round spotlight (see deal.js, spotlight.js), and any public reveal.
 DEAL_SECONDS = 3.0
@@ -81,7 +82,7 @@ class Room:
             self.seating = [None] * self.seats
         if self.computer:  # seats 1… are theirs; seat 0 waits for you
             for seat in range(1, self.seats):
-                self._seat_bot(seat, "Computer" if self.seats == 2 else f"Computer {seat}")
+                self._seat_bot(seat, BOT_NAMES[seat - 1])
 
     def _seat_bot(self, seat: int, name: str) -> None:
         bot = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16), computer=True)
@@ -150,7 +151,7 @@ class Room:
         if self.computer_seats_left == 0:
             raise Rejected("No more computer players fit at this table")
         names = {p.name for p in self.players if p.computer}
-        self._seat_bot(seat, next(f"Computer {n}" for n in range(1, self.seats + 1) if f"Computer {n}" not in names))
+        self._seat_bot(seat, next(n for n in BOT_NAMES if n not in names))
         if all(self.seating):
             self._new_game()
 

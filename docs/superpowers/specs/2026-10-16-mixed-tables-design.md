@@ -13,8 +13,8 @@ play: up to **1 computer at a 3-player table, 2 at a 4-player table**. A
 ### Lobby
 
 - The **room creator** sees an **Add computer** button on each empty seat while
-  more computers are allowed. Tapping it seats a computer there ("Computer 1",
-  "Computer 2": the lowest number not in use). If that fills the table, the game
+  more computers are allowed. Tapping it seats a computer there ("Bip",
+  then "Bop": the first name not in use). If that fills the table, the game
   starts as usual (the creator picks the race).
 - A computer's seat shows a 🤖 avatar, its name, and for the creator a **✕** to
   take it off the table again (only in the lobby).

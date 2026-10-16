@@ -19,7 +19,7 @@ straight to it: no code to share, no seat to pick.
 ## Server
 
 - `POST /rooms` takes `computer: true`. Such a room is created with its
-  computer players already seated (seats 1…n-1, named "Computer 1"…) and seat 0
+  computer players already seated (seats 1…n-1, named "Bip", "Bop", "Zip"; renamed 2026-10-16 from "Computer 1"…) and seat 0
   free for you; when you join you're seated there and the game starts. You're
   the creator, so you pick the race as usual.
 - Only one person can join a computer table (anyone else: "This table is full").
