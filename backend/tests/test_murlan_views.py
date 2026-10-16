@@ -163,7 +163,7 @@ def random_step(game: Game, rng: random.Random, clock: FakeClock) -> None:
         voters = game.loser_voters()
         game.pick_loser(rng.choice(voters), rng.choice(voters))
     elif game.phase == "playing" and rng.random() < 0.01:  # now and then someone throws their cards in
-        game.give_up(rng.choice([p for p in game.seats if game.hands[p]]))
+        game.give_up(game.turn)
     elif game.phase == "playing":
         player = game.turn
         cards = bot_play(game, player, rng)

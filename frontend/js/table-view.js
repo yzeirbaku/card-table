@@ -323,7 +323,7 @@ export function renderTable(state, meId) {
     showLeaveConfirm(false);
     document.getElementById('btn-table-menu').focus();
   }
-  const canGiveUp = game.phase === 'playing' && !game.pause && game.hand.length > 0;
+  const canGiveUp = game.phase === 'playing' && !game.pause && game.turn === meId && game.hand.length > 0; // only on your turn
   if (!document.getElementById('giveup-confirm').hidden) {
     if (canGiveUp) giveUpText(state); // someone went out or gave up meanwhile
     else showModal(document.getElementById('giveup-confirm'), false); // too late now
@@ -600,7 +600,7 @@ function renderActions(game, meId) {
   const clear = document.getElementById('btn-clear');
   clear.hidden = play.hidden;
   clear.disabled = selected.length === 0;
-  document.getElementById('btn-giveup').hidden = !(game.phase === 'playing' && !paused && game.hand.length > 0);
+  document.getElementById('btn-giveup').hidden = !(myTurn && game.hand.length > 0); // only on your turn
 }
 
 /** Nothing to beat: the pile is empty, or it's a won trick left on show until this lead. */

@@ -129,8 +129,9 @@ Suits never matter for beating anything.
 
 ### Giving up (added 2026-10-15)
 
-- Any time in the playing phase, a player still holding cards can **give up
-  the round** (with an "are you sure" first). Not only on their turn.
+- On their turn in the playing phase, a player can **give up the round**
+  (with an "are you sure" first) instead of playing or passing. (Changed
+  2026-10-16 at the author's request: before, any time, not only on their turn.)
 - Their cards are thrown **face up**: public to everyone until that round's
   result has been shown.
 - They finish **last**; a second player to give up finishes second-last, and so
@@ -139,8 +140,8 @@ Suits never matter for beating anything.
   left holding cards.
 - 4 players: if one team takes 1st and 2nd and one of the other team gave up,
   there's no vote for last: the one who gave up is last.
-- If it was their turn, play moves on. If their play is on top of the pile, the
-  lead passes on as when a player goes out. If they held the 3♠ before the first
+- Play moves on to the next player. If they had just won the trick (their lead),
+  the lead passes on as when a player goes out. If they held the 3♠ before the first
   lead, the next player leads anything.
 
 ### Disconnects

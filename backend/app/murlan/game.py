@@ -189,12 +189,14 @@ class Game:
 
     def give_up(self, player_id: str) -> None:
         """Throw your cards in: you finish last this round (a second to give up, second last).
-        Any time in play, not only on your turn. The cards land face up and stay on show all round."""
+        Only on your turn. The cards land face up and stay on show all round."""
         self._check_can_move(player_id)
         if self.phase != "playing":
             raise Rejected("You can only give up while the cards are being played")
         if player_id in self.places or player_id in self.gave_up:
             raise Rejected("You're already out of this round")
+        if player_id != self.turn:
+            raise Rejected("You can only give up on your turn")
         thrown, self.hands[player_id] = self.hands[player_id], []
         self.thrown[player_id] = thrown
         self.passed = [p for p in self.passed if p != player_id]  # out of the trick, so not "passed" in it either
@@ -202,7 +204,7 @@ class Game:
             self.must_include = None
         if self._round_over():
             self._end_round()
-        elif self.turn == player_id:
+        else:
             self._advance()
 
     def pick_loser(self, player_id: str, choice: str) -> None:
