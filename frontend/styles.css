@@ -416,5 +416,10 @@ input { font: inherit; }
          padding: 11px 16px; border-radius: 12px; background: #1a1a1a; color: #fff; font-size: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 body.table-rotated .toast { left: max(40px, env(safe-area-inset-left)); bottom: auto; top: 50%; max-width: 90vh; transform: translate(-50%, -50%) rotate(90deg); }
 body.table-rotated .banner { left: auto; right: max(24px, env(safe-area-inset-right)); top: 50%; transform: translate(50%, -50%) rotate(90deg); }
+/* Always there along the top, only its colour changes (ui.js): iOS 26 tints the status bar from a fixed full-width
+   element at the top, and kept the table's brown once the table view that gave it was hidden. Nearly see-through, so it
+   doesn't show; iOS blends it over the page background, which ui.js keeps the same colour. It takes taps (iOS finds it
+   the way a tap would), so nothing tappable sits in those top 12px. */
+.status-tint { position: fixed; top: 0; left: 0; right: 0; height: 12px; z-index: 50; }
 .banner { position: fixed; top: max(8px, env(safe-area-inset-top)); left: 50%; z-index: 40; transform: translateX(-50%);
           padding: 6px 14px; border-radius: 999px; background: #b45309; color: #fff; font-size: 13px; font-weight: 700; }

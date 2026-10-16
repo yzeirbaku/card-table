@@ -14,9 +14,17 @@ export function syncTableRotated() {
   // Whatever shows past the page (an installed app's system bars, the strip an iPhone leaves under it)
   // takes the colour at the page's edge: the table's edge at the table, the felt elsewhere. Always set
   // outright: an iPhone kept the table's brown after a cleared colour on the way back to the felt.
-  const edge = getComputedStyle(table.hidden ? document.body : table).backgroundColor;
+  const edge = getComputedStyle(table.hidden ? document.getElementById('view-main') : table).backgroundColor; // the felt under the main view's gradient
   document.documentElement.style.backgroundColor = edge;
+  document.body.style.backgroundColor = edge;
+  document.getElementById('status-tint').style.backgroundColor = faint(edge);
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', edge);
+}
+
+/** "rgb(91, 58, 30)" -> "rgba(91, 58, 30, 0.05)": the colour, all but see-through. */
+function faint(color) {
+  const [r, g, b] = color.match(/[\d.]+/g) ?? [0, 0, 0];
+  return `rgba(${r}, ${g}, ${b}, 0.05)`;
 }
 
 export function toast(message) {
