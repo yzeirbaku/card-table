@@ -42,6 +42,10 @@ def play_game(players: int, seed: int, target: int = 13, kinds=None, max_moves: 
         if game.rounds_played != seen_rounds:
             seen_rounds = game.rounds_played
             rounds.append(game.last_result)
+        if game.phase == "playing" and game.reveal:  # no one plays while cards are up, as in a room
+            clock.now = game.reveal.until
+            game.tick()
+            continue
         mover = next((p for p, bot in bots.items() if bot.needs_to_act(view_for(game, p))), None)
         assert mover is not None, f"nobody can move in phase {game.phase}"
         action = bots[mover].act(view_for(game, mover))

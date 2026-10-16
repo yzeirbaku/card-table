@@ -200,6 +200,7 @@ class Game:
             raise Rejected("You're already out of this round")
         if player_id != self.turn:
             raise Rejected("You can only give up on your turn")
+        self._check_no_reveal()
         thrown, self.hands[player_id] = self.hands[player_id], []
         self.thrown[player_id] = thrown
         self.passed = [p for p in self.passed if p != player_id]  # out of the trick, so not "passed" in it either
@@ -360,6 +361,11 @@ class Game:
             raise Rejected("It's not time to play cards")
         if player_id != self.turn:
             raise Rejected("It's not your turn")
+        self._check_no_reveal()
+
+    def _check_no_reveal(self) -> None:
+        if self.reveal:  # everyone gets to see the cards that are up before play goes on
+            raise Rejected("Wait till everyone has seen the cards")
 
     # ---- the swap: loser gives the winner their highest card, winner gives one back ----
 

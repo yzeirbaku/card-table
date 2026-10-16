@@ -1,6 +1,7 @@
 import { fetchGames, socketUrl } from './api.js';
 import { RoomConnection } from './connection.js';
 import { stopDeal } from './deal.js';
+import { preloadCards } from './dom.js';
 import { initLobby, renderLobby, showLobbyLoading } from './lobby-view.js';
 import { initMain } from './main-view.js';
 import { shouldRotate } from './orientation.js';
@@ -117,6 +118,7 @@ for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(
 document.addEventListener('touchmove', (event) => { if (event.touches.length > 1) event.preventDefault(); }, { passive: false });
 
 applySettings(store.getSettings());
+preloadCards();
 initMain({ store, enterRoom, applySettings });
 initLobby({ onLeave: leaveRoom, send });
 initTable({ onLeave: leaveRoom, send });

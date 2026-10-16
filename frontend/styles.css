@@ -347,7 +347,7 @@ input { font: inherit; }
 .gave-up-tag { padding: 3px 9px; border-radius: 999px; background: rgba(120, 20, 20, .8); color: #fff; font: 800 11px system-ui, sans-serif; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .thrown-card.flying { animation: none; } }
 .hand.locked .hand-card { cursor: default; }
-.reveal { position: absolute; left: 50%; top: calc(var(--bar) + 10px); z-index: 7; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 12px;
+.reveal { position: absolute; left: 50%; top: 46%; z-index: 7; transform: translate(-50%, -50%); /* centre stage, over the pile: play waits for it */ display: flex; align-items: flex-end; gap: 12px;
           padding: 8px 14px; border-radius: 14px; background: var(--plate-bg); color: var(--plate-fg); font-size: 12px; }
 .reveal-title { align-self: center; font-weight: 700; }
 .reveal-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }

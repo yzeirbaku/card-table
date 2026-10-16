@@ -1,4 +1,4 @@
-import { cardImage, cardName } from './murlan.js';
+import { ALL_CARDS, cardImage, cardName } from './murlan.js';
 
 // Tiny DOM builders. Text always goes in through textContent.
 
@@ -22,6 +22,19 @@ export function button(label, onClick, className = '') {
   el.textContent = label;
   el.addEventListener('click', onClick);
   return el;
+}
+
+const preloaded = []; // held on to, so the browser keeps the pictures ready
+
+/** Fetch every card picture up front: a card seen for the first time (someone's play) then shows at
+ *  once, instead of its empty frame flashing on the pile while the picture downloads. */
+export function preloadCards() {
+  for (const code of ALL_CARDS) {
+    const img = new Image();
+    img.src = cardImage(code);
+    img.decode().catch(() => {}); // a picture that fails to load is just fetched again when shown
+    preloaded.push(img);
+  }
 }
 
 /** A face-up card, in the same .card-face wrapper the card styles (Vintage) apply to. */

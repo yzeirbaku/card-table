@@ -560,7 +560,7 @@ function renderPile(game, names, seatEls) {
 
 /** Your cards are in play on your turn, or when you have a card to give in the swap. */
 function yourMove(game, meId) {
-  return (game.phase === 'playing' && game.turn === meId) || (game.swap?.choices.length ?? 0) > 0;
+  return (game.phase === 'playing' && game.turn === meId && !game.reveal) || (game.swap?.choices.length ?? 0) > 0; // play waits till the cards that are up go
 }
 
 function renderHand(game) {
@@ -617,7 +617,7 @@ function pick(code) {
 
 function renderActions(game, meId) {
   const paused = Boolean(game.pause);
-  const myTurn = !paused && game.phase === 'playing' && game.turn === meId;
+  const myTurn = !paused && !game.reveal && game.phase === 'playing' && game.turn === meId;
   const giving = !paused && (game.swap?.choices.length ?? 0) > 0;
   const play = document.getElementById('btn-play');
   play.hidden = !(myTurn || giving);

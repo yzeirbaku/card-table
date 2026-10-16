@@ -4,6 +4,11 @@ const SUITS = { S: '♠', H: '♥', D: '♦', C: '♣' };
 const JOKER_FILES = { JB: 'joker-black', JR: 'joker-red' };
 const PLACES = ['1st', '2nd', '3rd', '4th'];
 
+/** Every card in the deck: 2-10, J, Q, K, A of each suit, and the two jokers. */
+export const ALL_CARDS = [...'23456789', '10', ...'JQKA']
+  .flatMap((rank) => Object.keys(SUITS).map((suit) => rank + suit))
+  .concat(Object.keys(JOKER_FILES));
+
 /** Image for a card code such as "10H" or "JR". */
 export function cardImage(code) {
   return `/cards/${JOKER_FILES[code] ?? code}.webp`;

@@ -482,6 +482,23 @@ def test_reveals_expire_on_tick():
     assert g.reveal is None and g.deadline() is None
 
 
+def test_no_one_plays_until_the_reveal_is_gone():
+    clock = FakeClock()
+    g = new_game(2, clock=clock)
+    g.choose_target("p0", 13)
+    g.reveal = Reveal("first_cards", {p: ["3S"] for p in g.seats}, clock.now + REVEAL_SECONDS)
+    lead = g.turn
+    card = g.must_include or g.hands[lead][0]
+    with pytest.raises(Rejected, match="seen"):
+        g.play(lead, [card])
+    with pytest.raises(Rejected, match="seen"):
+        g.give_up(lead)
+    clock.now += REVEAL_SECONDS
+    g.tick()
+    g.play(lead, [card])
+    assert g.turn != lead
+
+
 def test_a_second_drop_restarts_the_countdown():
     clock = FakeClock()
     g = new_game(3, clock=clock)
