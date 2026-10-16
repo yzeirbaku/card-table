@@ -16,6 +16,8 @@ const LIE = [[-3, 2, -7], [4, -2, 6], [-2, -3, -2], [3, 3, 9], [-4, 1, -4], [2, 
 const PILE_SHOWN = 4; // older plays are buried under these
 const RECEIVED_MS = 3600; // a card given to you in the swap stands up this long (the CSS animation's length)
 const OUT_MS = 2600; // "Ana is out · 1st" shows this long (the CSS animation's length)
+const SHAKE_MS = 520; // a bomb landing shakes the table this long (the CSS animation's length)
+const LUCKY_MS = 4000; // "Four 2s. Act natural." shows this long (the CSS animation's length)
 
 let send = () => {};
 let leave = () => {}; // leave the table (game over against the computer: there's no lobby to go back to)
@@ -309,6 +311,7 @@ export function resetTable() {
   showModal(document.getElementById('ended-notice'), false);
   resetThrows();
   stopDeal();
+  document.querySelector('.lucky').hidden = true;
 }
 
 export function renderTable(state, meId) {
@@ -380,7 +383,29 @@ export function renderTable(state, meId) {
   if (spotlightOn()) overlay.hidden = true; // what comes next waits for the spotlight
   else renderOverlay(overlay, game, meId, names, sendOnce, { computer: state.room.computer, onLeave: leave });
   renderSpotlight(redraw);
-  if (dealt) playDeal(seatPositions(seated, meId).map(({ position }) => position), game.hand.length);
+  if (dealt) {
+    playDeal(seatPositions(seated, meId).map(({ position }) => position), game.hand.length)
+      .then(() => { if (game.lucky) showLucky(game.round); });
+  }
+}
+
+/** Dealt all four 2s: a word for you alone, once the cards are in your hand. */
+function showLucky(round) {
+  if (current?.game?.round !== round) return;
+  const el = document.querySelector('.lucky');
+  el.hidden = false;
+  clearTimeout(showLucky.timer);
+  showLucky.timer = setTimeout(() => { el.hidden = true; }, LUCKY_MS);
+}
+
+/** A bomb landed: the table jumps. */
+function shakeTable() {
+  const table = document.querySelector('.table');
+  table.classList.remove('shake');
+  void table.offsetWidth; // restart the animation when bombs land back to back
+  table.classList.add('shake');
+  clearTimeout(shakeTable.timer);
+  shakeTable.timer = setTimeout(() => table.classList.remove('shake'), SHAKE_MS);
 }
 
 /** A PASS stamp across a player's cards (above your name for you); it lands when the pass is new. */
@@ -418,7 +443,9 @@ function plate(player, game, showPlace = true) {
   el.classList.toggle('turn', game.turn === player.id);
   const place = game.places.indexOf(player.id);
   el.dataset.player = player.id;
-  el.append(div('dot'), span(player.name, 'name'));
+  el.append(div('dot'));
+  if (player.computer) el.append(span('🤖', 'bot-mark')); // everyone can tell a computer player
+  el.append(span(player.name, 'name'));
   if (crowned(player.id)) el.append(span('♛', 'crown'));
   if (place >= 0 && showPlace) el.append(span(placeLabel(place), 'count'));
   const reaction = reactionEl(player.id);
@@ -528,6 +555,7 @@ function renderPile(game, names, seatEls) {
   pile.replaceChildren(...plays, span(names[top.player_id] ?? '', 'pile-who'));
   const dropped = top.player_id === currentMe && justDropped(); // you put it there yourself
   if (landed && !dropped) flyIn(plays.at(-1), seatEls.get(top.player_id)); // slides in from whoever played it
+  if (landed && top.kind === 'bomb') shakeTable();
 }
 
 /** Your cards are in play on your turn, or when you have a card to give in the swap. */

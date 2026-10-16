@@ -98,6 +98,11 @@ input { font: inherit; }
 .lobby-seats li.open { cursor: pointer; }
 .lobby-seats li.open:hover, .lobby-seats li.open:active { background: rgba(0,0,0,.18); border-color: rgba(243,230,196,.7); }
 .lobby-seats li.me { box-shadow: 0 0 0 2px #f0c75e; }
+.lobby-seats li.computer .avatar { background: rgba(243,230,196,.18); font-size: 20px; }
+.lobby-seats li.computer::after { content: none; }
+.lobby-seats .seat-add, .lobby-seats .seat-remove { margin-left: auto; padding: 6px 10px; border: 1px solid rgba(243,230,196,.45); border-radius: 999px; color: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.lobby-seats .seat-remove { width: 32px; height: 32px; padding: 0; }
+.lobby-seats .seat-add:hover, .lobby-seats .seat-remove:hover { background: rgba(243,230,196,.12); }
 .lobby-unseated { min-height: 1.4em; font-size: 14px; line-height: 1.4; opacity: .75; } /* keeps its line when empty, so nothing moves */
 #view-lobby .btn { max-width: 340px; margin-top: auto; }
 
@@ -301,6 +306,18 @@ input { font: inherit; }
 .out-note-sub { font-size: 11px; font-weight: 600; opacity: .75; }
 @keyframes out-note { 0% { opacity: 0; scale: .8; } 10%, 80% { opacity: 1; scale: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .out-note { animation: none; } }
+
+/* ---------- easter eggs ---------- */
+.plate .bot-mark { margin-right: -3px; font-size: 1.05em; line-height: 1; }
+.table.shake { animation: bomb-shake .52s ease-out; }
+@keyframes bomb-shake { 0%, 100% { translate: 0 0; } 12% { translate: -7px 3px; } 25% { translate: 6px -4px; } 38% { translate: -5px -2px; } 52% { translate: 4px 3px; } 68% { translate: -2px 1px; } 84% { translate: 1px -1px; } }
+.lucky { position: absolute; left: 50%; top: 42%; z-index: 7; translate: -50% -50%; display: grid; justify-items: center; gap: 8px; padding: 18px 28px; border-radius: 18px;
+         background: rgba(24,16,6,.94); color: #fffdf7; text-align: center; box-shadow: 0 8px 28px rgba(0,0,0,.5); pointer-events: none; animation: lucky 4s ease-out both; }
+.lucky-face { font-size: 64px; line-height: 1; animation: lucky-face 4s ease-in-out both; }
+.lucky-text { font-family: Georgia, serif; font-size: 20px; font-weight: 700; white-space: nowrap; }
+@keyframes lucky { 0% { opacity: 0; scale: .6; } 10% { opacity: 1; scale: 1.06; } 16%, 85% { opacity: 1; scale: 1; } 100% { opacity: 0; } }
+@keyframes lucky-face { 0%, 30% { rotate: 0deg; } 40% { rotate: -12deg; } 50% { rotate: 10deg; } 60%, 100% { rotate: 0deg; } }
+@media (prefers-reduced-motion: reduce) { .table.shake, .lucky, .lucky-face { animation: none; } }
 /* Your name above your cards (clear of a lifted card), with the note beside it: only for the swap
    and the first lead, since whose turn it is shows on the names. */
 .my-row { position: absolute; left: 50%; bottom: calc(3cqh + var(--card-w) * 1.46 * 1.14 + 6px); z-index: 5; transform: translateX(-50%);

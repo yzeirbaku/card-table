@@ -28,6 +28,7 @@ SAVE_EARLY = {2: 0.0, 3: 0.6, 4: 0.6}
 SAVE_LATE = {2: 0.0, 3: 0.2, 4: 0.2}
 BOMB_SAVE = 0.3  # a bomb is kept for when it matters
 DANGER = 2  # an opponent with this many cards or fewer could go out any moment
+REACT_CHANCE = 0.35  # an emoji now and then at something it saw, not every time
 _DEALT_4 = (14, 14, 13, 13)  # by dealing order
 
 
@@ -46,6 +47,10 @@ class Bot:
         self.rng = rng or random.Random()
         self.memory = Memory()
         self._phase: str | None = None
+        self._top: tuple | None = None  # the newest play on the pile at the last reaction check
+        self._round: int | None = None  # the round at the last reaction check
+        self._reacted_in: int | None = None  # the round it last sent an emoji in: one a round at most
+        self._mood = random.Random(player_id)  # its own dice for emojis: they never change how it plays
 
     # ---- memory ----
 
@@ -74,6 +79,32 @@ class Bot:
     def _saw(self, player: str, cards: list[str]) -> None:
         self.memory.played.setdefault(player, set()).update(cards)
         self.memory.seen.update(cards)
+
+    # ---- emojis ----
+
+    def reaction(self, view: dict[str, Any]) -> str | None:
+        """Now and then an emoji at something that just happened: its own bomb landing, its
+        play being bombed, winning or losing the round. At most one a round."""
+        pile = view["pile"]
+        top = (view["round"], len(pile), pile[-1]["player_id"], tuple(pile[-1]["cards"])) if pile else None
+        new_top, self._top = top != self._top and top is not None, top
+        if self._round is not None and view["round"] < self._round:  # a new game
+            self._reacted_in = None
+        ended = self._round is not None and view["round"] > self._round and view["last_round"]
+        self._round = view["round"]
+        kind = None
+        if ended:
+            places = view["last_round"]["places"]
+            kind = "laughing" if places[0] == self.id else "angry" if places[-1] == self.id else None
+        elif new_top and pile[-1].get("kind") == "bomb":
+            if pile[-1]["player_id"] == self.id:
+                kind = "laughing"
+            elif len(pile) > 1 and pile[-2]["player_id"] == self.id:
+                kind = "shocked"
+        if kind is None or self._reacted_in == view["round"] - bool(ended) or self._mood.random() >= REACT_CHANCE:
+            return None
+        self._reacted_in = view["round"] - bool(ended)  # a round's end counts for that round
+        return kind
 
     # ---- what to do ----
 

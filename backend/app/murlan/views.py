@@ -30,6 +30,7 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
         # who gave up this round, and their hands: thrown face up, public until the round is over
         "thrown": {p: list(cards) for p, cards in game.thrown.items()},
         "must_include": game.must_include if game.turn == player_id else None,
+        "lucky": "four_twos" if game.four_twos == player_id else None,  # about your own hand: just for you
         "last_round": None,
         "winner_side": game.winner_side,
         "cut": None,

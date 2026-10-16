@@ -80,6 +80,7 @@ class Game:
         rng: random.Random | None = None,
         clock: Callable[[], float] = time.monotonic,
         no_countdown: bool = False,  # wait for a dropped player for as long as it takes
+        computers: frozenset[str] = frozenset(),  # computer players' seats: they never decide for the table
     ) -> None:
         if len(seats) not in PLACE_POINTS:
             raise ValueError("Murlan is for 2 to 4 players")
@@ -90,6 +91,7 @@ class Game:
         self.rng = rng or random.SystemRandom()
         self.clock = clock
         self.no_countdown = no_countdown
+        self.computers = frozenset(computers)
         self.phase: Phase = "choosing_target"
         self.target: int | None = None
         self.scores = [0] * self.side_count
@@ -117,6 +119,7 @@ class Game:
         self.must_include: str | None = None  # the first lead of a game must include this
         self.agree_picks: dict[str, str] = {}
         self.next_reveal = None
+        self.four_twos: str | None = None  # who was dealt all four 2s this round (only they are told)
 
     # ---- sides: teams of partners across in 4-player games, else each player ----
 
@@ -309,11 +312,11 @@ class Game:
 
     def decider(self) -> str | None:
         """Who chooses for the table: the creator, or if they're away the next
-        connected player clockwise."""
+        connected person clockwise (never a computer player)."""
         start = self.seats.index(self.creator)
         for k in range(len(self.seats)):
             player = self.seats[(start + k) % len(self.seats)]
-            if player not in self.disconnected:
+            if player not in self.disconnected and player not in self.computers:
                 return player
         return None
 
@@ -440,6 +443,7 @@ class Game:
             self.hands[order[k % len(order)]].append(card)
         for p in self.seats:
             self.hands[p] = sort_cards(self.hands[p])
+        self.four_twos = next((p for p in self.seats if sum(rank_of(c) == "2" for c in self.hands[p]) == 4), None)
         return order
 
     def _first_lead_card(self) -> str:

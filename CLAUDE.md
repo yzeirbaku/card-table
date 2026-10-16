@@ -29,7 +29,10 @@ Murlan (the first game) is `2026-10-14-murlan-design.md`.
   (`backend/app/murlan/bot.py`) decides only from `view_for(game, its id)` plus
   its memory of earlier views; it never reads the `Game`. Its moves go through
   `apply_action` like anyone's, timed by `Room.update_bots` / `run_bot`.
-  Strength is checked by self-play (`tests/murlan_selfplay.py`).
+  Strength is checked by self-play (`tests/murlan_selfplay.py`). At a friends
+  table of 3-4 the creator can seat computers too (a mixed table, at least two
+  people; spec `2026-10-16-mixed-tables-design.md`); computers never become
+  creator or `decider()`. Their emojis come from what their view shows.
 - Frontend: no npm dependencies and no bundler. `frontend/package.json` only
   makes Node treat `.js` as ES modules for `node --test`.
 - Names and anything from the server go into the DOM via `textContent`, never

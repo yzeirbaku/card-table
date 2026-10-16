@@ -232,3 +232,17 @@ def test_a_won_trick_stays_on_show_until_the_next_lead():
     assert v["pile_won"] is True and v["turn"] == "p0"
     g.play("p0", ["3C"])
     assert view_for(g, "p1")["pile_won"] is False
+
+
+def test_only_the_player_dealt_all_four_2s_is_told_they_are_lucky():
+    game = new_game(3)
+    twos = ["2C", "2D", "2H", "2S"]
+    rest = [c for c in DECK if c not in twos]
+    deck = []
+    for k in range(54):  # dealt round from p0: every third card is p0's
+        deck.append(twos.pop() if k % 3 == 0 and twos else rest.pop())
+    game.deck = deck
+    game._deal("p0")
+    assert sum(c.startswith("2") for c in game.hands["p0"]) == 4
+    assert view_for(game, "p0")["lucky"] == "four_twos"
+    assert view_for(game, "p1")["lucky"] is None and view_for(game, "p2")["lucky"] is None

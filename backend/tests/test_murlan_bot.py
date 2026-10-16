@@ -1,5 +1,6 @@
 import pytest
 
+from app.murlan import bot as bot_module
 from app.murlan.bot import Bot
 from app.murlan.views import view_for
 from tests.murlan_helpers import new_game, rig
@@ -69,3 +70,55 @@ def test_leading_it_keeps_its_jokers_for_later():
     g.must_include = None
     move = act(g, "p0")
     assert move["type"] == "play" and not set(move["cards"]) & {"JR", "JB"}
+
+
+# ---- emojis ----
+
+BOMB_HANDS = {"p0": ["3C", "9S", "9H", "9D", "9C", "KH"], "p1": ["4S", "5S", "6H"], "p2": ["6S", "7S", "8H"]}
+
+
+def test_it_sends_an_emoji_at_its_own_bomb_once_a_round_at_most(monkeypatch):
+    monkeypatch.setattr(bot_module, "REACT_CHANCE", 1.0)
+    g = new_game(3)
+    rig(g, BOMB_HANDS, "p1")
+    bot = Bot("p0")
+    assert bot.reaction(view_for(g, "p0")) is None  # nothing new yet
+    g.play("p1", ["5S"])
+    assert bot.reaction(view_for(g, "p0")) is None  # not a bomb
+    g.pass_turn("p2")
+    g.play("p0", ["9S", "9H", "9D", "9C"])
+    assert bot.reaction(view_for(g, "p0")) == "laughing"
+    assert bot.reaction(view_for(g, "p0")) is None  # the same bomb again: nothing
+
+
+def test_its_play_bombed_is_a_shock_and_the_other_seats_say_nothing(monkeypatch):
+    monkeypatch.setattr(bot_module, "REACT_CHANCE", 1.0)
+    g = new_game(3)
+    rig(g, BOMB_HANDS, "p2")
+    bots = {p: Bot(p) for p in ("p1", "p2")}
+    for p, bot in bots.items():
+        bot.reaction(view_for(g, p))
+    g.play("p2", ["8H"])
+    g.play("p0", ["9S", "9H", "9D", "9C"])
+    assert bots["p2"].reaction(view_for(g, "p2")) == "shocked"
+    assert bots["p1"].reaction(view_for(g, "p1")) is None
+
+
+def test_mostly_it_keeps_quiet(monkeypatch):
+    monkeypatch.setattr(bot_module, "REACT_CHANCE", 0.0)
+    g = new_game(3)
+    rig(g, BOMB_HANDS, "p0")
+    bot = Bot("p0")
+    bot.reaction(view_for(g, "p0"))
+    g.play("p0", ["9S", "9H", "9D", "9C"])
+    assert bot.reaction(view_for(g, "p0")) is None
+
+
+def test_it_reacts_to_winning_the_round(monkeypatch):
+    monkeypatch.setattr(bot_module, "REACT_CHANCE", 1.0)
+    g = new_game(2)
+    rig(g, {"p0": ["2S"], "p1": ["4S", "5S"]}, "p0")
+    bot = Bot("p0")
+    bot.reaction(view_for(g, "p0"))
+    g.play("p0", ["2S"])  # out: the round is over
+    assert bot.reaction(view_for(g, "p0")) == "laughing"

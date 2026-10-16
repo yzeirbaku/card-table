@@ -4,7 +4,8 @@ run as a single worker.
 
 A computer table (`computer=True`) has its computer players seated from the
 start and one seat left for the person who joins; the game starts as they do.
-The computer players move on their own: after every change `update_bots` says
+At a friends table of 3 or 4 the creator may seat computer players too (a mixed
+table, at least two people). The computer players move on their own: after every change `update_bots` says
 when the next one is due, and `run_bot` makes that move once its time comes."""
 
 import asyncio
@@ -71,6 +72,7 @@ class Room:
     computer: bool = False  # you against computer players
     bots: dict[str, Bot] = field(default_factory=dict)  # the computer players' minds, by player id
     bot_due: tuple[str, float, tuple] | None = None  # (who, when, the state they're answering): the next computer move
+    bot_reactions: list[tuple[str, str]] = field(default_factory=list)  # (who, reaction) computer emojis still to send
     _quiet_until: float = float("-inf")  # no computer moves before this (the deal, the round's end)
     _bots_saw: tuple[int, str] | None = None  # rounds played and phase at the last update
 
@@ -79,11 +81,13 @@ class Room:
             self.seating = [None] * self.seats
         if self.computer:  # seats 1… are theirs; seat 0 waits for you
             for seat in range(1, self.seats):
-                name = "Computer" if self.seats == 2 else f"Computer {seat}"
-                bot = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16), computer=True)
-                self.players.append(bot)
-                self.seating[seat] = bot.id
-                self.bots[bot.id] = Bot(bot.id, random.Random(self.rng.random()))
+                self._seat_bot(seat, "Computer" if self.seats == 2 else f"Computer {seat}")
+
+    def _seat_bot(self, seat: int, name: str) -> None:
+        bot = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16), computer=True)
+        self.players.append(bot)
+        self.seating[seat] = bot.id
+        self.bots[bot.id] = Bot(bot.id, random.Random(self.rng.random()))
 
     @property
     def status(self) -> RoomStatus:
@@ -131,6 +135,44 @@ class Room:
         if all(self.seating):
             self._new_game()
 
+    @property
+    def computer_seats_left(self) -> int:
+        """How many more computer players the creator may seat now: a friends table of 3 or 4
+        keeps at least two people, and a computer takes a place in the room like anyone."""
+        if self.computer or self.game is not None or self.seats < 3:
+            return 0
+        return max(0, min(self.seats - 2 - len(self.bots), self.seats - len(self.players)))
+
+    def add_computer(self, player_id: str, seat: object) -> None:
+        self._check_seating_computers(player_id, seat)
+        if self.seating[seat] is not None:
+            raise Rejected("That seat is taken")
+        if self.computer_seats_left == 0:
+            raise Rejected("No more computer players fit at this table")
+        names = {p.name for p in self.players if p.computer}
+        self._seat_bot(seat, next(f"Computer {n}" for n in range(1, self.seats + 1) if f"Computer {n}" not in names))
+        if all(self.seating):
+            self._new_game()
+
+    def remove_computer(self, player_id: str, seat: object) -> None:
+        self._check_seating_computers(player_id, seat)
+        bot_id = self.seating[seat]
+        if bot_id not in self.bots:
+            raise Rejected("There's no computer player in that seat")
+        del self.bots[bot_id]
+        self.players = [p for p in self.players if p.id != bot_id]
+        self.seating[seat] = None
+
+    def _check_seating_computers(self, player_id: str, seat: object) -> None:
+        if self.computer:
+            raise Rejected("This table is already you against the computer")
+        if player_id != self.creator_id:
+            raise Rejected("Only the room creator seats computer players")
+        if self.game is not None:
+            raise Rejected("The game has already started")
+        if not isinstance(seat, int) or isinstance(seat, bool) or not 0 <= seat < self.seats:
+            raise Rejected("There's no such seat")
+
     def leave(self, player_id: str) -> None:
         seat = self.seat_of(player_id)
         if self.game is not None and seat is not None:  # the others are told why their game ended
@@ -163,7 +205,7 @@ class Room:
         elif choice == "lobby":
             if self.computer:
                 raise Rejected("A table against the computer has no lobby: leave instead")
-            self.seating = [None] * self.seats
+            self.seating = [s if s in self.bots else None for s in self.seating]  # computers keep their seats
             self.game = None
         else:
             raise Rejected("Play again, shuffle teams or go back to the lobby")
@@ -182,7 +224,7 @@ class Room:
         self._bots_saw = None
         # Against the computer nobody else is waiting on you: if you drop, the game just waits.
         self.game = Game(list(self.seating), self.creator_id, rng=self.rng, clock=self.clock,
-                         no_countdown=self.computer)
+                         no_countdown=self.computer, computers=frozenset(self.bots))
         for p in self.players:
             if p.socket is None and not p.computer:
                 self.game.disconnect(p.id)
@@ -206,6 +248,9 @@ class Room:
         views = {b: view_for(game, b) for b in self.bots}
         for b, bot in self.bots.items():
             bot.observe(views[b])
+            reaction = bot.reaction(views[b])
+            if reaction and not self.bot_reactions:  # one computer at a time
+                self.bot_reactions.append((b, reaction))
         mover = next((b for b, bot in self.bots.items() if bot.needs_to_act(views[b])), None)
         if mover is None:
             self.bot_due = None
@@ -271,18 +316,18 @@ class Room:
         self.seating = [None if s == player_id else s for s in self.seating]
 
     def _next_creator(self, seat: int | None) -> str | None:
-        """Next seated player clockwise from the old creator's seat; if they
-        weren't seated or nobody is, whoever has been here longest."""
+        """Next seated person clockwise from the old creator's seat; if they
+        weren't seated or nobody is, whoever has been here longest. Never a computer."""
         if seat is not None:
             for k in range(1, self.seats):
                 player = self.seating[(seat + k) % self.seats]
-                if player is not None:
+                if player is not None and player not in self.bots:
                     return player
-        return self.players[0].id if self.players else None
+        return next((p.id for p in self.players if not p.computer), None)
 
     def room_view(self) -> dict[str, Any]:
         return {"game": self.game_id, "seats": self.seats, "status": self.status, "ended_by": self.ended_by,
-                "computer": self.computer}
+                "computer": self.computer, "computer_seats_left": self.computer_seats_left}
 
     def players_view(self) -> list[dict[str, Any]]:
         return [

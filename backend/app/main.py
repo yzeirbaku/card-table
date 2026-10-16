@@ -81,6 +81,9 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
             results = [await send_state(room, p) for p in list(room.players)]
             if all(results):
                 break
+        reactions, room.bot_reactions = room.bot_reactions, []
+        for player_id, reaction in reactions:  # a computer's emoji, at what everyone has just seen
+            await send_reaction(room, player_id, reaction)
         if use_timers:
             schedule(room)
 
@@ -112,7 +115,10 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
         if now - player.reacted_at < REACTION_GAP_SECONDS:
             return
         player.reacted_at = now
-        message = {"type": "reaction", "player_id": player.id, "reaction": reaction}
+        await send_reaction(room, player.id, reaction)
+
+    async def send_reaction(room: Room, player_id: str, reaction: str) -> None:
+        message = {"type": "reaction", "player_id": player_id, "reaction": reaction}
         for p in list(room.players):
             if p.socket is not None:
                 with suppress(Exception):  # a dead socket is cleaned up by its own receive loop
@@ -160,6 +166,10 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
                 room.act(player.id, msg.get("action"))
             elif kind == "sit":
                 room.sit(player.id, msg.get("seat"))
+            elif kind == "add_computer":
+                room.add_computer(player.id, msg.get("seat"))
+            elif kind == "remove_computer":
+                room.remove_computer(player.id, msg.get("seat"))
             elif kind == "after_game":
                 room.after_game(player.id, msg.get("choice"))
             else:

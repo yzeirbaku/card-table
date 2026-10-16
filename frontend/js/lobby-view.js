@@ -1,5 +1,5 @@
 import { copyText } from './clipboard.js';
-import { div, span } from './dom.js';
+import { button, div, span } from './dom.js';
 import { seatGroups } from './murlan.js';
 import { fillRules, hasRules } from './rules.js';
 import { openSheet } from './sheets.js';
@@ -46,6 +46,8 @@ export function renderLobby(state, meId, gameName) {
   document.querySelector('.lobby-count').textContent = `${bySeat.filter(Boolean).length}/${seats} seated`;
 
   const teams = seats === 4; // partners sit across, so picking a seat picks your partner
+  const creator = state.players.some((p) => p.id === meId && p.is_creator);
+  const seating = { meId, creator, canAdd: creator && state.room.computer_seats_left > 0 }; // computers: the creator's call
   const groups = document.querySelector('.lobby-groups');
   groups.classList.toggle('teams', teams);
   groups.replaceChildren(...seatGroups(seats).map((group, i) => {
@@ -53,7 +55,7 @@ export function renderLobby(state, meId, gameName) {
     if (teams) team.append(span(`Team ${i + 1}`, 'team-label'));
     const list = document.createElement('ul');
     list.className = 'lobby-seats';
-    list.append(...group.map((seat) => seatTile(seat, bySeat[seat], meId)));
+    list.append(...group.map((seat) => seatTile(seat, bySeat[seat], seating)));
     team.append(list);
     return team;
   }));
@@ -62,10 +64,23 @@ export function renderLobby(state, meId, gameName) {
   document.querySelector('.lobby-unseated').textContent = waiting.length ? `Not seated yet: ${waiting.join(', ')}` : '';
 }
 
-function seatTile(seat, player, meId) {
+function seatTile(seat, player, { meId, creator, canAdd }) {
   const row = document.createElement('li');
   const avatar = span('', 'avatar');
   const name = span('');
+  if (player?.computer) {
+    avatar.textContent = '🤖';
+    avatar.setAttribute('aria-label', 'computer player');
+    name.textContent = player.name;
+    row.className = 'taken computer';
+    row.append(avatar, name);
+    if (creator) {
+      const remove = button('✕', () => send({ type: 'remove_computer', seat }), 'seat-remove');
+      remove.setAttribute('aria-label', `Take ${player.name} off the table`);
+      row.append(remove);
+    }
+    return row;
+  }
   if (player) {
     avatar.textContent = player.name.charAt(0).toUpperCase();
     name.textContent = player.id === meId ? `${player.name} (you)` : player.name;
@@ -82,5 +97,11 @@ function seatTile(seat, player, meId) {
     });
   }
   row.append(avatar, name);
+  if (!player && canAdd) {
+    const add = button('+ 🤖 Computer', (e) => { e.stopPropagation(); send({ type: 'add_computer', seat }); }, 'seat-add');
+    add.addEventListener('keydown', (e) => e.stopPropagation()); // Enter on it adds, it doesn't sit you
+    add.setAttribute('aria-label', 'Add a computer player here');
+    row.append(add);
+  }
   return row;
 }
