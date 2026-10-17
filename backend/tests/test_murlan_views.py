@@ -249,3 +249,32 @@ def test_only_the_player_dealt_all_four_2s_is_told_they_are_lucky():
     assert sum(c.startswith("2") for c in game.hands["p0"]) == 4
     assert view_for(game, "p0")["lucky"] == "four_twos"
     assert view_for(game, "p1")["lucky"] is None and view_for(game, "p2")["lucky"] is None
+
+
+def test_can_play_says_whether_anything_in_your_hand_may_go_down_on_your_turn():
+    g = new_game(2)
+    rig(g, {"p0": ["KH", "3S"], "p1": ["5H", "6H", "7C"]}, "p0")
+    assert view_for(g, "p0")["can_play"] is True  # leading: anything goes
+    assert view_for(g, "p1")["can_play"] is False  # not their turn
+    g.play("p0", ["KH"])
+    assert view_for(g, "p1")["can_play"] is False  # nothing beats the king
+    assert view_for(g, "p0")["can_play"] is False
+
+
+def test_can_play_counts_a_bomb_and_a_higher_card():
+    g = new_game(2)
+    rig(g, {"p0": ["KH", "3S"], "p1": ["4S", "4H", "4D", "4C", "5H"]}, "p0")
+    g.play("p0", ["KH"])
+    assert view_for(g, "p1")["can_play"] is True  # the bomb beats it
+    g = new_game(2)
+    rig(g, {"p0": ["KH", "3S"], "p1": ["AH", "5H"]}, "p0")
+    g.play("p0", ["KH"])
+    assert view_for(g, "p1")["can_play"] is True
+
+
+def test_bombs_list_your_own_four_of_a_kinds_only():
+    g = new_game(2)
+    rig(g, {"p0": ["3S", "3H", "3D", "3C", "9S", "9H", "9D", "JR"], "p1": ["4S", "4H", "4D", "4C"]}, "p0")
+    assert view_for(g, "p0")["bombs"] == [["3S", "3H", "3D", "3C"]]
+    assert view_for(g, "p1")["bombs"] == [["4S", "4H", "4D", "4C"]]
+    assert view_for(g, "stranger")["bombs"] == []

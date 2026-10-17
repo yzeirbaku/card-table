@@ -1,7 +1,7 @@
 import { flyIn, playDeal, stopDeal } from './deal.js';
 import { cancelDrag, dragGroup, initDrag, justDropped, settleDropped } from './drag.js';
 import { button, div, face, span } from './dom.js';
-import { cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
+import { bombName, brokenBomb, cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
 import { crowned, finalPile, finalThrown, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
 import { addReaction, REACTIONS, reactionEl, resetReactions } from './reactions.js';
@@ -70,15 +70,26 @@ function playSelected() {
     if (selected.length !== 1) return toast('Pick the card to give');
     sendOnce({ type: 'action', action: { type: 'give', card: selected[0] } });
   } else {
+    if (game.can_play === false) return; // (an older server doesn't say)
     if (!selected.length) return toast('Pick the cards to play');
+    const bomb = brokenBomb(selected, game.bombs);
+    if (bomb) return askAboutBomb(bomb);
     sendOnce({ type: 'action', action: { type: 'play', cards: selected } });
   }
+}
+
+/** The cards picked use some of a bomb but not all of it: make sure that's meant. */
+function askAboutBomb(bomb) {
+  document.getElementById('bomb-text').textContent = `You hold ${bombName(bomb)}. Play these cards anyway?`;
+  showModal(document.getElementById('bomb-confirm'), true);
+  document.getElementById('btn-bomb-keep').focus();
 }
 
 /** A card in your hand starts moving: the cards that go with it, now picked (null: they can't move now). */
 function dragStart(code) {
   const game = current?.game;
   if (!game || waiting || !yourMove(game, currentMe) || game.pause) return null;
+  if (game.phase === 'playing' && game.can_play === false) return null; // nothing you hold can go down
   const group = dragGroup(selected, code, game.swap?.choices ?? []);
   if (!group) return null;
   selected = group;
@@ -225,6 +236,18 @@ export function initTable({ onLeave, send: sendMessage }) {
   });
   giveUp.addEventListener('click', (event) => { if (event.target === giveUp) stay(); }); // tap outside: keep playing
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !giveUp.hidden) stay(); });
+  const bombAsk = document.getElementById('bomb-confirm');
+  const keep = () => {
+    showModal(bombAsk, false);
+    document.getElementById('btn-play').focus();
+  };
+  document.getElementById('btn-bomb-keep').addEventListener('click', keep);
+  document.getElementById('btn-bomb-play').addEventListener('click', () => {
+    showModal(bombAsk, false);
+    if (current?.game?.phase === 'playing') sendOnce({ type: 'action', action: { type: 'play', cards: selected } });
+  });
+  bombAsk.addEventListener('click', (event) => { if (event.target === bombAsk) keep(); }); // tap outside: keep it
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !bombAsk.hidden) keep(); });
 }
 
 /** What giving up would mean right now, in the popup (kept up to date while it's open). */
@@ -276,6 +299,7 @@ export function showEnded(name, onDone) {
   showLeaveConfirm(false);
   showModal(document.getElementById('rules-dialog'), false);
   showModal(document.getElementById('giveup-confirm'), false);
+  showModal(document.getElementById('bomb-confirm'), false);
   document.getElementById('table-menu').hidden = true;
   document.getElementById('ended-title').textContent = `${name} left the table`;
   document.getElementById('ended-text').textContent = over ? 'Everyone goes back to the lobby.' : 'The game has ended. Everyone goes back to the lobby.';
@@ -307,6 +331,7 @@ export function resetTable() {
   showLeaveConfirm(false);
   showModal(document.getElementById('rules-dialog'), false);
   showModal(document.getElementById('giveup-confirm'), false);
+  showModal(document.getElementById('bomb-confirm'), false);
   showModal(document.getElementById('ended-notice'), false);
   resetThrows();
   stopDeal();
@@ -621,9 +646,12 @@ function renderActions(game, meId) {
   const play = document.getElementById('btn-play');
   play.hidden = !(myTurn || giving);
   play.textContent = giving ? 'Give' : 'Play';
+  play.disabled = myTurn && game.can_play === false; // nothing you hold beats the pile: Pass is the move
+  const bombAsk = document.getElementById('bomb-confirm');
+  if (!myTurn && !bombAsk.hidden) showModal(bombAsk, false); // the moment passed (a pause, a drop)
   const pass = document.getElementById('btn-pass'); // there with Play, greyed out when you can't pass
   pass.hidden = play.hidden;
-  pass.disabled = !myTurn || leading(game) || selected.length > 0; // cards picked: you mean to play (Clear, then Pass)
+  pass.disabled = !myTurn || leading(game) || (selected.length > 0 && game.can_play !== false); // cards picked: you mean to play (Clear, then Pass)
   const clear = document.getElementById('btn-clear');
   clear.hidden = play.hidden;
   clear.disabled = selected.length === 0;

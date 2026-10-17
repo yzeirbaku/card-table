@@ -24,6 +24,22 @@ export function cardName(code) {
   return code.slice(0, -1) + SUITS[code.slice(-1)];
 }
 
+const RANK_NAMES = { J: 'jacks', Q: 'queens', K: 'kings', A: 'aces' };
+
+/** The bomb (all four of a rank, as the server lists them) these cards would break up, or null. */
+export function brokenBomb(cards, bombs = []) {
+  return bombs.find((bomb) => {
+    const used = bomb.filter((c) => cards.includes(c)).length;
+    return used > 0 && used < bomb.length;
+  }) ?? null;
+}
+
+/** "all four 3s", "all four aces". */
+export function bombName(bomb) {
+  const rank = bomb[0].slice(0, -1);
+  return `all four ${RANK_NAMES[rank] ?? `${rank}s`}`;
+}
+
 /** Tap a card: select it, or unselect it if it was selected. */
 export function toggleCard(selected, code) {
   return selected.includes(code) ? selected.filter((c) => c !== code) : [...selected, code];
