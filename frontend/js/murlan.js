@@ -9,9 +9,12 @@ export const ALL_CARDS = [...'23456789', '10', ...'JQKA']
   .flatMap((rank) => Object.keys(SUITS).map((suit) => rank + suit))
   .concat(Object.keys(JOKER_FILES));
 
-/** Image for a card code such as "10H" or "JR". */
-export function cardImage(code) {
-  return `/cards/${JOKER_FILES[code] ?? code}.webp`;
+// Atlas and Modern have their own pictures; Vintage is Traditional's, aged in CSS.
+const STYLE_DIRS = { atlas: 'atlas/', modern: 'modern/' };
+
+/** Image for a card code such as "10H" or "JR", in a card style. */
+export function cardImage(code, style = 'traditional') {
+  return `/cards/${STYLE_DIRS[style] ?? ''}${JOKER_FILES[code] ?? code}.webp`;
 }
 
 /** "10♥", "red joker". */

@@ -2,6 +2,9 @@
 once every seat is taken, the Murlan game. In memory only - the backend must
 run as a single worker.
 
+When the last seat is taken the game starts `START_SECONDS` later (a short countdown in the
+lobby, so it doesn't start out of nowhere); a seat freed meanwhile calls it off.
+
 In the lobby the creator may seat computer players in every seat but one (one
 person always plays) and picks how well they play (`level`, for all of them).
 The computer players move on their own: after every change `update_bots` says
@@ -33,6 +36,7 @@ BOT_NAMES = ("Bip", "Bop", "Zip")  # short: the 🤖 by the name already says it
 # A computer player takes its time, so you see each move happen: it waits out the deal animation
 # and the end-of-round spotlight (see deal.js, spotlight.js), and any public reveal.
 DEAL_SECONDS = 3.0
+START_SECONDS = 3.0  # from the last seat taken to the game; 0 starts it at once
 ROUND_END_SECONDS = 6.0
 
 RoomStatus = Literal["lobby", "playing"]
@@ -69,6 +73,8 @@ class Room:
     game: Game | None = None  # exists from the moment every seat is taken
     ended_by: str | None = None  # the name of whoever left and so ended the last game (until the next starts)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    start_seconds: float = START_SECONDS
+    starts_at: float | None = None  # every seat is taken: the game starts then
     level: str = "medium"  # how well the computer players play: easy, medium or hard
     bots: dict[str, Bot] = field(default_factory=dict)  # the computer players' minds, by player id
     bot_due: tuple[str, float, tuple] | None = None  # (who, when, the state they're answering): the next computer move
@@ -127,8 +133,7 @@ class Room:
             raise Rejected("That seat is taken")
         self._unseat(player_id)
         self.seating[seat] = player_id
-        if all(self.seating):
-            self._new_game()
+        self._seats_changed()
 
     @property
     def computer_seats_left(self) -> int:
@@ -146,8 +151,7 @@ class Room:
             raise Rejected("No more computer players fit at this table")
         names = {p.name for p in self.players if p.computer}
         self._seat_bot(seat, next(n for n in BOT_NAMES if n not in names))
-        if all(self.seating):
-            self._new_game()
+        self._seats_changed()
 
     def remove_computer(self, player_id: str, seat: object) -> None:
         self._check_seating_computers(player_id, seat)
@@ -157,6 +161,7 @@ class Room:
         del self.bots[bot_id]
         self.players = [p for p in self.players if p.id != bot_id]
         self.seating[seat] = None
+        self._seats_changed()
 
     def set_level(self, player_id: str, level: object) -> None:
         if player_id != self.creator_id:
@@ -185,8 +190,26 @@ class Room:
         self._unseat(player_id)
         self.game = None  # a game can't go on with an empty seat
         self.bot_due = None
+        self._seats_changed()
         if self.creator_id == player_id:  # a computer never takes over: the next person to join does
             self.creator_id = self._next_creator(seat)
+
+    def _seats_changed(self) -> None:
+        """In the lobby: every seat taken starts the countdown to the game (or the game, with
+        no countdown); a seat freed calls it off."""
+        if self.game is not None or not all(self.seating):
+            self.starts_at = None
+        elif self.start_seconds <= 0:
+            self._new_game()
+        elif self.starts_at is None:
+            self.starts_at = self.clock() + self.start_seconds
+
+    def start_if_due(self) -> bool:
+        """Start the game once the countdown is over. True if it started."""
+        if self.starts_at is None or self.clock() < self.starts_at:
+            return False
+        self._new_game()
+        return True
 
     def act(self, player_id: str, action: object) -> None:
         if self.game is None:
@@ -221,6 +244,7 @@ class Room:
             self.game.disconnect(player_id)
 
     def _new_game(self) -> None:
+        self.starts_at = None
         self.ended_by = None
         self.bot_due = None
         self._bots_saw = None
@@ -330,7 +354,9 @@ class Room:
 
     def room_view(self) -> dict[str, Any]:
         return {"game": self.game_id, "seats": self.seats, "status": self.status, "ended_by": self.ended_by,
-                "level": self.level, "computer_seats_left": self.computer_seats_left}
+                "level": self.level, "computer_seats_left": self.computer_seats_left,
+                # seconds to the game, while every seat is taken in the lobby; the phones count it down
+                "starting_in": None if self.starts_at is None else round(max(0.0, self.starts_at - self.clock()), 2)}
 
     def players_view(self) -> list[dict[str, Any]]:
         return [
@@ -350,8 +376,9 @@ class Room:
 
 
 class RoomManager:
-    def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
+    def __init__(self, clock: Callable[[], float] = time.monotonic, start_seconds: float | None = None) -> None:
         self.clock = clock
+        self.start_seconds = START_SECONDS if start_seconds is None else start_seconds
         self.rooms: dict[str, Room] = {}
 
     def create(self, game_id: str, seats: int) -> Room:
@@ -360,7 +387,7 @@ class RoomManager:
             if code not in self.rooms:
                 break
         room = Room(code=code, last_activity=self.clock(), game_id=game_id, seats=seats,
-                    clock=self.clock)
+                    clock=self.clock, start_seconds=self.start_seconds)
         self.rooms[code] = room
         return room
 

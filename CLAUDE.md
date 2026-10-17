@@ -22,7 +22,8 @@ Murlan (the first game) is `2026-10-14-murlan-design.md`.
   clock and RNG, no I/O. Timed events (reveals, the 2:00 pause) run off
   `game.deadline()` / `game.tick()`; `app/timers.py` wakes the room for them.
 - Rooms: players join unseated and tap a seat; the room is `lobby` until every
-  seat is taken, then the game starts (`playing`). Leaving ends the game and
+  seat is taken, then after a 3-second countdown (`Room.starts_at`, called off
+  if a seat frees up) the game starts (`playing`). Leaving ends the game and
   drops back to `lobby`. Games and their player ranges live in `backend/app/games.py`.
 - **Computer players play fair.** In the lobby the creator can seat computers in
   every seat but one (specs `2026-10-15-vs-computer-design.md`,

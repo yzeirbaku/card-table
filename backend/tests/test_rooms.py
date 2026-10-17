@@ -307,7 +307,7 @@ def test_room_and_player_views():
     room.sit(ben.id, 2)
     ana.socket = None
     assert room.room_view() == {"game": "murlan", "seats": 3, "status": "lobby", "ended_by": None, "level": "medium",
-                                 "computer_seats_left": 1}
+                                 "computer_seats_left": 1, "starting_in": None}
     assert room.players_view() == [
         {"id": ana.id, "name": "Ana", "connected": False, "seat": None, "is_creator": True, "computer": False},
         {"id": ben.id, "name": "Ben", "connected": True, "seat": 2, "is_creator": False, "computer": False},
@@ -360,3 +360,105 @@ def test_shuffle_teams_always_changes_the_partners():
         room.after_game(players[0].id, "shuffle_teams")
         assert sorted(room.seating) == sorted(p.id for p in players)
         assert pairs(room.seating) != before
+
+
+# ---- the countdown from the last seat taken to the game ----
+
+def counting_room(seats: int, *names: str) -> tuple[Room, list, FakeClock]:
+    clock = FakeClock()
+    room = RoomManager(clock, start_seconds=3).create("murlan", seats)
+    players = []
+    for name in names:
+        player = room.join(name, None)
+        player.socket = object()
+        players.append(player)
+    return room, players, clock
+
+
+def test_the_game_starts_three_seconds_after_the_last_seat_is_taken():
+    room, (ana, ben), clock = counting_room(2, "Ana", "Ben")
+    room.sit(ana.id, 0)
+    assert room.room_view()["starting_in"] is None
+    room.sit(ben.id, 1)
+    assert room.game is None and room.status == "lobby"
+    assert room.room_view()["starting_in"] == 3
+    clock.now += 1.25
+    assert room.room_view()["starting_in"] == 1.75
+    assert not room.start_if_due()
+    clock.now += 1.75
+    assert room.start_if_due()
+    assert room.status == "playing" and room.game.seats == [ana.id, ben.id]
+    assert room.starts_at is None and room.room_view()["starting_in"] is None
+
+
+def test_a_computer_taking_the_last_seat_starts_the_countdown_too():
+    room, (ana,), clock = counting_room(2, "Ana")
+    room.sit(ana.id, 0)
+    room.add_computer(ana.id, 1)
+    assert room.game is None and room.room_view()["starting_in"] == 3
+    clock.now += 3
+    assert room.start_if_due() and room.status == "playing"
+
+
+def test_seats_are_locked_during_the_countdown():
+    room, (ana, ben), _ = counting_room(2, "Ana", "Ben")
+    room.sit(ana.id, 0)
+    room.sit(ben.id, 1)
+    with pytest.raises(Rejected, match="taken"):
+        room.sit(ana.id, 1)
+    assert room.starts_at is not None
+
+
+def test_someone_seated_leaving_calls_the_countdown_off():
+    room, (ana, ben), clock = counting_room(2, "Ana", "Ben")
+    room.sit(ana.id, 0)
+    room.sit(ben.id, 1)
+    room.leave(ben.id)
+    assert room.starts_at is None and room.room_view()["starting_in"] is None
+    clock.now += 10
+    assert not room.start_if_due() and room.game is None
+    assert room.ended_by is None  # no game was ended
+
+
+def test_removing_a_computer_calls_the_countdown_off():
+    room, (ana,), clock = counting_room(3, "Ana")
+    room.sit(ana.id, 0)
+    room.add_computer(ana.id, 1)
+    room.add_computer(ana.id, 2)
+    assert room.starts_at is not None
+    room.remove_computer(ana.id, 2)
+    assert room.starts_at is None
+    clock.now += 10
+    assert not room.start_if_due()
+
+
+def test_the_level_can_still_change_during_the_countdown():
+    room, (ana,), _ = counting_room(2, "Ana")
+    room.sit(ana.id, 0)
+    room.add_computer(ana.id, 1)
+    room.set_level(ana.id, "hard")
+    assert room.level == "hard" and room.starts_at is not None
+
+
+def test_play_again_starts_at_once():
+    room, (ana, ben), clock = counting_room(2, "Ana", "Ben")
+    room.sit(ana.id, 0)
+    room.sit(ben.id, 1)
+    clock.now += 3
+    room.start_if_due()
+    room.game.phase = "game_over"
+    room.after_game(room.game.decider(), "play_again")
+    assert room.status == "playing" and room.starts_at is None
+
+
+def test_back_to_the_lobby_with_computers_does_not_count_down():
+    room, (ana,), clock = counting_room(2, "Ana")
+    room.sit(ana.id, 0)
+    room.add_computer(ana.id, 1)
+    clock.now += 3
+    room.start_if_due()
+    room.game.phase = "game_over"
+    room.after_game(ana.id, "lobby")
+    assert room.starts_at is None and room.room_view()["starting_in"] is None
+    room.sit(ana.id, 0)
+    assert room.room_view()["starting_in"] == 3

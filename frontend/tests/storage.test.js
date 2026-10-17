@@ -26,6 +26,14 @@ test('name and settings round-trip and survive a new store', () => {
   assert.deepEqual(again.getSettings(), { theme: 'kafeneio', cardStyle: 'vintage' });
 });
 
+test('every card style is remembered', () => {
+  const store = createStore(memoryStorage());
+  for (const cardStyle of ['traditional', 'vintage', 'atlas', 'modern']) {
+    store.setSettings({ cardStyle });
+    assert.equal(store.getSettings().cardStyle, cardStyle);
+  }
+});
+
 test('unknown theme or card style falls back to the default', () => {
   const store = createStore(memoryStorage({ 'card-table': JSON.stringify({ theme: 'neon', cardStyle: 'x' }) }));
   assert.deepEqual(store.getSettings(), { theme: 'classic', cardStyle: 'traditional' });

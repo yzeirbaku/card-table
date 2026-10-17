@@ -6,6 +6,13 @@ import { openSheet } from './sheets.js';
 
 let send = () => {};
 let lobbyGame = null; // the room's game id, for How to play
+let startTimer = null; // ticks the 3 · 2 · 1 while every seat is taken
+let startShown = null; // the number on screen
+
+/** The number to show with `ms` left before the game: 3, 2, 1, and 1 until it starts. */
+export function startNumber(ms) {
+  return Math.max(1, Math.ceil(ms / 1000));
+}
 
 export function initLobby({ onLeave, send: sendMessage }) {
   send = sendMessage;
@@ -36,6 +43,7 @@ export function showLobbyLoading(code) {
   document.querySelector('.lobby-count').textContent = 'Connecting…';
   document.querySelector('.lobby-groups').replaceChildren();
   document.querySelector('.lobby-unseated').textContent = '';
+  showStart(null);
 }
 
 export function renderLobby(state, meId, gameName) {
@@ -66,6 +74,38 @@ export function renderLobby(state, meId, gameName) {
 
   const waiting = state.players.filter((p) => p.seat === null).map((p) => (p.id === meId ? 'you' : p.connected ? p.name : `${p.name} (offline)`));
   document.querySelector('.lobby-unseated').textContent = waiting.length ? `Not seated yet: ${waiting.join(', ')}` : '';
+  showStart(state.room.starting_in);
+}
+
+/** Every seat taken: count down to the game the server starts `seconds` from now; null hides it. */
+function showStart(seconds) {
+  const box = document.querySelector('.lobby-start');
+  clearInterval(startTimer);
+  startTimer = null;
+  if (seconds === null || seconds === undefined) {
+    box.hidden = true;
+    startShown = null;
+    return;
+  }
+  const until = performance.now() + seconds * 1000;
+  const num = box.querySelector('.lobby-start-num');
+  const tick = () => {
+    const n = startNumber(until - performance.now());
+    if (n === startShown) return;
+    startShown = n;
+    num.textContent = String(n);
+    num.style.animation = 'none'; // restart the pop for each number
+    void num.offsetWidth;
+    num.style.animation = '';
+  };
+  box.hidden = false;
+  tick();
+  startTimer = setInterval(tick, 100);
+}
+
+/** The game has started (or the lobby is gone): no countdown left running. */
+export function stopStart() {
+  showStart(null);
 }
 
 /** How well the computers play: everyone sees it while there are computers, or could be; the creator sets it. */

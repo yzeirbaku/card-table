@@ -1,6 +1,6 @@
 const KEY = 'card-table';
 export const THEMES = ['classic', 'qendisje', 'kafeneio', 'scoarta', 'kahvehane'];
-export const CARD_STYLES = ['traditional', 'vintage'];
+export const CARD_STYLES = ['traditional', 'vintage', 'atlas', 'modern'];
 
 /** Everything the device remembers: name, settings, seat tokens per room, the room you're in. */
 export function createStore(storage = globalThis.localStorage) {

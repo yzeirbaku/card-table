@@ -90,13 +90,15 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
         if rooms.get(room.code) is not room:  # purged: no timers for it
             return
         timer = timers.setdefault(id(room), RoomTimer(rooms.clock))
-        times = [room.game.deadline() if room.game else None, room.bot_due[1] if room.bot_due else None]
+        times = [room.game.deadline() if room.game else None, room.bot_due[1] if room.bot_due else None,
+                 room.starts_at]
         timer.set(min((t for t in times if t is not None), default=None), lambda: wake(room))
 
     async def wake(room: Room) -> None:
         async with room.lock:
             if rooms.get(room.code) is not room:  # purged while this wake was pending
                 return
+            room.start_if_due()
             if room.game is not None:
                 room.game.tick()
                 room.run_bot()

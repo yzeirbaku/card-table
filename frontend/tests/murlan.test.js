@@ -9,6 +9,12 @@ test('card images', () => {
   assert.equal(cardImage('JR'), '/cards/joker-red.webp');
 });
 
+test('card images per card style: Vintage shares the Traditional pictures, Atlas and Modern have their own', () => {
+  assert.equal(cardImage('KH', 'vintage'), '/cards/KH.webp');
+  assert.equal(cardImage('KH', 'atlas'), '/cards/atlas/KH.webp');
+  assert.equal(cardImage('JB', 'modern'), '/cards/modern/joker-black.webp');
+});
+
 test('card names', () => {
   assert.equal(cardName('10H'), '10♥');
   assert.equal(cardName('AS'), 'A♠');

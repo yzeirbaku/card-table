@@ -1,0 +1,22 @@
+Card pictures
+
+Traditional and Vintage (cards/*.webp)
+  Byron Knoll's Vector Playing Cards, public domain
+  (https://github.com/notpeter/Vector-Playing-Cards). The ace of spades and the
+  two jester jokers are our own. Built by scripts/build_cards.py.
+
+Atlas (cards/atlas/*.webp)
+  "Atlasnye" deck for AisleRiot, (C) 2024 Vincent Bermel, GNU LGPL 3.0 or later
+  (https://www.gnu.org/licenses/lgpl-3.0.html). Based on the Atlasnye playing
+  cards by Dmitry Fomin (CC0), after the 1862 Russian deck by Adolf Charlemagne.
+  Source: https://gitlab.gnome.org/GNOME/aisleriot/-/blob/51e1d770ceddfa7ee0fd775f7d59bbe4858ab87a/cards/atlasnye.svg
+
+Modern (cards/modern/*.webp)
+  "Neoclassical" deck for AisleRiot, (C) 2012 Charles Esquiaqui, (C) 2024
+  Vincent Bermel, GNU LGPL 3.0 or later. Court cards and jokers based on "Free
+  Vector Playing Cards Deck" by Charles Esquiaqui, CC BY 4.0
+  (https://creativecommons.org/licenses/by/4.0/). Index font: Girassol (SIL OFL 1.1).
+  Source: https://gitlab.gnome.org/GNOME/aisleriot/-/blob/51e1d770ceddfa7ee0fd775f7d59bbe4858ab87a/cards/neoclassical.svg
+
+The Atlas and Modern pictures are the source decks rendered to WebP and resized
+to 320 x 466 by scripts/build_card_styles.py; nothing else is changed.

@@ -1,8 +1,8 @@
 import { fetchGames, socketUrl } from './api.js';
 import { RoomConnection } from './connection.js';
 import { stopDeal } from './deal.js';
-import { preloadCards } from './dom.js';
-import { initLobby, renderLobby, showLobbyLoading } from './lobby-view.js';
+import { useCardStyle } from './dom.js';
+import { initLobby, renderLobby, showLobbyLoading, stopStart } from './lobby-view.js';
 import { initMain } from './main-view.js';
 import { shouldRotate } from './orientation.js';
 import { closeSheets } from './sheets.js';
@@ -21,6 +21,7 @@ function applySettings({ theme, cardStyle }) {
   // classList, not className: keep other body classes such as table-rotated.
   for (const c of [...document.body.classList]) if (/^(theme|cards)-/.test(c)) document.body.classList.remove(c);
   document.body.classList.add(`theme-${theme}`, `cards-${cardStyle}`);
+  useCardStyle(cardStyle);
 }
 
 function gameName(id) {
@@ -37,6 +38,7 @@ function render(state) {
   if (state.room.status === 'playing') {
     if (heldLobby) resetTable(); // a new game started behind the "X left" popup
     heldLobby = null;
+    stopStart();
     if (!document.getElementById('sheet-rules').hidden) closeSheets(); // read in the lobby; the game has started
     showView('table');
     renderTable(state, meId);
@@ -99,6 +101,7 @@ function leaveRoom() {
   connection = null;
   heldLobby = null;
   stopCountdown();
+  stopStart();
   resetTable();
   setReconnecting(false);
   closeSheets();
@@ -118,7 +121,6 @@ for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(
 document.addEventListener('touchmove', (event) => { if (event.touches.length > 1) event.preventDefault(); }, { passive: false });
 
 applySettings(store.getSettings());
-preloadCards();
 initMain({ store, enterRoom, applySettings });
 initLobby({ onLeave: leaveRoom, send });
 initTable({ onLeave: leaveRoom, send });

@@ -83,7 +83,7 @@ def test_create_and_join(client):
         assert s["players"] == [{"id": welcome["player_id"], "name": "Ana", "connected": True,
                                  "seat": None, "is_creator": True, "computer": False}]
         assert s["room"] == {"game": "murlan", "seats": 2, "status": "lobby", "ended_by": None, "level": "medium",
-                             "computer_seats_left": 1}
+                             "computer_seats_left": 1, "starting_in": None}
         assert s["game"] is None
 
 
@@ -204,6 +204,26 @@ def test_pause_times_out_without_any_message(monkeypatch):
             later = state(ana)  # nobody sent anything: the timer woke the room
             assert later["game"]["phase"] == "round_cancelled"
             assert later["game"]["pause"]["timed_out"] is True
+
+
+def test_the_game_starts_when_the_countdown_runs_out_without_any_message():
+    # If this test hangs, the room timer never started the game.
+    with TestClient(create_app(RoomManager(start_seconds=0.2))) as client:
+        code = new_room(client)
+        with connect(client, code, "Ana") as ana:
+            join(ana)
+            with connect(client, code, "Ben") as ben:
+                join(ben)
+                state(ana)
+                send(ana, type="sit", seat=0)
+                state(ana), state(ben)
+                send(ben, type="sit", seat=1)
+                counting = state(ana)["room"]
+                assert counting["status"] == "lobby" and 0 < counting["starting_in"] <= 0.2
+                state(ben)
+                started = state(ana)  # nobody sent anything: the timer started the game
+                assert started["room"]["status"] == "playing" and started["room"]["starting_in"] is None
+                assert started["game"]["phase"] == "choosing_target"
 
 
 def test_unknown_room_closes_4404(client):

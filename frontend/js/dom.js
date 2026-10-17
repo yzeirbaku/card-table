@@ -24,24 +24,29 @@ export function button(label, onClick, className = '') {
   return el;
 }
 
-const preloaded = []; // held on to, so the browser keeps the pictures ready
+let preloaded = []; // held on to, so the browser keeps the pictures ready
+let cardStyle = 'traditional';
 
-/** Fetch every card picture up front: a card seen for the first time (someone's play) then shows at
+/** Switch every face-up card, shown now or later, to a card style's pictures, and fetch that
+ *  style's pictures up front: a card seen for the first time (someone's play) then shows at
  *  once, instead of its empty frame flashing on the pile while the picture downloads. */
-export function preloadCards() {
-  for (const code of ALL_CARDS) {
+export function useCardStyle(style) {
+  cardStyle = style;
+  for (const img of document.querySelectorAll('img[data-card]')) img.src = cardImage(img.dataset.card, style);
+  preloaded = ALL_CARDS.map((code) => {
     const img = new Image();
-    img.src = cardImage(code);
+    img.src = cardImage(code, style);
     img.decode().catch(() => {}); // a picture that fails to load is just fetched again when shown
-    preloaded.push(img);
-  }
+    return img;
+  });
 }
 
 /** A face-up card, in the same .card-face wrapper the card styles (Vintage) apply to. */
 export function face(code, className = '') {
   const wrap = span('', `card-face ${className}`.trim());
   const img = document.createElement('img');
-  img.src = cardImage(code);
+  img.dataset.card = code;
+  img.src = cardImage(code, cardStyle);
   img.alt = cardName(code);
   wrap.append(img);
   return wrap;
