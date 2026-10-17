@@ -9,6 +9,7 @@ first round of a game goes straight to playing), agreeing_loser when a
 runs out. A pause (someone disconnected) sits on top of any phase except
 game_over and blocks every move."""
 
+import math
 import random
 import time
 from collections.abc import Callable
@@ -99,6 +100,7 @@ class Game:
         self.rounds_played = 0
         self.last_result: RoundResult | None = None
         self.winner_side: int | None = None
+        self.clinched = False  # won before the target: the other team could no longer catch up
         self.disconnected: list[str] = []
         self.pause: Pause | None = None  # set while someone is disconnected
         self.reveal: Reveal | None = None  # cards everyone may see for a few seconds
@@ -526,12 +528,26 @@ class Game:
         thrown = {p: list(cards) for p, cards in self.thrown.items()}  # and so are any thrown hands
         self.last_result = RoundResult(order, points, pile, out=len(self.places), thrown=thrown)
         best = max(self.scores)
-        if best >= self.target and self.scores.count(best) == 1:
+        self.clinched = best < self.target and self._out_of_reach()
+        if (best >= self.target and self.scores.count(best) == 1) or self.clinched:
             self._clear_round()
             self.phase = "game_over"
             self.winner_side = self.scores.index(best)
         else:
             self._start_round()  # also a tie for the lead at the target: one more round
+
+
+    def _out_of_reach(self) -> bool:
+        """4 players: a team scores 1 to 5 points a round (3rd + last up to 1st + 2nd), so
+        the leaders gain at least 1 a round and the others close the gap by at most 4.
+        Once the gap is more than that for every point the leaders still need, the
+        others can't win."""
+        if len(self.seats) != 4:  # with 2 or 3 the leader can score 0: a comeback is always possible
+            return False
+        points = sorted(PLACE_POINTS[4])
+        least, most = points[0] + points[1], points[-1] + points[-2]  # a team's worst and best round
+        lead, behind = max(self.scores), min(self.scores)
+        return lead - behind > (most - least) * math.ceil((self.target - lead) / least)
 
 
 def _why_not(play: Play, top: Play) -> str:

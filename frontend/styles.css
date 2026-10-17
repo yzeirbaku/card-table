@@ -353,7 +353,48 @@ input { font: inherit; }
 .reaction-asleep .b2 { right: -.4em; top: -.25em; font-size: .34em; animation-delay: calc(var(--since, 0ms) + 700ms); }
 .reaction-asleep .b3 { right: -.65em; top: -.55em; font-size: .42em; animation-delay: calc(var(--since, 0ms) + 1100ms); }
 @keyframes react-zzz { 0% { opacity: 0; translate: -6px 6px; } 15% { opacity: 1; } 60% { opacity: 1; translate: 4px -10px; } 80%, 100% { opacity: 0; translate: 8px -16px; } }
-@media (prefers-reduced-motion: reduce) { .reaction-face, .reaction-bit, .react-picker { animation: none; } }
+.reaction-clap .reaction-face { animation: react-clap 2.8s var(--since, 0ms) both; }
+@keyframes react-clap { 0%, 4% { scale: .6; } 10% { scale: 1.2 .85; } 16% { scale: 1; } 24% { scale: 1.2 .85; } 30% { scale: 1; } 38% { scale: 1.2 .85; } 44%, 100% { scale: 1; } }
+.reaction-clap .reaction-bit { color: #ffe08a; text-shadow: 0 0 4px rgba(255,200,80,.8); font-size: .34em; animation: react-spark .5s var(--since, 0ms) both; }
+.reaction-clap .b1 { left: -.35em; top: .05em; animation-delay: calc(var(--since, 0ms) + 280ms); }
+.reaction-clap .b2 { right: -.35em; top: -.15em; animation-delay: calc(var(--since, 0ms) + 670ms); }
+.reaction-clap .b3 { left: 50%; top: -.45em; animation-delay: calc(var(--since, 0ms) + 1060ms); }
+@keyframes react-spark { 0% { opacity: 0; scale: .3; } 40% { opacity: 1; scale: 1.2; } 100% { opacity: 0; scale: .8; } }
+
+.reaction-please .reaction-face { animation: react-beg 2.8s var(--since, 0ms) both; }
+@keyframes react-beg { 0%, 8% { rotate: 0deg; } 12%, 28%, 44% { rotate: -6deg; } 20%, 36%, 52% { rotate: 6deg; } 60%, 100% { rotate: 0deg; } }
+.reaction-please .reaction-bit { left: 50%; top: -.35em; translate: -50% 0; color: #fff; text-shadow: 0 1px 2px #000; font-size: .3em; animation: react-pls 2.8s var(--since, 0ms) both; }
+@keyframes react-pls { 0%, 15% { opacity: 0; translate: -50% .3em; } 30% { opacity: 1; translate: -50% 0; } 75% { opacity: 1; translate: -50% -.4em; } 100% { opacity: 0; translate: -50% -.6em; } }
+
+/* 💩 also stamps "Yzeir has CATAN cards" across the whole table ("Catan cards": a hopeless hand), letter by letter */
+.catan { position: absolute; left: 0; right: 0; top: calc(var(--bar) + 6cqh); bottom: 28cqh; z-index: 9; pointer-events: none;
+         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6cqh; }
+.catan[hidden] { display: none; }
+.catan-who, .catan-cards { max-width: 90cqw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f3e6c4;
+                           font: italic 700 min(4.6cqw, 7cqh)/1.1 Georgia, serif; text-shadow: 0 2px 6px rgba(0,0,0,.8), 0 0 2px #000;
+                           animation: catan-line 2.8s both; }
+.catan-cards { animation-delay: 480ms; } /* once the N has landed */
+@keyframes catan-line { 0% { opacity: 0; transform: translateY(-30%); } 8% { opacity: 1; transform: none; } 80% { opacity: 1; } 100% { opacity: 0; } }
+.catan-word { display: flex; gap: .02em; font: 900 min(17cqw, 29cqh)/1 "Arial Rounded MT Bold", "Arial Black", system-ui, sans-serif; letter-spacing: -.01em; }
+.catan-word span { display: inline-block; opacity: 0; color: #7a4a1f; -webkit-text-stroke: .045em #f3e6c4; paint-order: stroke fill;
+              text-shadow: 0 .05em 0 #4a2a0e, 0 .1em .12em rgba(0,0,0,.55); animation: catan-slam 2.8s both; }
+.catan-word span:nth-child(1) { --tilt: -6deg; }
+.catan-word span:nth-child(2) { --tilt: 4deg; animation-delay: 70ms; }
+.catan-word span:nth-child(3) { --tilt: -3deg; animation-delay: 140ms; }
+.catan-word span:nth-child(4) { --tilt: 7deg; animation-delay: 210ms; }
+.catan-word span:nth-child(5) { --tilt: -5deg; animation-delay: 280ms; }
+@keyframes catan-slam { 0% { opacity: 0; transform: translateY(-70%) scale(2.2); }
+                        9% { opacity: 1; transform: scale(.88) rotate(var(--tilt)); }
+                        14% { transform: scale(1.08) rotate(var(--tilt)); }
+                        19%, 80% { opacity: 1; transform: scale(1) rotate(var(--tilt)); }
+                        100% { opacity: 0; transform: translateY(6%) rotate(var(--tilt)); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .reaction-face, .reaction-bit, .react-picker { animation: none; }
+  .catan-word span { animation: catan-fade 2.8s both; }
+  .catan-who, .catan-cards { animation: catan-fade 2.8s both; }
+}
+@keyframes catan-fade { 0%, 100% { opacity: 0; } 10%, 80% { opacity: 1; transform: rotate(var(--tilt)); } }
 /* Someone went out and play goes on: a short note over the top of the pile. */
 .out-note { position: absolute; left: 50%; top: calc(var(--bar) + 106px); z-index: 6; translate: -50% -50%; display: grid; justify-items: center;
             padding: 5px 16px; border-radius: 999px; background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; white-space: nowrap; pointer-events: none;
@@ -422,6 +463,10 @@ input { font: inherit; }
 .ribbon.big { padding: 16px 34px; cursor: pointer; }
 .ribbon.big .ribbon-text { font-size: 28px; }
 .ribbon-hint { font-size: 12px; font-weight: 700; opacity: .7; }
+.ribbon-tag { position: absolute; left: 50%; top: -12px; translate: -50% 0; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+              background: #3a2a08; color: #f3d27a; font: 800 10px system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.ribbon-why { font: italic 600 15px Georgia, serif; }
+.ribbon-tag[hidden], .ribbon-why[hidden] { display: none; }
 .scoreboard b { position: relative; }
 .gain { position: absolute; left: 50%; top: 100%; translate: -50% 0; color: #7fe08f; font-size: 12px; font-style: normal; font-weight: 800; animation: gain 1.8s .4s both; }
 @keyframes fade-in { from { opacity: 0; } }

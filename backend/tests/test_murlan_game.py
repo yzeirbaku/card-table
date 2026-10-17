@@ -229,6 +229,47 @@ def test_reaching_the_target_wins():
         g.pass_turn("p1")
 
 
+def _four_player_round_4_to_2(scores: list[int]) -> Game:
+    """A 4-player race to 21 from `scores`: p0 1st, p1 2nd, p2 3rd, so p0+p2 score 4 and p1+p3 2."""
+    g = new_game(4)
+    rig(g, {"p0": ["3S"], "p1": ["4S"], "p2": ["5S"], "p3": ["6S", "7S"]}, "p0", target=21)
+    g.scores = list(scores)
+    g.play("p0", ["3S"])
+    g.play("p1", ["4S"])
+    g.play("p2", ["5S"])
+    return g
+
+
+def test_four_players_the_game_ends_once_the_other_team_cant_catch_up():
+    # 20-15: one more round gives the leaders at least 1 (21), the others at most 5 (20)
+    g = _four_player_round_4_to_2([16, 13])
+    assert g.scores == [20, 15]
+    assert g.phase == "game_over" and g.winner_side == 0 and g.clinched
+    assert view_for(g, "p1")["clinched"] is True
+
+
+def test_four_players_the_game_goes_on_while_a_comeback_is_possible():
+    # 20-16: the others can still tie at 21 and play on
+    g = _four_player_round_4_to_2([16, 14])
+    assert g.scores == [20, 16] and g.phase == "cutting" and not g.clinched
+    assert view_for(g, "p0")["clinched"] is False
+
+
+def test_a_win_at_the_target_isnt_called_clinched():
+    g = _four_player_round_4_to_2([17, 3])
+    assert g.scores == [21, 5] and g.phase == "game_over" and not g.clinched
+
+
+def test_three_players_never_end_early():
+    # in a 3-player round you can score 0, so the others can always come back
+    g = new_game(3)
+    rig(g, {"p0": ["3S"], "p1": ["4S"], "p2": ["5S", "6S"]}, "p0", target=21)
+    g.scores = [18, 0, 0]
+    g.play("p0", ["3S"])
+    g.play("p1", ["4S"])
+    assert g.scores == [20, 1, 0] and g.phase == "cutting" and not g.clinched
+
+
 def test_a_tie_at_the_top_plays_another_round():
     g = new_game(3)
     rig(g, {"p0": ["3S"], "p1": ["4S"], "p2": ["5S", "6S"]}, "p0")

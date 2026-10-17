@@ -4,7 +4,7 @@ import { button, div, face, span } from './dom.js';
 import { bombName, brokenBomb, cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
 import { crowned, finalPile, finalThrown, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
-import { addReaction, REACTIONS, reactionEl, resetReactions } from './reactions.js';
+import { addReaction, REACTIONS, reactionEl, resetReactions, stampCatan } from './reactions.js';
 import { fillRules } from './rules.js';
 import { noteThrows, renderThrown, resetThrows } from './throw.js';
 import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
@@ -17,6 +17,7 @@ const PILE_SHOWN = 4; // older plays are buried under these
 const RECEIVED_MS = 3600; // a card given to you in the swap stands up this long (the CSS animation's length)
 const OUT_MS = 2600; // "Ana is out · 1st" shows this long (the CSS animation's length)
 const SHAKE_MS = 520; // a bomb landing shakes the table this long (the CSS animation's length)
+const CATAN_LANDS_MS = 380; // the 💩 stamp: its last letter lands and the table jumps
 const LUCKY_MS = 4000; // "Four 2s. Act natural." shows this long (the CSS animation's length)
 
 let send = () => {};
@@ -100,7 +101,12 @@ function dragStart(code) {
 
 /** Someone at the table reacted (yours too, as it comes back from the server). */
 export function reacted(playerId, kind) {
-  if (current) addReaction(playerId, kind, paintReaction);
+  if (!current) return;
+  if (kind !== 'catan') return addReaction(playerId, kind, paintReaction);
+  const name = current.players.find((p) => p.id === playerId)?.name;
+  stampCatan(playerId === currentMe ? 'You have' : `${name ?? 'Someone'} has`);
+  clearTimeout(reacted.shake);
+  reacted.shake = setTimeout(() => { if (current) shakeTable(); }, CATAN_LANDS_MS); // as the N lands
 }
 
 /** Put a player's reaction (or none) on their plate in place: a full redraw would swallow taps on the cards. */

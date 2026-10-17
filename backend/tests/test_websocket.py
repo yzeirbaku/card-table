@@ -410,10 +410,11 @@ def test_a_message_on_a_replaced_socket_is_not_applied():
         assert player.socket is newer
 
 
-def test_a_reaction_goes_to_everyone_at_the_table(client):
+@pytest.mark.parametrize("reaction", ["laughing", "catan", "clap", "please"])
+def test_a_reaction_goes_to_everyone_at_the_table(client, reaction):
     with started_game(client) as (ana, ben, a, _b, _sa, _sb):
-        send(ana, type="react", reaction="laughing")
-        expected = {"type": "reaction", "player_id": a["player_id"], "reaction": "laughing"}
+        send(ana, type="react", reaction=reaction)
+        expected = {"type": "reaction", "player_id": a["player_id"], "reaction": reaction}
         assert ana.receive_json() == expected
         assert ben.receive_json() == expected
 

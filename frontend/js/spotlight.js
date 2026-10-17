@@ -10,7 +10,7 @@ const ROUND_MS = 3200;
 
 let shown; // the last result already shown (undefined: nothing drawn yet, so don't replay one)
 let shownResult = null; // that result without the game-over flag, to tell new points from old
-let active = null; // { crowned: [player ids], text, game: bool, points, pile, holding: bool } while the spotlight is up
+let active = null; // { crowned: [player ids], text, tag, why, game: bool, points, pile, holding: bool } while the spotlight is up
 let timer = null;
 
 export function resetSpotlight() {
@@ -75,9 +75,12 @@ export function updateSpotlight(game, names, redraw) {
   if (over) {
     const side = game.winner_side === null ? null : game.sides[game.winner_side];
     const many = side && side.players.length > 1;
+    const others = game.clinched ? game.sides.find((s) => s !== side) : null; // won early: they can't catch up
     active = {
       crowned: side ? side.players : [],
       text: side ? `${sideName(side, names)} ${many ? 'win' : 'wins'} the game!` : "It's a draw",
+      tag: others ? `Decided early · ${side.score}–${others.score}` : null,
+      why: others ? `${sideName(others, names)} can't reach ${game.target} first` : null,
       game: true,
       points,
       pile,
@@ -89,9 +92,12 @@ export function updateSpotlight(game, names, redraw) {
   }
   const winner = result.places[0];
   const side = sideOf(winner);
+  const tie = result.points.length === 2 && result.points[0] === result.points[1]; // 4 players, 3–3: nobody won it
   active = {
-    crowned: [winner],
-    text: `${sideName(side, names)} ${side.players.length > 1 ? 'win' : 'wins'} the round`,
+    crowned: tie ? [] : [winner],
+    text: tie ? `Tie round · ${result.points[0]}–${result.points[1]}` : `${sideName(side, names)} ${side.players.length > 1 ? 'win' : 'wins'} the round`,
+    tag: null,
+    why: null,
     game: false,
     points,
     pile,
@@ -132,6 +138,11 @@ export function renderSpotlight(redraw) {
   if (!on) return;
   ribbon.classList.toggle('big', active.game);
   ribbon.querySelector('.ribbon-text').textContent = active.text;
+  for (const [cls, value] of [['.ribbon-tag', active.tag], ['.ribbon-why', active.why]]) {
+    const el = ribbon.querySelector(cls);
+    el.textContent = value ?? '';
+    el.hidden = !value;
+  }
   ribbon.querySelector('.ribbon-hint').hidden = !active.game;
   shade.onclick = ribbon.onclick = active.game ? () => { active = null; redraw(); } : null;
 }

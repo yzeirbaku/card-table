@@ -1,4 +1,4 @@
-import { span } from './dom.js';
+import { div, span } from './dom.js';
 
 /** The emoji a player can throw: [id the server knows, emoji, the bits that fly off it]. */
 export const REACTIONS = [
@@ -6,6 +6,9 @@ export const REACTIONS = [
   ['laughing', '😂', ['ha', 'ha']],
   ['angry', '😠', ['', '']], // two puffs of steam
   ['asleep', '😴', ['z', 'z', 'z']],
+  ['catan', '💩', []], // "Catan cards": a bad hand. Plays as CATAN across the whole table, not over the name
+  ['clap', '👏', ['✦', '✦', '✦']], // a spark on each clap
+  ['please', '🙏', ['pls']],
 ];
 const REACTION_MS = 2800; // how long one plays (the CSS animations' length)
 const BY_ID = Object.fromEntries(REACTIONS.map(([id, emoji, bits]) => [id, { emoji, bits }]));
@@ -39,4 +42,24 @@ export function reactionEl(playerId) {
 
 export function resetReactions() {
   showing = new Map();
+  clearTimeout(catanTimer);
+  const word = document.querySelector('.catan');
+  if (word) word.hidden = true;
+}
+
+let catanTimer = null;
+
+/** Someone sent 💩: "Yzeir has CATAN cards" stamped across the whole table, for everyone.
+ *  `who` is "Yzeir has" or "You have". A new one starts it over. */
+export function stampCatan(who) {
+  const word = document.querySelector('.catan');
+  if (!word) return;
+  const letters = div('catan-word');
+  letters.append(...[...'CATAN'].map((letter) => span(letter)));
+  word.replaceChildren(span(who, 'catan-who'), letters, span('cards', 'catan-cards'));
+  word.hidden = true;
+  void word.offsetWidth; // restart the animations
+  word.hidden = false;
+  clearTimeout(catanTimer);
+  catanTimer = setTimeout(() => { word.hidden = true; }, REACTION_MS);
 }

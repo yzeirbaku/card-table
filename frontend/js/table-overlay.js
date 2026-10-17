@@ -66,7 +66,9 @@ function agreeing({ game, meId, names, act }) {
 function gameOver({ game, meId, names, send }) {
   const side = game.winner_side === null ? null : game.sides[game.winner_side];
   const head = side ? `${sideName(side, names)} ${side.players.length > 1 ? 'win' : 'wins'}!` : "It's a draw";
-  const items = [title(head), scores(game, names)];
+  const others = game.clinched && side ? game.sides.find((s) => s !== side) : null;
+  const why = others ? [text(`${sideName(others, names)} can't catch up anymore.`)] : [];
+  const items = [title(head), ...why, scores(game, names)];
   if (game.decider !== meId) return [...items, text(`Waiting for ${names[game.decider]} to choose…`)];
   const choose = (choice) => send({ type: 'after_game', choice });
   const buttons = [button('Play again', () => choose('play_again'), 'on')];

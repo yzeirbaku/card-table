@@ -39,6 +39,7 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
         "lucky": "four_twos" if game.four_twos == player_id else None,  # about your own hand: just for you
         "last_round": None,
         "winner_side": game.winner_side,
+        "clinched": game.clinched,  # won before the target: the others could no longer catch up
         "cut": None,
         "swap": None,
         "agree": None,
