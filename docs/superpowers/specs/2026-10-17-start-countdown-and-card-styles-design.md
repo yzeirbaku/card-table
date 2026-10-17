@@ -33,7 +33,7 @@ has no corner indices, Ancient French uses V/D/R):
 - `scripts/build_card_styles.py` renders each sheet (pinned commit), cuts the
   cards along their edges and scales them to 320 x 466 into
   `frontend/cards/atlas/` and `frontend/cards/modern/`. Credits and licences in
-  `frontend/cards/CREDITS.txt`, and a credits line under Cards in Settings.
+  `frontend/cards/CREDITS.txt`, served next to the pictures (no credits text in Settings).
 - `cardImage(code, style)` picks the folder; `useCardStyle` (dom.js) switches
   every face shown (`img[data-card]`, the main screen's cards included) and
   preloads that style's pictures. Settings shows the four styles two by two,
