@@ -54,7 +54,7 @@ export function initMain({ store, enterRoom, applySettings }) {
     try {
       const code = await createRoom(game.id, players);
       closeSheets();
-      enterRoom(code);
+      enterRoom(code, { game });
     } catch (err) {
       toast(err.message);
     } finally {

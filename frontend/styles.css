@@ -44,6 +44,11 @@ input { font: inherit; }
 .sheet-sub { font-size: 13px; color: #6b5f4a; }
 .sheet .small-btn { border-color: #ddd2b8; }
 .sheet-tall { max-height: 85dvh; overflow-y: auto; overscroll-behavior: contain; }
+/* Sheets slide up over a fading backdrop. */
+.sheet:not([hidden]) { animation: sheet-up .24s cubic-bezier(.2, .8, .3, 1); }
+.sheet-backdrop:not([hidden]) { animation: backdrop-in .2s ease-out; }
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes backdrop-in { from { opacity: 0; } }
 /* How to play: one text, in a sheet on the main screen and in a popup on the table */
 .rules-body { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 14px; line-height: 1.45; color: #2a2418; }
 .rules-body .rules-title { font-family: Georgia, serif; font-size: 22px; }
@@ -78,7 +83,7 @@ input { font: inherit; }
 
 /* ---------- lobby ---------- */
 #view-lobby { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: max(24px, calc(env(safe-area-inset-top) + 8px)) 26px max(16px, env(safe-area-inset-bottom)); text-align: center; } /* 4 seats and Leave fit an iPhone 16 */
-.lobby-game { font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: #f0c75e; }
+.lobby-game { min-height: 1.2em; line-height: 1.2; font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: #f0c75e; } /* keeps its line until the name comes */
 .lobby-code-row { display: flex; align-items: center; gap: 12px; }
 /* Its labels share one cell, so the button is always as wide as the longest and the code never moves. */
 #btn-copy { display: inline-grid; white-space: nowrap; }

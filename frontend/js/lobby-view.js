@@ -35,10 +35,12 @@ export function initLobby({ onLeave, send: sendMessage }) {
   });
 }
 
-/** Before the first state arrives: show the code so it can be shared right away. */
-export function showLobbyLoading(code) {
-  document.querySelector('.lobby-game').textContent = '';
-  document.getElementById('btn-lobby-rules').style.visibility = 'hidden'; // keeps its place: nothing jumps when it shows
+/** Before the first state arrives: show the code so it can be shared right away, and the game
+ *  (`{ id, name }`) if we know it already (we just created the table). */
+export function showLobbyLoading(code, game = null) {
+  lobbyGame = game?.id ?? null;
+  document.querySelector('.lobby-game').textContent = game?.name ?? '';
+  document.getElementById('btn-lobby-rules').style.visibility = game && hasRules(game.id) ? '' : 'hidden'; // keeps its place: nothing jumps when it shows
   document.querySelector('.lobby-code').textContent = code;
   document.querySelector('.lobby-count').textContent = 'Connecting…';
   document.querySelector('.lobby-groups').replaceChildren();

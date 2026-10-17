@@ -62,7 +62,7 @@ function showLobby(state) {
   renderLobby(state, meId, gameName(state.room.game));
 }
 
-function enterRoom(code, { resume = false } = {}) {
+function enterRoom(code, { resume = false, game = null } = {}) {
   connection?.close();
   heldLobby = null;
   resetTable();
@@ -70,7 +70,7 @@ function enterRoom(code, { resume = false } = {}) {
   if (resume) {
     showView(null); // no lobby flash: the first state picks lobby or table
   } else {
-    showLobbyLoading(code);
+    showLobbyLoading(code, game);
     showView('lobby');
   }
   connection = new RoomConnection({

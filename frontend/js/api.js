@@ -12,7 +12,16 @@ async function request(path, options) {
   return data;
 }
 
-export const fetchGames = () => request('/games');
+let games = null; // asked once (at startup), so the New table sheet opens with the list in it
+
+/** The games on offer. A failed request is asked again next time. */
+export function fetchGames() {
+  games ??= request('/games').catch((err) => {
+    games = null;
+    throw err;
+  });
+  return games;
+}
 
 export async function createRoom(game, players) {
   const { code } = await request('/rooms', {
