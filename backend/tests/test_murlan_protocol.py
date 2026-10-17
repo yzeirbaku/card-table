@@ -28,8 +28,8 @@ def test_malformed_actions_are_rejected(raw):
 
 def test_actions_reach_the_game():
     g = new_game(2)
-    apply_action(g, "p0", {"type": "choose_target", "target": 13})
-    assert g.target == 13
+    apply_action(g, "p0", {"type": "choose_target", "target": 10})
+    assert g.target == 10
     leader = g.turn
     apply_action(g, leader, {"type": "play", "cards": [g.must_include]})
     assert g.trick and g.trick[0][0] == leader

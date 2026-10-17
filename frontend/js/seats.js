@@ -10,3 +10,12 @@ export function seatPositions(players, meId) {
   const others = [...players.slice(me + 1), ...players.slice(0, me)];
   return others.map((player, i) => ({ player, position: spots[i] }));
 }
+
+/** The lobby's spot for each seat (by index) of a `seats`-seat table: yours at the bottom (seat 0's
+ *  until you sit), the rest clockwise from your left, as they will be at the table. */
+export function lobbySpots(seats, mySeat) {
+  const spots = SPOTS[seats];
+  if (!spots) throw new Error(`No table layout for ${seats} players`);
+  const me = mySeat ?? 0;
+  return Array.from({ length: seats }, (_, seat) => (seat === me ? 'bottom' : spots[(seat - me + seats) % seats - 1]));
+}

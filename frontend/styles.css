@@ -82,42 +82,63 @@ input { font: inherit; }
                                            border-radius: 50%; background: #1a1a1a; color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 0 0 2px #fffdf7; }
 
 /* ---------- lobby ---------- */
-#view-lobby { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: max(24px, calc(env(safe-area-inset-top) + 8px)) 26px max(16px, env(safe-area-inset-bottom)); text-align: center; } /* 4 seats and Leave fit an iPhone 16 */
-.lobby-game { min-height: 1.2em; line-height: 1.2; font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: #f0c75e; } /* keeps its line until the name comes */
-.lobby-code-row { display: flex; align-items: center; gap: 12px; }
-/* Its labels share one cell, so the button is always as wide as the longest and the code never moves. */
-#btn-copy { display: inline-grid; white-space: nowrap; }
-#btn-copy span { grid-area: 1 / 1; visibility: hidden; }
-#btn-copy span.on { visibility: visible; }
-.lobby-code { font-family: Georgia, serif; font-size: 52px; font-weight: 700; letter-spacing: .14em; color: #fffdf7; user-select: all; -webkit-user-select: all; }
-.lobby-hint { max-width: 290px; font-size: 14px; opacity: .75; }
-.lobby-count { margin-top: 6px; font-weight: 700; }
-.lobby-seats { display: grid; gap: 8px; width: 100%; max-width: 340px; list-style: none; }
-.lobby-seats li { display: flex; align-items: center; gap: 14px; padding: 8px 14px; border: 1.5px solid transparent; border-radius: 14px; background: rgba(0,0,0,.3); text-align: left; font-weight: 600; } /* same border as an open seat: taking one doesn't shrink it */
-.lobby-seats .avatar { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #f0c75e; color: #3a2a08; font-family: Georgia, serif; font-size: 17px; font-weight: 700; }
-.lobby-seats li.taken::after { content: "✓"; margin-left: auto; color: #7fd18b; font-weight: 700; }
-.lobby-seats li.offline { opacity: .55; }
-.lobby-seats li.open { background: none; border: 1.5px dashed rgba(243,230,196,.4); }
-.lobby-seats li.open .avatar { background: none; border: 1.5px dashed rgba(243,230,196,.5); }
-.lobby-groups { display: grid; gap: 10px; width: 100%; max-width: 340px; }
-.lobby-team { display: grid; gap: 6px; }
-.team-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: .75; text-align: left; }
-.lobby-seats li.open { cursor: pointer; }
-.lobby-seats li.open:hover, .lobby-seats li.open:active { background: rgba(0,0,0,.18); border-color: rgba(243,230,196,.7); }
-.lobby-seats li.me { box-shadow: 0 0 0 2px #f0c75e; }
-.lobby-seats li.computer .avatar { background: rgba(243,230,196,.18); font-size: 20px; }
-.lobby-seats li.computer::after { content: none; }
-.lobby-seats .seat-add, .lobby-seats .seat-remove { margin-left: auto; padding: 6px 10px; border: 1px solid rgba(243,230,196,.45); border-radius: 999px; color: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; }
-.lobby-seats .seat-remove { width: 32px; height: 32px; padding: 0; }
-.lobby-seats .seat-add:hover, .lobby-seats .seat-remove:hover { background: rgba(243,230,196,.12); }
-.lobby-level { display: grid; gap: 4px; width: 100%; max-width: 340px; }
-.lobby-level-label { font-size: 13px; font-weight: 700; opacity: .75; }
-.lobby-level .seg { background: rgba(0,0,0,.3); }
-.lobby-level .seg button { color: inherit; }
-.lobby-level .seg button.on { background: #f0c75e; color: #3a2a08; }
-.lobby-level .seg button:disabled { cursor: default; }
-.lobby-level .seg button:disabled:not(.on) { opacity: .6; }
+/* The lobby is the table seen from above: the chairs where everyone will sit, you at the bottom. */
+#view-lobby { --tw: min(270px, 68vw); --ring: 56px; --sw: 120px; /* table width, chair size, chair + name width */
+              display: flex; flex-direction: column; align-items: center; gap: 8px; padding: max(24px, calc(env(safe-area-inset-top) + 8px)) 26px max(16px, env(safe-area-inset-bottom)); text-align: center; }
+.lobby-top { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 340px; }
+.lobby-game { min-height: 1.2em; line-height: 1.2; font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: #f0c75e; } /* keeps its line until the name comes */
+.lobby-rules { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid rgba(243,230,196,.6); font-family: Georgia, serif; font-size: 17px; font-weight: 800; }
+/* The code on a brass plaque; tapping it copies the code. */
+.lobby-plaque { display: grid; justify-items: center; gap: 1px; width: 100%; max-width: 300px; padding: 10px 16px 12px; border-radius: 14px; cursor: pointer;
+                background: linear-gradient(#e8c56a, #b88a2c); color: #3a2a08; box-shadow: inset 0 0 0 2px rgba(255,240,190,.6), 0 4px 10px rgba(0,0,0,.35); }
+.lobby-plaque:active { translate: 0 1px; }
+.plaque-label { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; opacity: .75; }
+.lobby-code { padding-left: .2em; font-family: Georgia, serif; font-size: 46px; font-weight: 700; letter-spacing: .2em; line-height: 1.05; user-select: all; -webkit-user-select: all; }
+/* Its labels share one cell, so the plaque never changes size when one swaps for another. */
+.plaque-sub { display: inline-grid; font-size: 12px; font-weight: 700; opacity: .8; }
+.plaque-sub span { grid-area: 1 / 1; visibility: hidden; }
+.plaque-sub span.on { visibility: visible; }
+.lobby-table { position: relative; flex: none; width: var(--tw); aspect-ratio: 9 / 10; margin: calc(var(--ring) / 2 + 6px) 0 calc(var(--ring) / 2 + 30px); border-radius: 50% / 46%;
+               background: radial-gradient(ellipse at 50% 40%, #2c7a4c, #175034 75%);
+               box-shadow: inset 0 0 0 9px #6b4524, inset 0 0 0 11px #3e2713, inset 0 0 30px rgba(0,0,0,.45), 0 8px 20px rgba(0,0,0,.4); }
+.lobby-mid { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 2px; font-weight: 700; }
+.lobby-deck { width: 34px; height: 48px; margin-bottom: 8px; border-radius: 4px; border: 2px solid var(--card-back-edge, #fff); background: var(--card-back, #a8262e);
+              box-shadow: 2px 2px 0 var(--card-back-edge, #fff), 3px 3px 0 rgba(0,0,0,.3), 4px 4px 0 var(--card-back-edge, #fff), 5px 5px 3px rgba(0,0,0,.35); }
+.lobby-count { font-family: Georgia, serif; font-size: 30px; color: #f0c75e; }
+.lobby-count-sub { max-width: calc(var(--tw) * .4); font-size: 12px; opacity: .8; } /* narrow, so the side chairs' names never run over it */
+.lobby-groups { position: absolute; inset: 0; }
+/* A chair: its circle sits on the table's rim, the name under it. */
+.lobby-seat { position: absolute; display: grid; justify-items: center; gap: 5px; width: var(--sw); }
+.spot-bottom { left: calc(50% - var(--sw) / 2); top: calc(100% - var(--ring) / 2); }
+.spot-top { left: calc(50% - var(--sw) / 2); top: calc(var(--ring) / -2); }
+.spot-left { left: calc(5% - var(--sw) / 2); top: calc(50% - var(--ring) / 2); }
+.spot-right { left: calc(95% - var(--sw) / 2); top: calc(50% - var(--ring) / 2); }
+.lobby-seat .ring { display: grid; place-items: center; width: var(--ring); height: var(--ring); border-radius: 50%; background: #f0c75e; color: #3a2a08;
+                    font-family: Georgia, serif; font-size: 24px; font-weight: 700; box-shadow: 0 0 0 3px #1d5a37, 0 3px 8px rgba(0,0,0,.45); }
+.lobby-seat.me .ring { box-shadow: 0 0 0 3px #123d25, 0 0 0 5px #f0c75e, 0 0 16px rgba(240,199,94,.55); }
+.lobby-seat.computer .ring { background: #3b5e48; font-size: 26px; }
+.lobby-seat.offline { opacity: .55; }
+.lobby-seat.open .ring { background: rgba(0,0,0,.25); border: 2px dashed rgba(243,230,196,.65); color: #f3e6c4; box-shadow: none;
+                         font-family: inherit; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.lobby-seat.open .ring:hover, .lobby-seat.open .ring:active { background: rgba(0,0,0,.4); border-color: #f3e6c4; }
+.seat-name { display: inline-flex; align-items: center; gap: 6px; max-width: var(--sw); padding: 2px 9px; border-radius: 999px; background: rgba(0,0,0,.5); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.seat-name > span { overflow: hidden; text-overflow: ellipsis; }
+.spot-left .seat-name, .spot-right .seat-name { max-width: calc(var(--tw) * .3); } /* these sit on the table */
+.seat-remove { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-right: -6px; border-radius: 50%; background: rgba(243,230,196,.2); font-size: 11px; }
+.seat-add { padding: 3px 10px; border: 1px solid rgba(243,230,196,.5); border-radius: 999px; background: rgba(0,0,0,.4); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.seat-add:hover, .seat-remove:hover { background: rgba(243,230,196,.25); }
 .lobby-unseated { min-height: 1.4em; font-size: 14px; line-height: 1.4; opacity: .75; } /* keeps its line when empty, so nothing moves */
+/* Computer difficulty: one gold pill slides to the chosen level (placed by placePill in lobby-view.js). */
+.lobby-level { display: grid; justify-items: center; gap: 6px; }
+.lobby-level-label { font-size: 13px; font-weight: 700; opacity: .8; }
+.pills { position: relative; display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(0,0,0,.3); border: 1px solid rgba(243,230,196,.18); }
+.pills button { position: relative; z-index: 1; padding: 8px 20px; border-radius: 999px; font-size: 15px; font-weight: 700; color: rgba(243,230,196,.75); transition: color 280ms cubic-bezier(.4, 0, .2, 1); }
+.pills button.on { color: #3a2a08; }
+.pills button:disabled { cursor: default; }
+.pill-ind { position: absolute; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 999px; pointer-events: none; opacity: 0;
+            background: linear-gradient(#f3d27a, #e2b24a); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 3px rgba(0,0,0,.35);
+            transition: transform 320ms cubic-bezier(.4, 0, .2, 1), width 320ms cubic-bezier(.4, 0, .2, 1); }
+.pill-ind.ready { opacity: 1; }
 #view-lobby .btn { max-width: 340px; margin-top: auto; }
 /* Every seat taken: 3 · 2 · 1 over the lobby, then the table. Taps go through (Leave, ✕ on a computer call it off). */
 .lobby-start { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
@@ -140,26 +161,35 @@ input { font: inherit; }
   .menu-card .card-face { width: 180px; }
   .menu-card .tag { font-size: 25px; }
 
-  #view-lobby { justify-content: safe center; gap: 14px; padding-top: max(60px, env(safe-area-inset-top)); padding-bottom: max(30px, env(safe-area-inset-bottom)); }
-  .lobby-game { font-size: 40px; }
-  .lobby-code-row { gap: 22px; margin-top: 8px; }
-  .lobby-code { font-size: 120px; line-height: 1.1; }
-  #btn-copy { padding: 12px 22px; font-size: 20px; border-radius: 10px; }
-  #btn-lobby-rules { padding: 8px 16px; font-size: 16px; border-radius: 10px; }
-  .lobby-hint { max-width: none; font-size: 18px; }
-  .lobby-count { margin-top: 30px; font-size: 20px; }
-  .lobby-seats { grid-template-columns: 1fr 1fr; gap: 14px; max-width: 720px; }
-  .lobby-seats li { padding: 18px 22px; font-size: 20px; }
-  .lobby-seats .avatar { width: 48px; height: 48px; font-size: 22px; }
-  .lobby-groups { max-width: 720px; }
-  .lobby-groups.teams { grid-template-columns: 1fr 1fr; gap: 22px; }
-  .lobby-groups.teams .lobby-seats { grid-template-columns: 1fr; }
-  .team-label { font-size: 15px; }
+  #view-lobby { justify-content: safe center; }
+  #view-lobby .btn { max-width: 240px; margin-top: 16px; }
+}
+
+/* The lobby at full desktop size needs a tall window; a shorter one keeps the phone sizes, centred. */
+@media (min-width: 900px) and (min-height: 950px) {
+  #view-lobby { --tw: 400px; --ring: 72px; --sw: 170px; justify-content: safe center; gap: 12px;
+                padding-top: max(40px, env(safe-area-inset-top)); padding-bottom: max(30px, env(safe-area-inset-bottom)); }
+  .lobby-top { max-width: 560px; }
+  .lobby-game { font-size: 34px; }
+  .lobby-rules { width: 44px; height: 44px; font-size: 22px; }
+  .lobby-plaque { max-width: 460px; padding: 14px 24px 16px; border-radius: 18px; }
+  .plaque-label { font-size: 13px; }
+  .lobby-code { font-size: 72px; }
+  .plaque-sub { font-size: 15px; }
+  .lobby-seat .ring { font-size: 32px; }
+  .lobby-seat.computer .ring { font-size: 34px; }
+  .lobby-seat.open .ring { font-size: 15px; }
+  .seat-name { padding: 4px 12px; font-size: 17px; }
+  .seat-remove { width: 28px; height: 28px; font-size: 13px; }
+  .seat-add { padding: 5px 14px; font-size: 15px; }
+  .lobby-deck { width: 48px; height: 68px; }
+  .lobby-count { font-size: 44px; }
+  .lobby-count-sub { font-size: 16px; }
   .lobby-unseated { font-size: 17px; }
-  .lobby-level { max-width: 420px; gap: 8px; }
+  .lobby-level { gap: 8px; }
   .lobby-level-label { font-size: 16px; }
-  .lobby-level .seg button { padding: 12px; font-size: 18px; }
-  #view-lobby .btn { max-width: 240px; margin-top: 42px; padding: 15px; font-size: 18px; }
+  .pills button { padding: 11px 30px; font-size: 18px; }
+  #view-lobby .btn { max-width: 240px; margin-top: 16px; padding: 13px; font-size: 18px; }
 }
 
 /* ---------- table ---------- */

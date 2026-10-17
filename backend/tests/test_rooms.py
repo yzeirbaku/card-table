@@ -131,9 +131,9 @@ def test_actions_go_to_the_game():
         room.act(ana.id, {"type": "pass"})
     room, (ana, ben) = full_room(2)
     with pytest.raises(Rejected, match="creator"):
-        room.act(ben.id, {"type": "choose_target", "target": 13})
-    room.act(ana.id, {"type": "choose_target", "target": 13})
-    assert room.game.target == 13
+        room.act(ben.id, {"type": "choose_target", "target": 10})
+    room.act(ana.id, {"type": "choose_target", "target": 10})
+    assert room.game.target == 10
 
 
 def test_leaving_mid_game_returns_everyone_to_the_lobby():

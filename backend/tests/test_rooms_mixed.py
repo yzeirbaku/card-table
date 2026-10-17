@@ -254,7 +254,7 @@ def test_a_whole_game_alone_where_you_always_pass_or_lead_low(level):
     room.sit(you.id, 0)
     for seat in (1, 2, 3):
         room.add_computer(you.id, seat)
-    room.act(you.id, {"type": "choose_target", "target": 5})
+    room.act(you.id, {"type": "choose_target", "target": 13})
     game = room.game
 
     def your_moves():

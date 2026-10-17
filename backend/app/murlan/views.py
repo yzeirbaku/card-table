@@ -15,6 +15,7 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
     view: dict[str, Any] = {
         "phase": game.phase,
         "target": game.target,
+        "targets": list(game.targets()),
         "round": game.rounds_played + 1,
         "seats": list(game.seats),
         "creator": game.creator,

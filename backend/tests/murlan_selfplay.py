@@ -22,7 +22,7 @@ class Naive(Bot):
         return min(legal, key=lambda cards: (classify(cards).rank, -len(cards))) if legal else None
 
 
-def play_game(players: int, seed: int, target: int = 13, kinds=None, max_moves: int = 20000):
+def play_game(players: int, seed: int, target: int | None = None, kinds=None, max_moves: int = 20000):
     """Plays one game out. `kinds` gives each seat's player class (default: all Bot).
     Returns the finished game and the results of every round."""
     rng = random.Random(seed)
@@ -31,7 +31,7 @@ def play_game(players: int, seed: int, target: int = 13, kinds=None, max_moves: 
     game = Game(seats, "p0", rng=rng, clock=clock)
     kinds = kinds or [Bot] * players
     bots = {p: kind(p, random.Random(seed * 10 + i)) for i, (p, kind) in enumerate(zip(seats, kinds))}
-    game.choose_target("p0", target)
+    game.choose_target("p0", target or game.targets()[0])  # default: the shortest race
     rounds = []
     seen_rounds = 0
     for _ in range(max_moves):

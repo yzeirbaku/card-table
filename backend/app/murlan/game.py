@@ -18,7 +18,8 @@ from typing import Literal
 from .cards import DECK, JOKERS, card_name, power, rank_of, sort_cards, sort_key, suit_of
 from .combos import KIND_NAMES, STRAIGHTS, Play, beats, classify, in_play_order
 
-TARGETS = (5, 10, 13, 21)
+# The races the creator can pick from, by number of players.
+TARGETS = {2: (5, 10), 3: (10, 13, 21), 4: (13, 21)}
 # Points for 1st, 2nd, ... place. In 4-player games a team adds its two players,
 # so one team taking 1st and 2nd scores 5 against 1 (and the round ends early).
 PLACE_POINTS = {2: (1, 0), 3: (2, 1, 0), 4: (3, 2, 1, 0)}
@@ -138,6 +139,10 @@ class Game:
     def top(self) -> Play | None:
         return self.trick[-1][2] if self.trick and not self.trick_won else None
 
+    def targets(self) -> tuple[int, ...]:
+        """The races the creator can pick from at this table."""
+        return TARGETS[len(self.seats)]
+
     def loser_voters(self) -> list[str]:
         """The two players who must agree who's last after a 4-player early end."""
         return [p for p in self.seats if p not in self.places]
@@ -150,8 +155,8 @@ class Game:
             raise Rejected("The target is already set")
         if player_id != self.creator:
             raise Rejected("The room creator picks the target")
-        if target not in TARGETS:
-            raise Rejected("The target is 5, 10, 13 or 21")
+        if target not in self.targets():
+            raise Rejected(f"The target is {' or '.join(map(str, self.targets()))}")
         self.target = target
         self._start_round()
 

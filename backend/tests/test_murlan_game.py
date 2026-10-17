@@ -13,19 +13,25 @@ def test_creator_picks_the_target_and_the_first_round_starts():
     assert g.phase == "choosing_target"
     with pytest.raises(Rejected, match="creator"):
         g.choose_target("p1", 13)
-    with pytest.raises(Rejected, match="5, 10, 13 or 21"):
-        g.choose_target("p0", 15)
+    with pytest.raises(Rejected, match="13 or 21"):
+        g.choose_target("p0", 10)
     g.choose_target("p0", 21)
     assert g.target == 21 and g.phase == "playing"
     with pytest.raises(Rejected, match="already"):
         g.choose_target("p0", 13)
 
 
-@pytest.mark.parametrize("target", [5, 10, 13, 21])
-def test_every_listed_target_can_be_picked(target):
-    g = new_game(2)
-    g.choose_target("p0", target)
-    assert g.target == target
+@pytest.mark.parametrize("n, targets", [(2, [5, 10]), (3, [10, 13, 21]), (4, [13, 21])])
+def test_the_races_on_offer_depend_on_the_number_of_players(n, targets):
+    assert new_game(n).targets() == tuple(targets)
+    assert view_for(new_game(n), "p0")["targets"] == targets
+    for target in targets:
+        g = new_game(n)
+        g.choose_target("p0", target)
+        assert g.target == target
+    for target in {5, 10, 13, 21} - set(targets):
+        with pytest.raises(Rejected, match="The target is"):
+            new_game(n).choose_target("p0", target)
 
 
 def test_strangers_cannot_move():
@@ -37,7 +43,7 @@ def test_strangers_cannot_move():
 @pytest.mark.parametrize("n, sizes", [(2, [18, 18]), (3, [18, 18, 18]), (4, [14, 14, 13, 13])])
 def test_deal_sizes(n, sizes):
     g = new_game(n)
-    g.choose_target("p0", 13)
+    g.choose_target("p0", g.targets()[0])
     assert [len(g.hands[p]) for p in g.seats] == sizes
     dealt = [c for p in g.seats for c in g.hands[p]]
     assert len(set(dealt)) == len(dealt)
@@ -59,14 +65,14 @@ def test_first_lead_is_the_three_of_spades_and_must_include_it():
 
 def test_two_players_lowest_spade_dealt_leads_when_3s_is_out_of_play():
     g = new_game(2, rng=Rotate())
-    g.choose_target("p0", 13)
+    g.choose_target("p0", 10)
     assert all("3S" not in h for h in g.hands.values())
     assert g.must_include == "4S" and g.turn == "p0"
 
 
 def test_two_players_with_no_spade_dealt_the_lowest_card_leads():
     g = new_game(2, rng=Reverse())
-    g.choose_target("p0", 13)
+    g.choose_target("p0", 10)
     assert not any(c.endswith("S") for h in g.hands.values() for c in h)
     assert g.must_include == "3D" and g.turn == "p1"
 
@@ -485,7 +491,7 @@ def test_reveals_expire_on_tick():
 def test_no_one_plays_until_the_reveal_is_gone():
     clock = FakeClock()
     g = new_game(2, clock=clock)
-    g.choose_target("p0", 13)
+    g.choose_target("p0", 10)
     g.reveal = Reveal("first_cards", {p: ["3S"] for p in g.seats}, clock.now + REVEAL_SECONDS)
     lead = g.turn
     card = g.must_include or g.hands[lead][0]

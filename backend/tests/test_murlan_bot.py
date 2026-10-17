@@ -15,7 +15,7 @@ from tests.murlan_selfplay import Naive, play_game
 @pytest.mark.parametrize("players", [2, 3, 4])
 @pytest.mark.parametrize("seed", range(4))
 def test_computer_players_play_whole_games_without_a_refused_move(level, players, seed):
-    game, rounds = play_game(players, seed, target=5, kinds=[functools.partial(Bot, level=level)] * players)
+    game, rounds = play_game(players, seed, kinds=[functools.partial(Bot, level=level)] * players)
     assert game.phase == "game_over"
     assert rounds and max(game.scores) >= 5
 
@@ -25,7 +25,7 @@ def share_of_rounds(a, b, games):
     won = total = 0
     for seed in range(games):
         kinds, mine = ([a, b], "p0") if seed % 2 == 0 else ([b, a], "p1")
-        _, rounds = play_game(2, 700 + seed, target=13, kinds=kinds)
+        _, rounds = play_game(2, 700 + seed, target=10, kinds=kinds)
         won += sum(r.winner == mine for r in rounds)
         total += len(rounds)
     return won / total
@@ -40,7 +40,7 @@ def test_each_level_beats_the_one_below(better, worse):
 def test_the_computer_clearly_beats_a_naive_player():
     won = total = 0
     for seed in range(6):
-        game, rounds = play_game(2, 500 + seed, target=13, kinds=[Bot, Naive])
+        game, rounds = play_game(2, 500 + seed, target=10, kinds=[Bot, Naive])
         won += sum(r.winner == "p0" for r in rounds)
         total += len(rounds)
     assert won / total > 0.6, f"{won}/{total}"

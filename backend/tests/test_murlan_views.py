@@ -85,7 +85,7 @@ def test_first_cards_are_public_while_the_reveal_lasts():
 def test_pause_view_counts_down():
     clock = FakeClock()
     g = new_game(2, clock=clock)
-    g.choose_target("p0", 13)
+    g.choose_target("p0", 10)
     g.disconnect("p1")
     clock.now += 30
     assert view_for(g, "p0")["pause"] == {"waiting_for": ["p1"], "seconds_left": 90,
@@ -98,7 +98,7 @@ def test_pause_view_counts_down():
 
 def test_two_player_out_of_play_cards_never_show():
     g = new_game(2)
-    g.choose_target("p0", 13)
+    g.choose_target("p0", 10)
     dealt = set(g.hands["p0"]) | set(g.hands["p1"])
     for p in g.seats:
         assert card_codes(view_for(g, p)) <= dealt
@@ -149,7 +149,7 @@ def random_step(game: Game, rng: random.Random, clock: FakeClock) -> None:
         game.tick()
         return
     if game.phase == "choosing_target":
-        game.choose_target(game.creator, 13)
+        game.choose_target(game.creator, 10 if len(game.seats) == 2 else 13)
     elif game.phase == "cutting":
         loser = game.last_result.loser
         if game.cut_index is None:

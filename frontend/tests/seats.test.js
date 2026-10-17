@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { seatPositions } from '../js/seats.js';
+import { lobbySpots, seatPositions } from '../js/seats.js';
 
 const players = (...ids) => ids.map((id) => ({ id, name: id }));
 const layout = (ps, me) => seatPositions(ps, me).map(({ player, position }) => [player.id, position]);
@@ -23,4 +23,14 @@ test('not seated: nobody to place', () => {
 
 test('more than 4 players is not supported', () => {
   assert.throws(() => seatPositions(players('a', 'b', 'c', 'd', 'e'), 'a'));
+});
+
+test('lobby: your seat at the bottom, the others where they will sit at the table', () => {
+  assert.deepEqual(lobbySpots(2, 1), ['top', 'bottom']);
+  assert.deepEqual(lobbySpots(3, 0), ['bottom', 'left', 'right']);
+  assert.deepEqual(lobbySpots(4, 2), ['top', 'right', 'bottom', 'left']);
+});
+
+test('lobby: before you sit, seat 0 is at the bottom', () => {
+  assert.deepEqual(lobbySpots(4, null), ['bottom', 'left', 'top', 'right']);
 });

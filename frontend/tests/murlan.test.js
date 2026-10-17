@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cardImage, cardName, formatClock, keepHeld, placeLabel, seatGroups, sideName, toggleCard } from '../js/murlan.js';
+import { cardImage, cardName, formatClock, keepHeld, placeLabel, sideName, toggleCard } from '../js/murlan.js';
 
 test('card images', () => {
   assert.equal(cardImage('10H'), '/cards/10H.webp');
@@ -37,12 +37,6 @@ test('pause clock', () => {
   assert.equal(formatClock(105), '1:45');
   assert.equal(formatClock(9.2), '0:10');
   assert.equal(formatClock(-3), '0:00');
-});
-
-test('seat groups: partners sit across in 4-player games', () => {
-  assert.deepEqual(seatGroups(4), [[0, 2], [1, 3]]);
-  assert.deepEqual(seatGroups(3), [[0, 1, 2]]);
-  assert.deepEqual(seatGroups(2), [[0, 1]]);
 });
 
 test('side names and places', () => {

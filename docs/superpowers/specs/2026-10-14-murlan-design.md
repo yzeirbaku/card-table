@@ -120,8 +120,9 @@ Suits never matter for beating anything.
 
 ### Winning the game
 
-- When all seats are filled, the **room creator** picks the target: **5, 10, 13
-  or 21**. Everyone else sees "Waiting for Yzeir to choose the target…". The game
+- When all seats are filled, the **room creator** picks the target, from the
+  races that suit the table: **5 or 10** for 2 players, **10, 13 or 21** for 3,
+  **13 or 21** for 4 (`TARGETS` in `game.py`; the view sends them as `targets`). Everyone else sees "Waiting for Yzeir to choose the target…". The game
   starts when it's picked.
 - After each round, if any side has reached the target, the **highest score
   wins**. On an exact tie for the highest score, play **one more round** at a

@@ -37,24 +37,29 @@
   </main>
 
   <section id="view-lobby" class="view felt" hidden>
-    <p class="lobby-game"></p>
-    <button id="btn-lobby-rules" class="small-btn" type="button">How to play</button>
-    <div class="lobby-code-row">
-      <span class="lobby-code"></span>
-      <button id="btn-copy" class="small-btn" type="button"><span class="on">Copy</span><span>Copied ✓</span><span>Tap the code</span></button>
+    <div class="lobby-top">
+      <p class="lobby-game"></p>
+      <button id="btn-lobby-rules" class="lobby-rules" type="button" aria-label="How to play">?</button>
     </div>
-    <p class="lobby-hint">Share this code, then tap a seat. The game starts when every seat is taken.</p>
-    <p class="lobby-count"></p>
+    <div id="btn-copy" class="lobby-plaque" role="button" tabindex="0" aria-label="Copy the table code">
+      <span class="plaque-label">Table code</span>
+      <span class="lobby-code"></span>
+      <span class="plaque-sub"><span class="on">Tap to copy · share it with your friends</span><span>Copied ✓</span><span>Select the code to copy it</span></span>
+    </div>
+    <div class="lobby-table">
+      <div class="lobby-mid"><span class="lobby-deck"></span><p class="lobby-count"></p><p class="lobby-count-sub">seated · starts when full</p></div>
+      <div class="lobby-groups"></div>
+    </div>
+    <p class="lobby-unseated"></p>
     <div class="lobby-level" hidden>
-      <span class="lobby-level-label" id="lobby-level-label">Computer level</span>
-      <div class="seg" role="group" aria-labelledby="lobby-level-label">
+      <span class="lobby-level-label" id="lobby-level-label">Computer difficulty</span>
+      <div class="pills" role="group" aria-labelledby="lobby-level-label">
+        <span class="pill-ind" aria-hidden="true"></span>
         <button type="button" data-level="easy">Easy</button>
         <button type="button" data-level="medium">Medium</button>
         <button type="button" data-level="hard">Hard</button>
       </div>
     </div>
-    <div class="lobby-groups"></div>
-    <p class="lobby-unseated"></p>
     <button id="btn-lobby-leave" class="btn ghost" type="button">Leave</button>
     <div class="lobby-start" hidden aria-live="assertive"><span class="lobby-start-num"></span><span class="lobby-start-text">Game starting…</span></div>
   </section>
@@ -145,7 +150,6 @@
     <div class="sheet-step" data-step="game"><div class="choice-list" id="game-list"></div></div>
     <div class="sheet-step" data-step="players" hidden>
       <div class="choice-row" id="player-counts" role="group" aria-label="Number of players"></div>
-      <p class="sheet-sub">Computer players can take seats in the lobby.</p>
     </div>
   </section>
 
@@ -183,7 +187,7 @@
 
   <template id="rules-murlan">
     <h2 class="rules-title">How to play Murlan</h2>
-    <p>Be the first to get rid of all your cards. Every round gives points. Once a side reaches the target (5, 10, 13 or 21), the highest score wins the game.</p>
+    <p>Be the first to get rid of all your cards. Every round gives points. Once a side reaches the target (5 or 10 with 2 players, 10, 13 or 21 with 3, 13 or 21 with 4), the highest score wins the game.</p>
     <h3>Players</h3>
     <ul>
       <li><b>4 players:</b> two teams of two, partners sit across from each other. All 54 cards are dealt.</li>

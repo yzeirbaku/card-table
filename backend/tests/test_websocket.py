@@ -57,7 +57,7 @@ def seat_and_start(ana, ben) -> tuple[dict, dict]:
     state(ana), state(ben)
     send(ben, type="sit", seat=1)
     state(ana), state(ben)
-    act(ana, type="choose_target", target=13)
+    act(ana, type="choose_target", target=10)
     return state(ana), state(ben)
 
 
@@ -105,11 +105,11 @@ def test_seats_fill_then_the_creator_picks_the_target(client):
             assert sa["room"]["status"] == "playing"
             assert sa["game"]["phase"] == "choosing_target"
             assert sa["game"]["seats"] == [b["player_id"], a["player_id"]]
-            act(ben, type="choose_target", target=13)
+            act(ben, type="choose_target", target=10)
             assert ben.receive_json() == {"type": "error",
                                           "message": "The room creator picks the target"}
             state(ben)
-            act(ana, type="choose_target", target=13)
+            act(ana, type="choose_target", target=10)
             sa, sb = state(ana), state(ben)
             assert sa["game"]["phase"] == "playing"
             assert len(sa["game"]["hand"]) == 18 and len(sb["game"]["hand"]) == 18

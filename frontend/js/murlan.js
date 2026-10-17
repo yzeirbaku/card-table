@@ -40,12 +40,6 @@ export function formatClock(seconds) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** Seats the way the lobby groups them: in 4-player games partners sit across (0+2, 1+3). */
-export function seatGroups(seats) {
-  if (seats === 4) return [[0, 2], [1, 3]];
-  return [Array.from({ length: seats }, (_, i) => i)];
-}
-
 /** "Ana & Cleo" for a team, "Ben" for a single player. */
 export function sideName(side, names) {
   return side.players.map((id) => names[id] ?? '?').join(' & ');
