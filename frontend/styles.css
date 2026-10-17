@@ -77,25 +77,25 @@ input { font: inherit; }
                                            border-radius: 50%; background: #1a1a1a; color: #fff; font-size: 13px; font-weight: 800; box-shadow: 0 0 0 2px #fffdf7; }
 
 /* ---------- lobby ---------- */
-#view-lobby { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: max(60px, env(safe-area-inset-top)) 26px max(30px, env(safe-area-inset-bottom)); text-align: center; }
+#view-lobby { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: max(24px, calc(env(safe-area-inset-top) + 8px)) 26px max(16px, env(safe-area-inset-bottom)); text-align: center; } /* 4 seats and Leave fit an iPhone 16 */
 .lobby-game { font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: #f0c75e; }
 .lobby-code-row { display: flex; align-items: center; gap: 12px; }
 /* Its labels share one cell, so the button is always as wide as the longest and the code never moves. */
 #btn-copy { display: inline-grid; white-space: nowrap; }
 #btn-copy span { grid-area: 1 / 1; visibility: hidden; }
 #btn-copy span.on { visibility: visible; }
-.lobby-code { font-family: Georgia, serif; font-size: 60px; font-weight: 700; letter-spacing: .14em; color: #fffdf7; user-select: all; -webkit-user-select: all; }
+.lobby-code { font-family: Georgia, serif; font-size: 52px; font-weight: 700; letter-spacing: .14em; color: #fffdf7; user-select: all; -webkit-user-select: all; }
 .lobby-hint { max-width: 290px; font-size: 14px; opacity: .75; }
-.lobby-count { margin-top: 18px; font-weight: 700; }
-.lobby-seats { display: grid; gap: 10px; width: 100%; max-width: 340px; list-style: none; }
-.lobby-seats li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1.5px solid transparent; border-radius: 14px; background: rgba(0,0,0,.3); text-align: left; font-weight: 600; } /* same border as an open seat: taking one doesn't shrink it */
-.lobby-seats .avatar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #f0c75e; color: #3a2a08; font-family: Georgia, serif; font-size: 17px; font-weight: 700; }
+.lobby-count { margin-top: 6px; font-weight: 700; }
+.lobby-seats { display: grid; gap: 8px; width: 100%; max-width: 340px; list-style: none; }
+.lobby-seats li { display: flex; align-items: center; gap: 14px; padding: 8px 14px; border: 1.5px solid transparent; border-radius: 14px; background: rgba(0,0,0,.3); text-align: left; font-weight: 600; } /* same border as an open seat: taking one doesn't shrink it */
+.lobby-seats .avatar { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #f0c75e; color: #3a2a08; font-family: Georgia, serif; font-size: 17px; font-weight: 700; }
 .lobby-seats li.taken::after { content: "✓"; margin-left: auto; color: #7fd18b; font-weight: 700; }
 .lobby-seats li.offline { opacity: .55; }
 .lobby-seats li.open { background: none; border: 1.5px dashed rgba(243,230,196,.4); }
 .lobby-seats li.open .avatar { background: none; border: 1.5px dashed rgba(243,230,196,.5); }
-.lobby-groups { display: grid; gap: 14px; width: 100%; max-width: 340px; }
-.lobby-team { display: grid; gap: 8px; }
+.lobby-groups { display: grid; gap: 10px; width: 100%; max-width: 340px; }
+.lobby-team { display: grid; gap: 6px; }
 .team-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; opacity: .75; text-align: left; }
 .lobby-seats li.open { cursor: pointer; }
 .lobby-seats li.open:hover, .lobby-seats li.open:active { background: rgba(0,0,0,.18); border-color: rgba(243,230,196,.7); }
@@ -105,7 +105,7 @@ input { font: inherit; }
 .lobby-seats .seat-add, .lobby-seats .seat-remove { margin-left: auto; padding: 6px 10px; border: 1px solid rgba(243,230,196,.45); border-radius: 999px; color: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .lobby-seats .seat-remove { width: 32px; height: 32px; padding: 0; }
 .lobby-seats .seat-add:hover, .lobby-seats .seat-remove:hover { background: rgba(243,230,196,.12); }
-.lobby-level { display: grid; gap: 6px; width: 100%; max-width: 340px; }
+.lobby-level { display: grid; gap: 4px; width: 100%; max-width: 340px; }
 .lobby-level-label { font-size: 13px; font-weight: 700; opacity: .75; }
 .lobby-level .seg { background: rgba(0,0,0,.3); }
 .lobby-level .seg button { color: inherit; }
@@ -135,7 +135,7 @@ input { font: inherit; }
   .menu-card .card-face { width: 180px; }
   .menu-card .tag { font-size: 25px; }
 
-  #view-lobby { justify-content: safe center; gap: 14px; }
+  #view-lobby { justify-content: safe center; gap: 14px; padding-top: max(60px, env(safe-area-inset-top)); padding-bottom: max(30px, env(safe-area-inset-bottom)); }
   .lobby-game { font-size: 40px; }
   .lobby-code-row { gap: 22px; margin-top: 8px; }
   .lobby-code { font-size: 120px; line-height: 1.1; }
