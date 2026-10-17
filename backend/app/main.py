@@ -34,7 +34,6 @@ DEV_ORIGINS = (
 class CreateRoom(BaseModel):
     game: str
     players: int
-    computer: bool = False  # you against computer players: they fill every seat but yours
 
 
 def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -> FastAPI:
@@ -170,6 +169,8 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
                 room.add_computer(player.id, msg.get("seat"))
             elif kind == "remove_computer":
                 room.remove_computer(player.id, msg.get("seat"))
+            elif kind == "set_level":
+                room.set_level(player.id, msg.get("level"))
             elif kind == "after_game":
                 room.after_game(player.id, msg.get("choice"))
             else:
@@ -197,7 +198,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
             raise HTTPException(
                 400, f"{game.name} is for {game.min_players}-{game.max_players} players"
             )
-        return {"code": rooms.create(game.id, body.players, computer=body.computer).code}
+        return {"code": rooms.create(game.id, body.players).code}
 
     @app.websocket("/rooms/{code}/ws")
     async def room_socket(
@@ -229,7 +230,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
             except Exception:  # same cleanup as a disconnect
                 if player.socket is ws:
                     player.socket = None
-                    if room.computer:  # they never got their token: free the table for their next try
+                    if player.token != token and room.game is None:  # new here and never got their token: their retry is someone new
                         room.leave(player.id)
                     else:
                         room.mark_disconnected(player.id)

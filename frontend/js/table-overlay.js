@@ -9,9 +9,9 @@ export function stopCountdown() {
 }
 
 /** The panel over the table for whatever needs attention right now, or nothing. */
-export function renderOverlay(el, game, meId, names, send, { computer = false, onLeave = () => {} } = {}) {
+export function renderOverlay(el, game, meId, names, send) {
   clearInterval(countdown);
-  const ctx = { game, meId, names, send, computer, onLeave, act: (action) => send({ type: 'action', action }) };
+  const ctx = { game, meId, names, send, act: (action) => send({ type: 'action', action }) };
   const content = game.pause ? paused(ctx) : PHASES[game.phase]?.(ctx);
   el.hidden = !content;
   el.replaceChildren(...(content ?? []));
@@ -63,7 +63,7 @@ function agreeing({ game, meId, names, act }) {
   ];
 }
 
-function gameOver({ game, meId, names, send, computer, onLeave }) {
+function gameOver({ game, meId, names, send }) {
   const side = game.winner_side === null ? null : game.sides[game.winner_side];
   const head = side ? `${sideName(side, names)} ${side.players.length > 1 ? 'win' : 'wins'}!` : "It's a draw";
   const items = [title(head), scores(game, names)];
@@ -71,7 +71,7 @@ function gameOver({ game, meId, names, send, computer, onLeave }) {
   const choose = (choice) => send({ type: 'after_game', choice });
   const buttons = [button('Play again', () => choose('play_again'), 'on')];
   if (game.seats.length === 4) buttons.push(button('Shuffle teams', () => choose('shuffle_teams')));
-  buttons.push(computer ? button('Leave', onLeave) : button('Back to the lobby', () => choose('lobby'))); // no lobby against the computer
+  buttons.push(button('Back to the lobby', () => choose('lobby')));
   return [...items, column(...buttons)];
 }
 

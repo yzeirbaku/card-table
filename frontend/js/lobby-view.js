@@ -17,6 +17,9 @@ export function initLobby({ onLeave, send: sendMessage }) {
     setTimeout(() => show(0), 1500);
   });
   document.getElementById('btn-lobby-leave').addEventListener('click', onLeave);
+  for (const b of document.querySelectorAll('.lobby-level [data-level]')) {
+    b.addEventListener('click', () => send({ type: 'set_level', level: b.dataset.level }));
+  }
   document.getElementById('btn-lobby-rules').addEventListener('click', () => {
     const sheet = document.getElementById('sheet-rules');
     fillRules(sheet.querySelector('.rules-body'), lobbyGame);
@@ -48,6 +51,7 @@ export function renderLobby(state, meId, gameName) {
   const teams = seats === 4; // partners sit across, so picking a seat picks your partner
   const creator = state.players.some((p) => p.id === meId && p.is_creator);
   const seating = { meId, creator, canAdd: creator && state.room.computer_seats_left > 0 }; // computers: the creator's call
+  showLevel(state, creator);
   const groups = document.querySelector('.lobby-groups');
   groups.classList.toggle('teams', teams);
   groups.replaceChildren(...seatGroups(seats).map((group, i) => {
@@ -62,6 +66,18 @@ export function renderLobby(state, meId, gameName) {
 
   const waiting = state.players.filter((p) => p.seat === null).map((p) => (p.id === meId ? 'you' : p.connected ? p.name : `${p.name} (offline)`));
   document.querySelector('.lobby-unseated').textContent = waiting.length ? `Not seated yet: ${waiting.join(', ')}` : '';
+}
+
+/** How well the computers play: everyone sees it while there are computers, or could be; the creator sets it. */
+function showLevel(state, creator) {
+  const row = document.querySelector('.lobby-level');
+  row.hidden = state.room.computer_seats_left === 0 && !state.players.some((p) => p.computer);
+  for (const b of row.querySelectorAll('[data-level]')) {
+    const on = b.dataset.level === state.room.level;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+    b.disabled = !creator;
+  }
 }
 
 function seatTile(seat, player, { meId, creator, canAdd }) {

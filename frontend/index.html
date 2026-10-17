@@ -45,6 +45,14 @@
     </div>
     <p class="lobby-hint">Share this code, then tap a seat. The game starts when every seat is taken.</p>
     <p class="lobby-count"></p>
+    <div class="lobby-level" hidden>
+      <span class="lobby-level-label" id="lobby-level-label">Computer level</span>
+      <div class="seg" role="group" aria-labelledby="lobby-level-label">
+        <button type="button" data-level="easy">Easy</button>
+        <button type="button" data-level="medium">Medium</button>
+        <button type="button" data-level="hard">Hard</button>
+      </div>
+    </div>
     <div class="lobby-groups"></div>
     <p class="lobby-unseated"></p>
     <button id="btn-lobby-leave" class="btn ghost" type="button">Leave</button>
@@ -55,7 +63,7 @@
       <!-- The cloth and the bar's colour run on out to the screen's edges; what's played stays on .table. -->
       <div class="surface">
         <div class="cloth"></div><div class="stitch"></div><div class="runner"></div>
-        <div class="prop cup"></div><div class="prop glass"></div>
+        <div class="prop cup"></div><div class="prop glass"></div><div class="prop cay"></div>
       </div>
       <div class="bar-bleed"></div>
       <div class="table">
@@ -135,12 +143,8 @@
     <h2 class="sheet-title">Pick a game</h2>
     <div class="sheet-step" data-step="game"><div class="choice-list" id="game-list"></div></div>
     <div class="sheet-step" data-step="players" hidden>
-      <div class="seg" id="player-mode" role="group" aria-label="Who you play with">
-        <button type="button" data-mode="friends">Friends</button>
-        <button type="button" data-mode="computer">Computer</button>
-      </div>
       <div class="choice-row" id="player-counts" role="group" aria-label="Number of players"></div>
-      <p class="sheet-sub" id="player-note" hidden>You count as one of them: 3 is you and 2 computer players.</p>
+      <p class="sheet-sub">Computer players can take seats in the lobby.</p>
     </div>
   </section>
 
@@ -160,6 +164,8 @@
       <button type="button" data-theme="classic" class="swatch swatch-classic"><span>Classic</span></button>
       <button type="button" data-theme="qendisje" class="swatch swatch-qendisje"><span>Qëndisje</span></button>
       <button type="button" data-theme="kafeneio" class="swatch swatch-kafeneio"><span>Kafeneio</span></button>
+      <button type="button" data-theme="scoarta" class="swatch swatch-scoarta"><span>Scoarță</span></button>
+      <button type="button" data-theme="kahvehane" class="swatch swatch-kahvehane"><span>Kahvehane</span></button>
     </div>
     <p class="sheet-sub">Cards</p>
     <div class="style-tiles" id="card-styles">

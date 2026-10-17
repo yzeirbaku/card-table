@@ -1,6 +1,6 @@
 # Computer levels, one kind of table
 
-Date: 2026-10-17. Status: approved in chat, spec under review.
+Date: 2026-10-17. Status: approved, built.
 Builds on: `2026-10-15-vs-computer-design.md` (the computer player) and
 `2026-10-16-mixed-tables-design.md` (computers at a friends table). Replaces the
 separate "vs computer" table from the first.
@@ -79,6 +79,30 @@ level it goes out when it can and never makes an illegal move.
   self-play stays reproducible; emojis keep their own separate dice.
 - The exact mistake rates and memory loss are starting points, set in
   self-play to hit the strength targets below.
+
+### As built (2026-10-17, tuned in self-play)
+
+- **Hard:** `WEAK` 0.9 → 0.99 (the rest of the constants made no difference),
+  plus an **endgame solver**: at a table of 3 or 4, once only it and one
+  opponent hold cards (at most 14 between them), every card it hasn't seen is
+  in the opponent's hand, so it plays the rest out exactly and picks a move
+  that goes out first. With 2 players a third of the deck sits out, so it
+  doesn't (trying likely hands there didn't help). The worked-out positions are
+  kept for the rest of the round, and each move may look at no more than 3,000
+  new ones (`ENDGAME_BUDGET`, about 0.1 s): rooms share one event loop, and an
+  unbounded 14-card solve took up to 0.85 s. Past the budget it plays as usual.
+- **Medium:** mistakes 0.12, remembers 60% of what it sees, never beats its
+  partner, no endgame solver. **Easy:** mistakes 0.15, remembers 40%, doesn't
+  watch for an opponent about to go out, leaves its partner's trick alone 90%
+  of the time, gives a random allowed card in the swap. (Easy at the first
+  guess, 1 mistake in 3, lost even to a player who always plays its lowest
+  card.)
+- **Results** (600 games each, race to 13): 2 players, Hard beats today's bot
+  in 70% of games, Hard beats Medium in 72%, Medium beats Easy in 72.5%, Easy
+  plays about even with always-play-lowest. 3 players: Hard is last in 31% of
+  rounds against today's bot's 33%. 4 players: Hard is last 47.6% vs 50%, but
+  wins no more games; Hard beats Medium in 63% of games, Medium beats Easy in
+  75%.
 
 ## Testing
 

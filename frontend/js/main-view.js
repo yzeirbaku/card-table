@@ -19,7 +19,7 @@ export function initMain({ store, enterRoom, applySettings }) {
     return false;
   };
 
-  // New table: pick game, then friends or the computer and the player count, then the room is created.
+  // New table: pick game, then the player count, then the room is created (computers join in the lobby).
   let gamesRequest = 0; // the newest games fetch; an older one's answer is dropped
   document.getElementById('btn-new').addEventListener('click', async () => {
     if (!hasName()) return;
@@ -40,22 +40,8 @@ export function initMain({ store, enterRoom, applySettings }) {
     }
   });
 
-  let vsComputer = false; // the Friends / Computer switch
-  const modeButtons = [...document.querySelectorAll('#player-mode [data-mode]')];
-  const showMode = () => {
-    for (const b of modeButtons) {
-      const on = (b.dataset.mode === 'computer') === vsComputer;
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-pressed', String(on));
-    }
-    document.getElementById('player-note').hidden = !vsComputer;
-  };
-  for (const b of modeButtons) b.addEventListener('click', () => { vsComputer = b.dataset.mode === 'computer'; showMode(); });
-
   function pickPlayers(game) {
     showStep('players');
-    vsComputer = false;
-    showMode();
     const counts = [];
     for (let n = game.min_players; n <= game.max_players; n++) counts.push(choice(String(n), () => create(game, n)));
     document.getElementById('player-counts').replaceChildren(...counts);
@@ -65,11 +51,10 @@ export function initMain({ store, enterRoom, applySettings }) {
   async function create(game, players) {
     if (creating) return; // ignore double taps while the request is in flight
     creating = true;
-    const computer = vsComputer;
     try {
-      const code = await createRoom(game.id, players, computer);
+      const code = await createRoom(game.id, players);
       closeSheets();
-      enterRoom(code, { resume: computer }); // against the computer there's no lobby: straight to the table
+      enterRoom(code);
     } catch (err) {
       toast(err.message);
     } finally {

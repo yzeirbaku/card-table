@@ -20,7 +20,6 @@ const SHAKE_MS = 520; // a bomb landing shakes the table this long (the CSS anim
 const LUCKY_MS = 4000; // "Four 2s. Act natural." shows this long (the CSS animation's length)
 
 let send = () => {};
-let leave = () => {}; // leave the table (game over against the computer: there's no lobby to go back to)
 let selected = []; // card codes picked in your hand
 let lastHand = []; // your cards at the last render, to spot the one you were just given
 let received = null; // { code, at } the card given to you in the swap, while it stands up
@@ -121,7 +120,6 @@ export function moveRejected() {
 
 export function initTable({ onLeave, send: sendMessage }) {
   send = sendMessage;
-  leave = onLeave;
   const menu = document.getElementById('table-menu');
   const menuButton = document.getElementById('btn-table-menu');
   menuButton.addEventListener('click', () => { menu.hidden = !menu.hidden; });
@@ -263,7 +261,8 @@ function showModal(dialog, open) {
 }
 
 function showLeaveConfirm(open) {
-  document.getElementById('leave-text').textContent = current?.room?.computer ? 'This ends the game.' : 'This ends the game for everyone.';
+  const others = current?.players?.some((p) => p.id !== currentMe && !p.computer && p.seat !== null);
+  document.getElementById('leave-text').textContent = others ? 'This ends the game for everyone.' : 'This ends the game.';
   showModal(document.getElementById('leave-confirm'), open);
 }
 
@@ -381,7 +380,7 @@ export function renderTable(state, meId) {
   renderOutNote(names, meId);
   const overlay = document.querySelector('.overlay');
   if (spotlightOn()) overlay.hidden = true; // what comes next waits for the spotlight
-  else renderOverlay(overlay, game, meId, names, sendOnce, { computer: state.room.computer, onLeave: leave });
+  else renderOverlay(overlay, game, meId, names, sendOnce);
   renderSpotlight(redraw);
   if (dealt) {
     playDeal(seatPositions(seated, meId).map(({ position }) => position), game.hand.length)

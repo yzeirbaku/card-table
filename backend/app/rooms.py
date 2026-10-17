@@ -2,10 +2,9 @@
 once every seat is taken, the Murlan game. In memory only - the backend must
 run as a single worker.
 
-A computer table (`computer=True`) has its computer players seated from the
-start and one seat left for the person who joins; the game starts as they do.
-At a friends table of 3 or 4 the creator may seat computer players too (a mixed
-table, at least two people). The computer players move on their own: after every change `update_bots` says
+In the lobby the creator may seat computer players in every seat but one (one
+person always plays) and picks how well they play (`level`, for all of them).
+The computer players move on their own: after every change `update_bots` says
 when the next one is due, and `run_bot` makes that move once its time comes."""
 
 import asyncio
@@ -17,7 +16,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from .murlan.bot import Bot
+from .murlan.bot import LEVELS, Bot
 from .murlan.combos import classify
 from .murlan.game import Game, Rejected
 from .murlan.moves import legal_plays
@@ -70,7 +69,7 @@ class Room:
     game: Game | None = None  # exists from the moment every seat is taken
     ended_by: str | None = None  # the name of whoever left and so ended the last game (until the next starts)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    computer: bool = False  # you against computer players
+    level: str = "medium"  # how well the computer players play: easy, medium or hard
     bots: dict[str, Bot] = field(default_factory=dict)  # the computer players' minds, by player id
     bot_due: tuple[str, float, tuple] | None = None  # (who, when, the state they're answering): the next computer move
     bot_reactions: list[tuple[str, str]] = field(default_factory=list)  # (who, reaction) computer emojis still to send
@@ -80,15 +79,12 @@ class Room:
     def __post_init__(self) -> None:
         if not self.seating:
             self.seating = [None] * self.seats
-        if self.computer:  # seats 1… are theirs; seat 0 waits for you
-            for seat in range(1, self.seats):
-                self._seat_bot(seat, BOT_NAMES[seat - 1])
 
     def _seat_bot(self, seat: int, name: str) -> None:
         bot = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16), computer=True)
         self.players.append(bot)
         self.seating[seat] = bot.id
-        self.bots[bot.id] = Bot(bot.id, random.Random(self.rng.random()))
+        self.bots[bot.id] = Bot(bot.id, random.Random(self.rng.random()), self.level)
 
     @property
     def status(self) -> RoomStatus:
@@ -102,7 +98,7 @@ class Room:
         name = name.strip()
         if not 1 <= len(name) <= MAX_NAME_LENGTH:
             raise JoinRejected(4400, f"Name must be 1-{MAX_NAME_LENGTH} characters")
-        if self.game is not None or (self.computer and any(not p.computer for p in self.players)):
+        if self.game is not None:
             raise JoinRejected(4409, "This table is full")
         if len(self.players) >= self.seats:
             # Make room by dropping whoever has been offline and unseated the longest.
@@ -115,8 +111,6 @@ class Room:
         self.players.append(player)
         if self.creator_id is None:
             self.creator_id = player.id
-        if self.computer:  # straight to the free seat: the game starts
-            self.sit(player.id, self.seating.index(None))
         return player
 
     def seat_of(self, player_id: str) -> int | None:
@@ -138,11 +132,11 @@ class Room:
 
     @property
     def computer_seats_left(self) -> int:
-        """How many more computer players the creator may seat now: a friends table of 3 or 4
-        keeps at least two people, and a computer takes a place in the room like anyone."""
-        if self.computer or self.game is not None or self.seats < 3:
+        """How many more computer players the creator may seat now: one seat is always left
+        for a person, and a computer takes a place in the room like anyone."""
+        if self.game is not None:
             return 0
-        return max(0, min(self.seats - 2 - len(self.bots), self.seats - len(self.players)))
+        return max(0, min(self.seats - 1 - len(self.bots), self.seats - len(self.players)))
 
     def add_computer(self, player_id: str, seat: object) -> None:
         self._check_seating_computers(player_id, seat)
@@ -164,9 +158,18 @@ class Room:
         self.players = [p for p in self.players if p.id != bot_id]
         self.seating[seat] = None
 
+    def set_level(self, player_id: str, level: object) -> None:
+        if player_id != self.creator_id:
+            raise Rejected("Only the room creator picks the computer level")
+        if self.game is not None:
+            raise Rejected("The game has already started")
+        if not isinstance(level, str) or level not in LEVELS:
+            raise Rejected("The level is easy, medium or hard")
+        self.level = level
+        for bot in self.bots.values():
+            bot.level = LEVELS[level]
+
     def _check_seating_computers(self, player_id: str, seat: object) -> None:
-        if self.computer:
-            raise Rejected("This table is already you against the computer")
         if player_id != self.creator_id:
             raise Rejected("Only the room creator seats computer players")
         if self.game is not None:
@@ -183,7 +186,7 @@ class Room:
         self.game = None  # a game can't go on with an empty seat
         self.bot_due = None
         if self.creator_id == player_id:  # a computer never takes over: the next person to join does
-            self.creator_id = None if self.computer else self._next_creator(seat)
+            self.creator_id = self._next_creator(seat)
 
     def act(self, player_id: str, action: object) -> None:
         if self.game is None:
@@ -204,8 +207,6 @@ class Room:
             self._reshuffle_partners()
             self._new_game()
         elif choice == "lobby":
-            if self.computer:
-                raise Rejected("A table against the computer has no lobby: leave instead")
             self.seating = [s if s in self.bots else None for s in self.seating]  # computers keep their seats
             self.game = None
         else:
@@ -223,9 +224,10 @@ class Room:
         self.ended_by = None
         self.bot_due = None
         self._bots_saw = None
-        # Against the computer nobody else is waiting on you: if you drop, the game just waits.
+        # Alone with computer players nobody else is waiting on you: if you drop, the game just waits.
+        alone = sum(p not in self.bots for p in self.seating) == 1
         self.game = Game(list(self.seating), self.creator_id, rng=self.rng, clock=self.clock,
-                         no_countdown=self.computer, computers=frozenset(self.bots))
+                         no_countdown=alone, computers=frozenset(self.bots))
         for p in self.players:
             if p.socket is None and not p.computer:
                 self.game.disconnect(p.id)
@@ -328,7 +330,7 @@ class Room:
 
     def room_view(self) -> dict[str, Any]:
         return {"game": self.game_id, "seats": self.seats, "status": self.status, "ended_by": self.ended_by,
-                "computer": self.computer, "computer_seats_left": self.computer_seats_left}
+                "level": self.level, "computer_seats_left": self.computer_seats_left}
 
     def players_view(self) -> list[dict[str, Any]]:
         return [
@@ -352,13 +354,13 @@ class RoomManager:
         self.clock = clock
         self.rooms: dict[str, Room] = {}
 
-    def create(self, game_id: str, seats: int, computer: bool = False) -> Room:
+    def create(self, game_id: str, seats: int) -> Room:
         while True:
             code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
             if code not in self.rooms:
                 break
         room = Room(code=code, last_activity=self.clock(), game_id=game_id, seats=seats,
-                    clock=self.clock, computer=computer)
+                    clock=self.clock)
         self.rooms[code] = room
         return room
 

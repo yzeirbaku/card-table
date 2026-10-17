@@ -24,15 +24,16 @@ Murlan (the first game) is `2026-10-14-murlan-design.md`.
 - Rooms: players join unseated and tap a seat; the room is `lobby` until every
   seat is taken, then the game starts (`playing`). Leaving ends the game and
   drops back to `lobby`. Games and their player ranges live in `backend/app/games.py`.
-- **Computer players play fair.** A computer table (`computer=True`, spec
-  `2026-10-15-vs-computer-design.md`) seats them from the start. The bot
-  (`backend/app/murlan/bot.py`) decides only from `view_for(game, its id)` plus
-  its memory of earlier views; it never reads the `Game`. Its moves go through
+- **Computer players play fair.** In the lobby the creator can seat computers in
+  every seat but one (specs `2026-10-15-vs-computer-design.md`,
+  `2026-10-16-mixed-tables-design.md`, `2026-10-17-bot-levels-design.md`); there is
+  no separate computer table. The bot (`backend/app/murlan/bot.py`) decides only
+  from `view_for(game, its id)` plus its memory of earlier views; it never reads
+  the `Game`, at any level (`Room.level`: easy / medium / hard, for the whole
+  table; the weaker levels only slip and forget). Its moves go through
   `apply_action` like anyone's, timed by `Room.update_bots` / `run_bot`.
-  Strength is checked by self-play (`tests/murlan_selfplay.py`). At a friends
-  table of 3-4 the creator can seat computers too (a mixed table, at least two
-  people; spec `2026-10-16-mixed-tables-design.md`); computers never become
-  creator or `decider()`. Their emojis come from what their view shows.
+  Strength is checked by self-play (`tests/murlan_selfplay.py`). Computers never
+  become creator or `decider()`. Their emojis come from what their view shows.
 - Frontend: no npm dependencies and no bundler. `frontend/package.json` only
   makes Node treat `.js` as ES modules for `node --test`.
 - Names and anything from the server go into the DOM via `textContent`, never

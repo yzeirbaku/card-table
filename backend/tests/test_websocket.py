@@ -82,8 +82,8 @@ def test_create_and_join(client):
         assert welcome["code"] == code
         assert s["players"] == [{"id": welcome["player_id"], "name": "Ana", "connected": True,
                                  "seat": None, "is_creator": True, "computer": False}]
-        assert s["room"] == {"game": "murlan", "seats": 2, "status": "lobby", "ended_by": None, "computer": False,
-                             "computer_seats_left": 0}
+        assert s["room"] == {"game": "murlan", "seats": 2, "status": "lobby", "ended_by": None, "level": "medium",
+                             "computer_seats_left": 1}
         assert s["game"] is None
 
 
@@ -314,12 +314,8 @@ def test_a_newcomer_evicts_an_offline_player_from_a_full_lobby(client):
             assert [p["name"] for p in s["players"]] == ["Ana", "Cleo"]
 
 
-def test_a_failed_welcome_clears_the_socket():
-    manager = RoomManager()
-    client = TestClient(create_app(manager, use_timers=False))
-    code = new_room(client, 2)
-    room = manager.get(code)
-    original = None
+@contextlib.contextmanager
+def welcomes_fail():
     from starlette.websockets import WebSocket
 
     original = WebSocket.send_json
@@ -331,12 +327,37 @@ def test_a_failed_welcome_clears_the_socket():
 
     WebSocket.send_json = flaky
     try:
-        with contextlib.suppress(Exception):
-            with connect(client, code, "Ana") as ws:
-                ws.receive_json()
+        yield
     finally:
         WebSocket.send_json = original
-    assert room.players and room.players[0].socket is None
+
+
+def test_a_failed_welcome_for_someone_new_takes_them_back_out():
+    # They never got their token, so their retry is someone new: left in, they'd be a creator nobody can reach.
+    manager = RoomManager()
+    client = TestClient(create_app(manager, use_timers=False))
+    code = new_room(client, 2)
+    room = manager.get(code)
+    with welcomes_fail(), contextlib.suppress(Exception):
+        with connect(client, code, "Ana") as ws:
+            ws.receive_json()
+    assert room.players == [] and room.creator_id is None
+    with connect(client, code, "Ana") as ws:
+        welcome, s = join(ws)
+        assert [p["is_creator"] for p in s["players"]] == [True]
+
+
+def test_a_failed_welcome_on_a_reconnect_keeps_them_and_clears_the_socket():
+    manager = RoomManager()
+    client = TestClient(create_app(manager, use_timers=False))
+    code = new_room(client, 2)
+    room = manager.get(code)
+    with connect(client, code, "Ana") as ws:
+        welcome, _ = join(ws)
+    with welcomes_fail(), contextlib.suppress(Exception):
+        with connect(client, code, "Ana", welcome["token"]) as ws:
+            ws.receive_json()
+    assert [p.id for p in room.players] == [welcome["player_id"]] and room.players[0].socket is None
 
 
 def test_a_removed_player_s_socket_is_closed_on_its_next_message():
@@ -403,17 +424,22 @@ def test_reactions_faster_than_one_a_second_are_dropped(client, clock):
         assert [ben.receive_json()["reaction"] for _ in range(2)] == ["shocked", "asleep"]
 
 
-def test_a_table_against_the_computer_starts_on_join_and_the_computer_moves_by_itself(monkeypatch):
+def test_alone_with_a_computer_it_moves_by_itself(monkeypatch):
     monkeypatch.setattr("app.rooms.DEAL_SECONDS", 0.05)
     monkeypatch.setattr("app.rooms.Room._think_time", lambda self, game: 0.05)
     # `with TestClient(...)`: one event loop for every socket, so the room's timer can run.
     with TestClient(create_app(RoomManager())) as client:
-        res = client.post("/rooms", json={"game": "murlan", "players": 2, "computer": True})
-        code = res.json()["code"]
+        code = new_room(client)
         with connect(client, code, "Ana") as ana:
             welcome, s = join(ana)
             me = welcome["player_id"]
-            assert s["room"]["computer"] is True and s["room"]["status"] == "playing"
+            send(ana, type="set_level", level="hard")
+            assert state(ana)["room"]["level"] == "hard"
+            send(ana, type="sit", seat=0)
+            state(ana)
+            send(ana, type="add_computer", seat=1)
+            s = state(ana)
+            assert s["room"]["status"] == "playing"
             assert [p["name"] for p in s["players"] if p["computer"]] == ["Bip"]
             act(ana, type="choose_target", target=5)
             s = state(ana)
