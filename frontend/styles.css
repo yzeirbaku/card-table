@@ -68,7 +68,7 @@ input { font: inherit; }
 .join-form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .join-form .btn { flex-basis: 100%; }
 .code-input { flex: 1; min-width: 0; padding: 12px; border-radius: 10px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-size: 24px; font-weight: 700; letter-spacing: 6px; text-align: center; text-transform: uppercase; }
-.theme-swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 10px; } /* five tables: three to a row */
+.theme-swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 10px; } /* six tables: three to a row */
 .swatch { position: relative; height: 64px; border-radius: 10px; border: 3px solid transparent; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 .swatch span { position: absolute; left: 6px; bottom: 4px; padding: 1px 6px; border-radius: 999px; background: rgba(0,0,0,.55); color: #fff; font-size: 11px; font-weight: 700; }
 .style-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; }

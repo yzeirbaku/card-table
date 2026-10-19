@@ -82,6 +82,26 @@
   background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='none' stroke='%23eef0f0' stroke-width='3'><rect x='20' y='20' width='60' height='60'/><rect x='20' y='20' width='60' height='60' transform='rotate(45 50 50)'/><circle cx='50' cy='50' r='16'/></g></svg>") center / contain no-repeat; }
 .theme-kahvehane .cay { display: block; right: 80px; top: 30px; }
 
+/* Danish: Christmas linen bordered with woven paper hearts (julehjerter) */
+.theme-julehjerte {
+  --plate-bg: #8a0c1f; --plate-fg: #fff; --plate-count: #f2d27a;
+  --card-back: linear-gradient(45deg, #c8102e 25%, transparent 25% 75%, #c8102e 75%) 0 0 / 8px 8px, linear-gradient(45deg, #c8102e 25%, transparent 25% 75%, #c8102e 75%) 4px 4px / 8px 8px, #fff;
+  --card-back-edge: #fff;
+  --bar-bg: #8a0c1f; --bar-edge: #f2d27a;
+  --edge: #f4efe3; /* the linen */
+}
+.theme-julehjerte .surface { background: repeating-linear-gradient(0deg, rgba(0,0,0,.035) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(0,0,0,.03) 0 1px, transparent 1px 3px), #f4efe3; }
+/* the border of hearts */
+.theme-julehjerte .stitch { display: block; inset: 12px 14px;
+  --h: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><pattern id='c' width='20' height='20' patternUnits='userSpaceOnUse' patternTransform='rotate(45 50 50)'><rect width='20' height='20' fill='%23fff'/><rect width='10' height='10' fill='%23c8102e'/><rect x='10' y='10' width='10' height='10' fill='%23c8102e'/></pattern></defs><path d='M50 92L14 56A25.5 25.5 0 0 1 50 20A25.5 25.5 0 0 1 86 56Z' fill='url(%23c)' stroke='%238a0c1f' stroke-width='3'/></svg>");
+  background-image: var(--h), var(--h), var(--h), var(--h); background-repeat: space no-repeat, space no-repeat, no-repeat space, no-repeat space;
+  background-position: left top, left bottom, left top, right top; background-size: 26px 26px; }
+/* the big faint heart under the pile */
+.theme-julehjerte .runner { display: block; left: 50%; top: 50%; height: 46%; aspect-ratio: 1; translate: -50% -50%; opacity: .35;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><pattern id='c' width='20' height='20' patternUnits='userSpaceOnUse' patternTransform='rotate(45 50 50)'><rect width='20' height='20' fill='%23fff'/><rect width='10' height='10' fill='%23c8102e'/><rect x='10' y='10' width='10' height='10' fill='%23c8102e'/></pattern></defs><path d='M50 92L14 56A25.5 25.5 0 0 1 50 20A25.5 25.5 0 0 1 86 56Z' fill='url(%23c)'/></svg>") center / contain no-repeat; }
+.theme-julehjerte .candle { display: block; left: 80px; top: 34px; }
+.theme-julehjerte .aeble { display: block; right: 78px; top: 32px; }
+
 /* Props, drawn from above */
 .prop.cup { width: 46px; height: 46px; border-radius: 50%; background: #fbfbfb; box-shadow: 0 3px 8px rgba(0,0,0,.35), inset 0 0 0 1px #ddd; }
 .prop.cup::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: radial-gradient(circle at 45% 40%, #7a4a26 0 30%, #3b2010 70%); box-shadow: 0 0 0 3px #fff, 0 0 0 4px #d6d6d6; }
@@ -93,11 +113,20 @@
 .prop.cay::after { content: ""; position: absolute; inset: 24%; border-radius: 50%; background: radial-gradient(circle at 42% 40%, #e2803a 0 25%, #a8401a 55%, rgba(255,255,255,.9) 62%, rgba(210,215,220,.85) 72%); }
 .prop.cay::before { content: ""; position: absolute; right: -10%; top: 40%; width: 34%; height: 9%; border-radius: 99px; background: #d8d8d8; rotate: -20deg; }
 
+/* a lit candle in its brass holder */
+.prop.candle { width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle, #ffb347 0 7%, #fff3c4 9% 13%, #f7f1e3 15% 52%, #c9a14a 54% 70%, #8e6a25 72%);
+  box-shadow: 0 0 26px 9px rgba(255,200,90,.35), 0 2px 5px rgba(0,0,0,.35); }
+/* a plate of æbleskiver, dusted with sugar */
+.prop.aeble { width: 66px; height: 66px; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,.35), inset 0 0 0 2px #ececec;
+  --ball: radial-gradient(circle closest-side, #fbf3e2 0 24%, #e9c48a 40%, #c9802f 66%, #8a4b17 94%, transparent 98%);
+  background: var(--ball) 14% 16% / 34% 34% no-repeat, var(--ball) 82% 14% / 34% 34% no-repeat, var(--ball) 46% 84% / 34% 34% no-repeat, #fbfbfb; }
+
 /* Settings swatches */
 .swatch-classic { background: radial-gradient(#2f7d4f, #123d25); }
 .swatch-qendisje { background: #f1ebdc; box-shadow: inset 0 0 0 4px #b3121f, 0 1px 3px rgba(0,0,0,.3); }
 .swatch-scoarta { background: radial-gradient(circle, #e3a52b 0 14%, transparent 15%), #8e1c1d; box-shadow: inset 0 0 0 5px #171110, inset 0 0 0 7px #e3a52b, 0 1px 3px rgba(0,0,0,.3); }
 .swatch-kahvehane { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><g fill='none' stroke='%23eef0f0' stroke-width='5'><rect x='25' y='25' width='50' height='50'/><rect x='25' y='25' width='50' height='50' transform='rotate(45 50 50)'/></g></svg>") center / 44px no-repeat, linear-gradient(180deg, #5a3520, #3a2012); }
+.swatch-julehjerte { background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><pattern id='c' width='20' height='20' patternUnits='userSpaceOnUse' patternTransform='rotate(45 50 50)'><rect width='20' height='20' fill='%23fff'/><rect width='10' height='10' fill='%23c8102e'/><rect x='10' y='10' width='10' height='10' fill='%23c8102e'/></pattern></defs><path d='M50 92L14 56A25.5 25.5 0 0 1 50 20A25.5 25.5 0 0 1 86 56Z' fill='url(%23c)' stroke='%238a0c1f' stroke-width='3'/></svg>") center / 46px no-repeat, #f4efe3; }
 .swatch-kafeneio { background: linear-gradient(90deg, rgba(31,78,156,.5) 50%, transparent 50%) 0 0 / 8px 8px, linear-gradient(rgba(31,78,156,.5) 50%, transparent 50%) 0 0 / 8px 8px, #fff; }
 
 /* Card style: Vintage ages the same images */
