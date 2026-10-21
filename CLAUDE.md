@@ -52,7 +52,11 @@ build command, and `connect-src` in `frontend/_headers` together.
 
 ## Git
 
-Remote: `origin` = https://github.com/yzeirbaku/card-table (personal account
-`yzeirbaku`, via the stored git credentials, not the `gh` CLI, which is logged in
-to a work account). Commit as `Yzeir Baku <yzeirbaku@hotmail.com>` (set in
-local config). No feature branches: commit and push straight to `main`.
+Remote: `origin` = https://github.com/yzeirbaku/card-table (public; personal
+account `yzeirbaku`, via the stored git credentials). Commit as
+`Yzeir Baku <yzeirbaku@hotmail.com>` (set in local config). `main` is protected
+by a ruleset: no direct pushes or force-pushes, every change is a branch and a
+PR. Friends' PRs need the owner's approval; the owner merges their own PRs
+without one. Open PRs with `gh` as `yzeirbaku` (`gh auth switch -u yzeirbaku`;
+the default `gh` account is a work one, so switch back afterwards). Merging a PR
+into `main` is what redeploys the frontend.
