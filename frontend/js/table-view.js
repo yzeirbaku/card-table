@@ -4,7 +4,7 @@ import { button, div, face, span } from './dom.js';
 import { bombName, brokenBomb, cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
 import { crowned, finalPile, finalThrown, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
-import { addReaction, REACTIONS, reactionEl, resetReactions, stampCatan } from './reactions.js';
+import { addReaction, REACTIONS, reactionEl, resetReactions, stampBravo, stampCatan } from './reactions.js';
 import { fillRules } from './rules.js';
 import { noteThrows, renderThrown, resetThrows } from './throw.js';
 import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
@@ -103,8 +103,9 @@ function dragStart(code) {
 /** Someone at the table reacted (yours too, as it comes back from the server). */
 export function reacted(playerId, kind) {
   if (!current) return;
-  if (kind !== 'catan') return addReaction(playerId, kind, paintReaction);
   const name = current.players.find((p) => p.id === playerId)?.name;
+  if (kind === 'bravo') return stampBravo();
+  if (kind !== 'catan') return addReaction(playerId, kind, paintReaction);
   stampCatan(playerId === currentMe ? 'You have' : `${name ?? 'Someone'} has`);
   clearTimeout(reacted.shake);
   reacted.shake = setTimeout(() => { if (current) shakeTable(); }, CATAN_LANDS_MS); // as the N lands

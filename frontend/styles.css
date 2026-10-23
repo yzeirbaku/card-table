@@ -401,6 +401,21 @@ input { font: inherit; }
   .catan-who, .catan-cards { animation: catan-fade 2.8s both; }
 }
 @keyframes catan-fade { 0%, 100% { opacity: 0; } 10%, 80% { opacity: 1; transform: rotate(var(--tilt)); } }
+/* 👍 pops a picture up over the whole table with BRAVO, BRAVO! under it, a word at a time */
+.bravo { position: absolute; left: 0; right: 0; top: calc(var(--bar) + 4cqh); bottom: 28cqh; z-index: 9; pointer-events: none;
+         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1cqh; }
+.bravo[hidden] { display: none; }
+.bravo-pic { max-width: 60cqw; max-height: 30cqh; object-fit: contain; filter: drop-shadow(0 .6cqh 1.2cqh rgba(0,0,0,.55)); animation: bravo-pop 2.8s both; }
+@keyframes bravo-pop { 0% { opacity: 0; transform: scale(.3) rotate(-12deg); } 10% { opacity: 1; transform: scale(1.12) rotate(4deg); }
+                       16% { transform: scale(.96) rotate(-2deg); } 22%, 80% { opacity: 1; transform: scale(1) rotate(0deg); }
+                       100% { opacity: 0; transform: scale(1.05) translateY(-6%); } }
+.bravo-words { display: flex; gap: .3em; max-width: 94cqw; font: 900 min(7.5cqw, 14cqh)/1 "Arial Rounded MT Bold", "Arial Black", system-ui, sans-serif; }
+.bravo-words span { display: inline-block; opacity: 0; color: #f0c75e; -webkit-text-stroke: .05em #3a2a08; paint-order: stroke fill;
+                    text-shadow: 0 .05em 0 #3a2a08, 0 .1em .14em rgba(0,0,0,.55); animation: bravo-word 2.8s 180ms both; }
+.bravo-words span:nth-child(2) { animation-delay: 420ms; }
+@keyframes bravo-word { 0% { opacity: 0; transform: translateY(40%) scale(.6); } 8% { opacity: 1; transform: scale(1.15); }
+                        13%, 78% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .bravo-pic, .bravo-words span { animation: catan-fade 2.8s both; } }
 /* Someone went out and play goes on: a short note over the top of the pile. */
 .out-note { position: absolute; left: 50%; top: calc(var(--bar) + 106px); z-index: 6; translate: -50% -50%; display: grid; justify-items: center;
             padding: 5px 16px; border-radius: 999px; background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; white-space: nowrap; pointer-events: none;
