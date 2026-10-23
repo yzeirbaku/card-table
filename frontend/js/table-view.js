@@ -104,7 +104,7 @@ function dragStart(code) {
 export function reacted(playerId, kind) {
   if (!current) return;
   const name = current.players.find((p) => p.id === playerId)?.name;
-  if (kind === 'bravo') return stampBravo();
+  if (kind === 'clap') return stampBravo();
   if (kind !== 'catan') return addReaction(playerId, kind, paintReaction);
   stampCatan(playerId === currentMe ? 'You have' : `${name ?? 'Someone'} has`);
   clearTimeout(reacted.shake);

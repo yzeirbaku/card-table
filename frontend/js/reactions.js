@@ -7,14 +7,13 @@ export const REACTIONS = [
   ['angry', '😠', ['', '']], // two puffs of steam
   ['asleep', '😴', ['z', 'z', 'z']],
   ['catan', '💩', []], // "Catan cards": a bad hand. Plays as CATAN across the whole table, not over the name
-  ['clap', '👏', ['✦', '✦', '✦']], // a spark on each clap
+  ['clap', '👏', []], // plays as a picture and BRAVO, BRAVO! across the whole table, not over the name
   ['please', '🙏', ['pls']],
-  ['bravo', '👍', []], // plays as a picture and BRAVO, BRAVO! across the whole table, not over the name
 ];
 const REACTION_MS = 2800; // how long one plays (the CSS animations' length)
 const BY_ID = Object.fromEntries(REACTIONS.map(([id, emoji, bits]) => [id, { emoji, bits }]));
 const BRAVO_PIC = 'reactions/bravo.png';
-new Image().src = BRAVO_PIC; // fetched up front, so the first 👍 doesn't play before its picture is in
+new Image().src = BRAVO_PIC; // fetched up front, so the first 👏 doesn't play before its picture is in
 
 let showing = new Map(); // player id -> { kind, at } while their reaction plays
 
@@ -74,7 +73,7 @@ export function stampCatan(who) {
   stamp('.catan', span(who, 'catan-who'), letters, span('cards', 'catan-cards'));
 }
 
-/** Someone sent 👍: the picture pops up over the table with BRAVO, BRAVO!, for everyone. */
+/** Someone sent 👏: the picture pops up over the table with BRAVO, BRAVO!, for everyone. */
 export function stampBravo() {
   const picture = document.createElement('img');
   picture.className = 'bravo-pic';

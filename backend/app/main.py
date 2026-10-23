@@ -21,7 +21,7 @@ from .timers import RoomTimer
 
 log = logging.getLogger(__name__)
 
-REACTIONS = frozenset({"shocked", "laughing", "angry", "asleep", "catan", "clap", "please", "bravo"})
+REACTIONS = frozenset({"shocked", "laughing", "angry", "asleep", "catan", "clap", "please"})
 REACTION_GAP_SECONDS = 1.0  # a player's reactions closer together than this are dropped
 
 # Local dev: the frontend is served on :5520 from localhost or a private-network address.
