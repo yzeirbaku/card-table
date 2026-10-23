@@ -1,13 +1,13 @@
 import { div, span } from './dom.js';
 
-/** The emoji a player can throw: [id the server knows, emoji, the bits that fly off it]. */
+/** The emoji a player can throw: [id the server knows, emoji, the bits that fly off it, a picture the picker shows instead of the emoji]. */
 export const REACTIONS = [
   ['shocked', '😮', ['!', '!']],
   ['laughing', '😂', ['ha', 'ha']],
   ['angry', '😠', ['', '']], // two puffs of steam
   ['asleep', '😴', ['z', 'z', 'z']],
   ['catan', '💩', []], // "Catan cards": a bad hand. Plays as CATAN across the whole table, not over the name
-  ['clap', '👏', []], // plays as a picture and BRAVO, BRAVO! across the whole table, not over the name
+  ['clap', '👏', [], 'reactions/bravo-icon.png'], // plays as a picture and BRAVO, BRAVO! across the whole table, not over the name
   ['please', '🙏', ['pls']],
 ];
 const REACTION_MS = 2800; // how long one plays (the CSS animations' length)

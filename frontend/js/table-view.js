@@ -504,8 +504,15 @@ function myPlate(me, game) {
 
 function reactionPicker() {
   const picker = div('react-picker');
-  for (const [kind, emoji] of REACTIONS) {
-    const choice = button(emoji, () => {}, 'react-choice');
+  for (const [kind, emoji, , icon] of REACTIONS) {
+    const choice = button(icon ? '' : emoji, () => {}, 'react-choice');
+    if (icon) {
+      const picture = document.createElement('img');
+      picture.className = 'react-icon';
+      picture.src = icon;
+      picture.alt = '';
+      choice.append(picture);
+    }
     choice.dataset.reaction = kind;
     choice.setAttribute('aria-label', kind);
     picker.append(choice);
