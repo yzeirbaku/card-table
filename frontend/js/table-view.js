@@ -4,7 +4,7 @@ import { button, div, face, span } from './dom.js';
 import { bombName, brokenBomb, cardName, keepHeld, placeLabel, sideName, toggleCard } from './murlan.js';
 import { seatPositions } from './seats.js';
 import { crowned, finalPile, finalThrown, gains, renderSpotlight, resetSpotlight, spotlightOn, updateSpotlight } from './spotlight.js';
-import { addReaction, REACTIONS, reactionEl, resetReactions, stampCatan } from './reactions.js';
+import { addReaction, REACTIONS, reactionEl, resetReactions, stampBravo, stampCatan } from './reactions.js';
 import { fillRules } from './rules.js';
 import { noteThrows, renderThrown, resetThrows } from './throw.js';
 import { renderOverlay, renderReveal, stopCountdown } from './table-overlay.js';
@@ -38,6 +38,7 @@ let hadEmptyHand = null; // whether the last render had no cards in your hand: c
 let lastPlay; // the newest play on the pile at the last render (null: empty), so only a new one lands
 let lastPassed = []; // the passes (pile + player) at the last render, so only a new Pass pops in
 let picking = false; // the reaction picker over your name is open
+let pickedFrom = '.plate'; // what opened it, your name or the react button: where the keyboard goes back to
 
 /** Draw the last state again (the spotlight ending); a move that's still out stays out. */
 function redraw() {
@@ -102,8 +103,9 @@ function dragStart(code) {
 /** Someone at the table reacted (yours too, as it comes back from the server). */
 export function reacted(playerId, kind) {
   if (!current) return;
-  if (kind !== 'catan') return addReaction(playerId, kind, paintReaction);
   const name = current.players.find((p) => p.id === playerId)?.name;
+  if (kind === 'clap') return stampBravo();
+  if (kind !== 'catan') return addReaction(playerId, kind, paintReaction);
   stampCatan(playerId === currentMe ? 'You have' : `${name ?? 'Someone'} has`);
   clearTimeout(reacted.shake);
   reacted.shake = setTimeout(() => { if (current) shakeTable(); }, CATAN_LANDS_MS); // as the N lands
@@ -125,7 +127,7 @@ function setPicking(open) {
   picking = open;
   const seatMe = document.querySelector('.seat-me');
   seatMe.querySelector('.react-picker')?.remove();
-  seatMe.querySelector('.plate')?.setAttribute('aria-expanded', String(open));
+  for (const el of seatMe.querySelectorAll('.plate, .react-btn')) el.setAttribute('aria-expanded', String(open));
   if (open) seatMe.append(reactionPicker());
 }
 
@@ -145,13 +147,15 @@ export function initTable({ onLeave, send: sendMessage }) {
     if (!menu.hidden && !menu.contains(event.target) && !menuButton.contains(event.target)) menu.hidden = true;
     if (picking && !seatMe.contains(event.target)) setPicking(false);
   });
-  seatMe.addEventListener('click', (event) => { // tap your name to react
+  seatMe.addEventListener('click', (event) => { // tap your name, or the react button beside it, to react
     const choice = event.target.closest('[data-reaction]');
+    const opener = event.target.closest('.plate, .react-btn');
     if (choice) {
       send({ type: 'react', reaction: choice.dataset.reaction });
       setPicking(false);
-      if (event.detail === 0) seatMe.querySelector('.plate')?.focus(); // from the keyboard: back to your name
-    } else if (event.target.closest('.plate')) {
+      if (event.detail === 0) seatMe.querySelector(pickedFrom)?.focus(); // from the keyboard: back to what opened it
+    } else if (opener) {
+      pickedFrom = opener.matches('.react-btn') ? '.react-btn' : '.plate';
       setPicking(!picking);
       if (event.detail === 0) seatMe.querySelector('[data-reaction]')?.focus();
     }
@@ -172,7 +176,7 @@ export function initTable({ onLeave, send: sendMessage }) {
     menu.hidden = true;
     if (picking) {
       setPicking(false);
-      if (seatMe.contains(document.activeElement)) seatMe.querySelector('.plate')?.focus();
+      if (seatMe.contains(document.activeElement)) seatMe.querySelector(pickedFrom)?.focus();
     }
     if (!rules.hidden) return closeRules();
     if (ask.hidden) return;
@@ -394,9 +398,10 @@ export function renderTable(state, meId) {
   seatEls.set(meId, document.querySelector('.hand')); // yours come from your hand
   const me = byId[meId];
   const seatMe = document.querySelector('.seat-me');
-  const focused = seatMe.contains(document.activeElement) ? document.activeElement.dataset.reaction ?? 'plate' : null;
+  const active = seatMe.contains(document.activeElement) ? document.activeElement : null;
+  const focused = active && (active.dataset.reaction ? `[data-reaction="${active.dataset.reaction}"]` : active.matches('.react-btn') ? '.react-btn' : '.plate');
   seatMe.replaceChildren(...(me ? myPlate(me, seen) : []));
-  if (focused) seatMe.querySelector(focused === 'plate' ? '.plate' : `[data-reaction="${focused}"]`)?.focus(); // keyboard focus survives the redraw
+  if (focused) seatMe.querySelector(focused)?.focus(); // keyboard focus survives the redraw
   document.querySelector('.my-row').classList.toggle('spot-winner', crowned(meId));
   if (me && game.passed.includes(meId)) document.querySelector('.seat-me').append(passStamp(newPasses.includes(meId)));
   if (me && meId in seen.thrown) document.querySelector('.seat-me').append(span('Gave up', 'gave-up-tag'));
@@ -483,7 +488,7 @@ function plate(player, game, showPlace = true) {
   return el;
 }
 
-/** Your plate, which you tap for the reaction picker, and the picker while it's open. */
+/** Your plate and the react button beside it, either of which you tap for the reaction picker, and the picker while it's open. */
 function myPlate(me, game) {
   const el = plate(me, game);
   el.classList.add('mine');
@@ -491,13 +496,23 @@ function myPlate(me, game) {
   el.setAttribute('role', 'button');
   el.setAttribute('aria-label', `${me.name}: react`);
   el.setAttribute('aria-expanded', String(picking));
-  return picking ? [el, reactionPicker()] : [el];
+  const react = button('😊', () => {}, 'react-btn');
+  react.setAttribute('aria-label', 'React');
+  react.setAttribute('aria-expanded', String(picking));
+  return picking ? [el, react, reactionPicker()] : [el, react];
 }
 
 function reactionPicker() {
   const picker = div('react-picker');
-  for (const [kind, emoji] of REACTIONS) {
-    const choice = button(emoji, () => {}, 'react-choice');
+  for (const [kind, emoji, , icon] of REACTIONS) {
+    const choice = button(icon ? '' : emoji, () => {}, 'react-choice');
+    if (icon) {
+      const picture = document.createElement('img');
+      picture.className = 'react-icon';
+      picture.src = icon;
+      picture.alt = '';
+      choice.append(picture);
+    }
     choice.dataset.reaction = kind;
     choice.setAttribute('aria-label', kind);
     picker.append(choice);

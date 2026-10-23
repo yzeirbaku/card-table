@@ -1,17 +1,19 @@
 import { div, span } from './dom.js';
 
-/** The emoji a player can throw: [id the server knows, emoji, the bits that fly off it]. */
+/** The emoji a player can throw: [id the server knows, emoji, the bits that fly off it, a picture the picker shows instead of the emoji]. */
 export const REACTIONS = [
   ['shocked', '😮', ['!', '!']],
   ['laughing', '😂', ['ha', 'ha']],
   ['angry', '😠', ['', '']], // two puffs of steam
   ['asleep', '😴', ['z', 'z', 'z']],
   ['catan', '💩', []], // "Catan cards": a bad hand. Plays as CATAN across the whole table, not over the name
-  ['clap', '👏', ['✦', '✦', '✦']], // a spark on each clap
+  ['clap', '👏', [], 'reactions/bravo-icon.png'], // plays as a picture and BRAVO, BRAVO! across the whole table, not over the name
   ['please', '🙏', ['pls']],
 ];
 const REACTION_MS = 2800; // how long one plays (the CSS animations' length)
 const BY_ID = Object.fromEntries(REACTIONS.map(([id, emoji, bits]) => [id, { emoji, bits }]));
+const BRAVO_PIC = 'reactions/bravo.png';
+new Image().src = BRAVO_PIC; // fetched up front, so the first 👏 doesn't play before its picture is in
 
 let showing = new Map(); // player id -> { kind, at } while their reaction plays
 
@@ -42,24 +44,42 @@ export function reactionEl(playerId) {
 
 export function resetReactions() {
   showing = new Map();
-  clearTimeout(catanTimer);
-  const word = document.querySelector('.catan');
-  if (word) word.hidden = true;
+  for (const sel of ['.catan', '.bravo']) {
+    clearTimeout(stampTimers[sel]);
+    const el = document.querySelector(sel);
+    if (el) el.hidden = true;
+  }
 }
 
-let catanTimer = null;
+const stampTimers = {};
+
+/** Play a whole-table stamp: fill it, then restart its animations. A new one starts it over. */
+function stamp(sel, ...children) {
+  const el = document.querySelector(sel);
+  if (!el) return;
+  el.replaceChildren(...children);
+  el.hidden = true;
+  void el.offsetWidth; // restart the animations
+  el.hidden = false;
+  clearTimeout(stampTimers[sel]);
+  stampTimers[sel] = setTimeout(() => { el.hidden = true; }, REACTION_MS);
+}
 
 /** Someone sent 💩: "Yzeir has CATAN cards" stamped across the whole table, for everyone.
- *  `who` is "Yzeir has" or "You have". A new one starts it over. */
+ *  `who` is "Yzeir has" or "You have". */
 export function stampCatan(who) {
-  const word = document.querySelector('.catan');
-  if (!word) return;
   const letters = div('catan-word');
   letters.append(...[...'CATAN'].map((letter) => span(letter)));
-  word.replaceChildren(span(who, 'catan-who'), letters, span('cards', 'catan-cards'));
-  word.hidden = true;
-  void word.offsetWidth; // restart the animations
-  word.hidden = false;
-  clearTimeout(catanTimer);
-  catanTimer = setTimeout(() => { word.hidden = true; }, REACTION_MS);
+  stamp('.catan', span(who, 'catan-who'), letters, span('cards', 'catan-cards'));
+}
+
+/** Someone sent 👏: the picture pops up over the table with BRAVO, BRAVO!, for everyone. */
+export function stampBravo() {
+  const picture = document.createElement('img');
+  picture.className = 'bravo-pic';
+  picture.src = BRAVO_PIC;
+  picture.alt = '';
+  const words = div('bravo-words');
+  words.append(span('BRAVO,'), span('BRAVO!'));
+  stamp('.bravo', picture, words);
 }
