@@ -306,8 +306,14 @@ input { font: inherit; }
          background: radial-gradient(circle at 35% 30%, #fff1b8, #f0c75e 45%, #b8871f); box-shadow: 0 0 0 2px #fff3cf, 0 2px 6px rgba(0,0,0,.5); }
 .seat.out .plate { opacity: .75; }
 
-/* Reactions: tap your own name for the picker; a reaction plays over the name of whoever sent it, on every screen */
+/* Reactions: tap your own name, or the react button beside it, for the picker; a reaction plays over the name of whoever sent it, on every screen */
 .plate.mine { cursor: pointer; }
+.my-row .seat-me { flex-direction: row; }
+.react-btn { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-size: 17px; line-height: 1;
+             background: var(--plate-bg); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.react-btn:hover, .react-btn[aria-expanded="true"] { filter: brightness(1.15); }
+.react-btn:focus-visible { outline: 2px solid #f0c75e; outline-offset: 2px; }
+.table.dealing .react-btn { visibility: hidden; }
 .plate.mine:focus-visible { outline: 2px solid #f0c75e; outline-offset: 2px; }
 .react-picker { position: absolute; left: 50%; bottom: calc(100% + 8px); translate: -50% 0; z-index: 7; display: flex; gap: 2px; padding: 4px 6px;
                 border-radius: 999px; background: rgba(20,14,8,.88); box-shadow: 0 4px 12px rgba(0,0,0,.45); animation: picker-in .15s ease-out both; }
