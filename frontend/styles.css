@@ -509,6 +509,10 @@ input { font: inherit; }
 .overlay-buttons button { padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-weight: 700; white-space: nowrap; }
 /* Our own confirm, drawn on the table so it turns with it on a portrait phone. */
 .confirm { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(0,0,0,.45); }
+/* ...and on out under the notch / home bar, over the bar too (.table clips the backdrop at its edges). */
+.confirm-bleed { position: absolute; inset: calc(-1 * var(--bleed-t)) calc(-1 * var(--bleed-r)) calc(-1 * var(--bleed-b)) calc(-1 * var(--bleed-l)); display: none;
+                 border: 0 solid rgba(0,0,0,.45); border-width: var(--bleed-t) var(--bleed-r) var(--bleed-b) var(--bleed-l); pointer-events: none; }
+.table:has(> .confirm:not([hidden])) ~ .confirm-bleed { display: block; }
 .confirm-box { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 86cqw; padding: 18px 24px; border-radius: 16px;
                background: #fffdf7; color: #1a1a1a; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 .confirm-box h2 { font-family: Georgia, serif; font-size: 20px; }
