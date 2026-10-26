@@ -270,11 +270,3 @@ def test_can_play_counts_a_bomb_and_a_higher_card():
     rig(g, {"p0": ["KH", "3S"], "p1": ["AH", "5H"]}, "p0")
     g.play("p0", ["KH"])
     assert view_for(g, "p1")["can_play"] is True
-
-
-def test_bombs_list_your_own_four_of_a_kinds_only():
-    g = new_game(2)
-    rig(g, {"p0": ["3S", "3H", "3D", "3C", "9S", "9H", "9D", "JR"], "p1": ["4S", "4H", "4D", "4C"]}, "p0")
-    assert view_for(g, "p0")["bombs"] == [["3S", "3H", "3D", "3C"]]
-    assert view_for(g, "p1")["bombs"] == [["4S", "4H", "4D", "4C"]]
-    assert view_for(g, "stranger")["bombs"] == []

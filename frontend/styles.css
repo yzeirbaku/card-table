@@ -195,6 +195,10 @@ input { font: inherit; }
 
 /* ---------- table ---------- */
 #view-table { overflow: hidden; background: var(--edge, #000); } /* the strips by the notch and home bar look like more table */
+/* Playing: a double tap or long press selects nothing, and a long press on a card doesn't lift the picture out
+   (iOS) or offer to open it; taps land on the card's wrapper instead. */
+#view-table { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+#view-table img { pointer-events: none; }
 .table-frame { position: absolute; inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); /* clear of the notch and home bar */
                container-type: size; --bar: clamp(34px, 9cqh, 52px);
                /* How far past the frame, on each of the table's own sides, the screen goes on (the notch and home-bar strips). */
@@ -273,8 +277,7 @@ input { font: inherit; }
 .hand { position: absolute; left: 50%; bottom: 3cqh; z-index: 4; width: max-content; transform: translateX(-50%); display: flex;
         --gap: min(4px, calc((var(--hand-w) - var(--n, 1) * var(--card-w)) / max(1, var(--n, 1) - 1))); }
 .hand-card { flex: none; width: var(--card-w); margin-left: var(--gap); transition: translate .12s, transform .18s ease-out;
-             touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.hand-card img { -webkit-user-drag: none; }
+             touch-action: none; }
 /* Dragged to the pile (drag.js): the cards follow your finger, the pile lights up while they're over it. */
 .hand-card.dragging { z-index: 1; transition: translate .12s; cursor: grabbing; }
 .hand-card.dragging .card-face img { box-shadow: 0 0 0 2px #f0c75e, 0 10px 22px rgba(0,0,0,.55); }
@@ -467,6 +470,10 @@ input { font: inherit; }
 .reveal-item .card-face { width: calc(var(--card-w) * .7); }
 /* The end of a round (spotlight.js): the table dims under the bar, the winner's seat stays lit with a crown. */
 .spot-shade { position: absolute; inset: 0; z-index: 5; background: rgba(0,0,0,.55); animation: fade-in .4s; }
+/* ...and on out under the notch / home bar, below the bar like the cloth (.table clips the shade at its edges). */
+.spot-bleed { position: absolute; inset: var(--bar) calc(-1 * var(--bleed-r)) calc(-1 * var(--bleed-b)) calc(-1 * var(--bleed-l)); display: none;
+              border: 0 solid rgba(0,0,0,.55); border-width: 0 var(--bleed-r) var(--bleed-b) var(--bleed-l); pointer-events: none; animation: fade-in .4s; }
+.table.spotlight ~ .spot-bleed { display: block; }
 .table.spotlight .spot-winner { z-index: 7; }
 .crown { position: absolute; left: 50%; bottom: calc(100% + 2px); translate: -50% 0; color: #f0c75e; font-size: 22px; line-height: 1;
          text-shadow: 0 2px 4px rgba(0,0,0,.6); animation: crown .5s ease-out; }
@@ -488,7 +495,7 @@ input { font: inherit; }
 @keyframes crown { from { opacity: 0; translate: -50% 8px; } }
 @keyframes ribbon { from { opacity: 0; scale: .8; } }
 @keyframes gain { 0% { opacity: 0; translate: -50% -6px; } 25% { opacity: 1; translate: -50% 0; } 100% { opacity: 0; translate: -50% 8px; } }
-@media (prefers-reduced-motion: reduce) { .spot-shade, .crown, .ribbon, .gain { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .spot-shade, .spot-bleed, .crown, .ribbon, .gain { animation: none; } }
 .overlay { position: absolute; left: 50%; top: 45%; z-index: 8; transform: translate(-50%, -50%); width: max-content; max-width: 86cqw; max-height: 80cqh; overflow-y: auto;
            display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 22px; border-radius: 16px;
            background: #fffdf7; color: #1a1a1a; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
@@ -502,6 +509,10 @@ input { font: inherit; }
 .overlay-buttons button { padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; background: #f6f1e4; font-weight: 700; white-space: nowrap; }
 /* Our own confirm, drawn on the table so it turns with it on a portrait phone. */
 .confirm { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(0,0,0,.45); }
+/* ...and on out under the notch / home bar, over the bar too (.table clips the backdrop at its edges). */
+.confirm-bleed { position: absolute; inset: calc(-1 * var(--bleed-t)) calc(-1 * var(--bleed-r)) calc(-1 * var(--bleed-b)) calc(-1 * var(--bleed-l)); display: none;
+                 border: 0 solid rgba(0,0,0,.45); border-width: var(--bleed-t) var(--bleed-r) var(--bleed-b) var(--bleed-l); pointer-events: none; }
+.table:has(> .confirm:not([hidden])) ~ .confirm-bleed { display: block; }
 .confirm-box { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 86cqw; padding: 18px 24px; border-radius: 16px;
                background: #fffdf7; color: #1a1a1a; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
 .confirm-box h2 { font-family: Georgia, serif; font-size: 20px; }

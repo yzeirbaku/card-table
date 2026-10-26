@@ -18,6 +18,7 @@ export function initLobby({ onLeave, send: sendMessage }) {
   send = sendMessage;
   const copyButton = document.getElementById('btn-copy');
   const copy = async () => {
+    getSelection()?.removeAllRanges(); // the click selected the code (user-select: all): it needn't stay blue
     const ok = await copyText(document.querySelector('.lobby-code').textContent);
     const labels = [...copyButton.querySelector('.plaque-sub').children];
     const show = (i) => labels.forEach((label, j) => label.classList.toggle('on', i === j));
