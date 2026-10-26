@@ -43,9 +43,8 @@ computers there if they want them.
 
 - **One level per table**: Easy, Medium or Hard. New rooms start at **Medium**.
 - **Lobby:** a **Computer level** row (Easy / Medium / Hard) above the seats.
-  Everyone in the lobby sees it; only the creator can change it. It shows while
-  the table has a computer or the creator could add one (so not at a full table
-  of people).
+  Everyone in the lobby sees it; only the creator can change it. It shows only
+  while a computer is seated.
 - **Server:** `Room.level` (`"easy" | "medium" | "hard"`), sent as
   `room_view["level"]`. New client message, creator only, lobby only:
   `{"type": "set_level", "level": "easy" | "medium" | "hard"}`; anything else

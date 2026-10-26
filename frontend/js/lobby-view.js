@@ -18,6 +18,7 @@ export function initLobby({ onLeave, send: sendMessage }) {
   send = sendMessage;
   const copyButton = document.getElementById('btn-copy');
   const copy = async () => {
+    getSelection()?.removeAllRanges(); // the click selected the code (user-select: all): it needn't stay blue
     const ok = await copyText(document.querySelector('.lobby-code').textContent);
     const labels = [...copyButton.querySelector('.plaque-sub').children];
     const show = (i) => labels.forEach((label, j) => label.classList.toggle('on', i === j));
@@ -80,10 +81,10 @@ export function renderLobby(state, meId, gameName) {
   showStart(state.room.starting_in);
 }
 
-/** How well the computers play: everyone sees it while there are computers, or could be; the creator sets it. */
+/** How well the computers play: everyone sees it once a computer sits down; the creator sets it. */
 function showLevel(state, creator) {
   const row = document.querySelector('.lobby-level');
-  row.hidden = state.room.computer_seats_left === 0 && !state.players.some((p) => p.computer);
+  row.hidden = !state.players.some((p) => p.computer);
   for (const b of row.querySelectorAll('[data-level]')) {
     const on = b.dataset.level === state.room.level;
     b.classList.toggle('on', on);

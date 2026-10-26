@@ -9,7 +9,7 @@ from typing import Any
 
 from .combos import classify
 from .game import Game
-from .moves import by_rank, legal_plays
+from .moves import legal_plays
 
 
 def view_for(game: Game, player_id: str) -> dict[str, Any]:
@@ -33,9 +33,8 @@ def view_for(game: Game, player_id: str) -> dict[str, Any]:
         # who gave up this round, and their hands: thrown face up, public until the round is over
         "thrown": {p: list(cards) for p, cards in game.thrown.items()},
         "must_include": game.must_include if game.turn == player_id else None,
-        # about your own hand, so the screen can grey out Play and ask before you break up a bomb
+        # about your own hand, so the screen can grey out Play
         "can_play": can_play(game, player_id),
-        "bombs": [cards for cards in by_rank(game.hands.get(player_id, [])).values() if len(cards) == 4],
         "lucky": "four_twos" if game.four_twos == player_id else None,  # about your own hand: just for you
         "last_round": None,
         "winner_side": game.winner_side,

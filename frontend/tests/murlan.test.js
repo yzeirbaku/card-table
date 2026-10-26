@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bombName, brokenBomb, cardImage, cardName, formatClock, keepHeld, placeLabel, sideName, toggleCard } from '../js/murlan.js';
+import { cardImage, cardName, formatClock, keepHeld, placeLabel, sideName, toggleCard } from '../js/murlan.js';
 
 test('card images', () => {
   assert.equal(cardImage('10H'), '/cards/10H.webp');
@@ -44,19 +44,4 @@ test('side names and places', () => {
   assert.equal(sideName({ players: ['b'] }, { b: 'Ben' }), 'Ben');
   assert.equal(placeLabel(0), '1st');
   assert.equal(placeLabel(3), '4th');
-});
-
-test('a play that uses some but not all of a bomb breaks it up', () => {
-  const bombs = [['3S', '3H', '3D', '3C'], ['AS', 'AH', 'AD', 'AC']];
-  assert.deepEqual(brokenBomb(['3S'], bombs), bombs[0]);
-  assert.deepEqual(brokenBomb(['AS', 'AH', '5D'], bombs), bombs[1]);
-  assert.equal(brokenBomb(['3S', '3H', '3D', '3C'], bombs), null); // the whole bomb
-  assert.equal(brokenBomb(['5D', 'JR'], bombs), null);
-  assert.equal(brokenBomb(['3S']), null); // an older server sends no bombs
-});
-
-test('bomb names', () => {
-  assert.equal(bombName(['3S', '3H', '3D', '3C']), 'all four 3s');
-  assert.equal(bombName(['10S', '10H', '10D', '10C']), 'all four 10s');
-  assert.equal(bombName(['AS', 'AH', 'AD', 'AC']), 'all four aces');
 });

@@ -119,6 +119,8 @@ function updateRotation() {
 // iOS Safari ignores user-scalable=no: stop pinch zoom by hand. Two fingers never scroll here anyway.
 for (const type of ['gesturestart', 'gesturechange']) document.addEventListener(type, (event) => event.preventDefault());
 document.addEventListener('touchmove', (event) => { if (event.touches.length > 1) event.preventDefault(); }, { passive: false });
+// A long press at the table opens no menu (Android's "open image", the desktop right-click one).
+document.getElementById('view-table').addEventListener('contextmenu', (event) => event.preventDefault());
 
 applySettings(store.getSettings());
 initMain({ store, enterRoom, applySettings });
