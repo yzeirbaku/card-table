@@ -81,10 +81,10 @@ export function renderLobby(state, meId, gameName) {
   showStart(state.room.starting_in);
 }
 
-/** How well the computers play: everyone sees it once a computer sits down; the creator sets it. */
+/** How well the computers play: everyone sees it while there are computers, or could be; the creator sets it. */
 function showLevel(state, creator) {
   const row = document.querySelector('.lobby-level');
-  row.hidden = !state.players.some((p) => p.computer);
+  row.hidden = state.room.computer_seats_left === 0 && !state.players.some((p) => p.computer);
   for (const b of row.querySelectorAll('[data-level]')) {
     const on = b.dataset.level === state.room.level;
     b.classList.toggle('on', on);
