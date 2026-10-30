@@ -15,7 +15,8 @@ description: Deploy the card-table backend to the live Oracle Cloud VM. Use when
   Every push to `main` redeploys it; nothing to do here.
 
 **A backend deploy ends every live game** (rooms are in memory). Ask before
-deploying and never during a game night.
+deploying and never during a game night. Accounts, sign-ins and stats are in
+`data/cards.db` on the VM and survive deploys.
 
 ## VM layout
 
@@ -23,9 +24,40 @@ deploying and never during a game night.
 ~/apps/card-table/
 ├── repo/                       # this repo, cloned via deploy key (ssh alias github-cards)
 │   └── backend/Dockerfile      # VM-local, untracked: python:3.12-slim, uvicorn --workers 1 --proxy-headers
+├── data/
+│   ├── cards.db                # accounts, sessions, finished games (SQLite; outside repo/, never in git)
+│   └── backups/                # nightly copies, last 14 kept
 ├── docker-compose.yml          # backend only (container card-table-backend), joins external network apps_web
 └── .env                        # CORS_ORIGIN_REGEX='https://([a-z0-9-]+\.)?card-table-e61\.pages\.dev'
 ```
+
+### The database (one-time setup, before the first deploy with accounts)
+
+The compose file mounts `data/` as a plain folder (not a named volume, which
+`docker compose down -v` or a prune would delete) and points the app at it:
+
+```yaml
+services:
+  backend:
+    volumes:
+      - ./data:/data
+    environment:
+      - DB_PATH=/data/cards.db
+```
+
+```bash
+mkdir -p ~/apps/card-table/data/backups
+sudo apt-get install -y sqlite3   # for the backup job
+crontab -e   # add:
+# 30 4 * * * sqlite3 ~/apps/card-table/data/cards.db ".backup '$HOME/apps/card-table/data/backups/cards-$(date +\%F).db'" && find ~/apps/card-table/data/backups -name 'cards-*.db' -mtime +14 -delete
+```
+
+The container runs as root, so `cards.db` is root-owned; the backup job reads
+it fine. The app creates the tables and applies new migrations on startup.
+
+**Forgotten password** (there's no email):
+`sudo docker exec -it card-table-backend python -m app.accounts reset-password <username>`.
+It signs that account out on every phone.
 
 Caddy lives in `~/apps/net-tracker/` (root-owned Caddyfile, edit with sudo):
 `yzeir-cards.duckdns.org { reverse_proxy card-table-backend:8000; encode gzip }`.
@@ -50,7 +82,8 @@ https://github.com/yzeirbaku/card-table/settings/keys.
    The Caddy restart is needed so it re-resolves the recreated container (see the
    sibling repos' deploy skills). It blips the other two apps for a few seconds.
 4. **Verify:** `curl -sS "$HEALTH_URL"` returns the games list (JSON with
-   `murlan`), and `https://yzeir-net.duckdns.org/` and
+   `murlan`), `curl -sS https://yzeir-cards.duckdns.org/stats/nobody` returns a
+   404 JSON (`No such player`, so the database opened), and `https://yzeir-net.duckdns.org/` and
    `https://yzeir-gold.duckdns.org/` still return 200.
 5. **On failure:** `ssh ... "sudo docker logs card-table-backend --tail 60"`.
 

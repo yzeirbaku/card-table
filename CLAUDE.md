@@ -3,7 +3,8 @@
 Personal project: card games for friends, one game at a time. Vanilla-JS PWA
 (`frontend/`, no build step) + FastAPI (`backend/`). Specs in
 `docs/superpowers/specs/`: the PWA shell is `2026-10-14-pwa-conversion-design.md`,
-Murlan (the first game) is `2026-10-14-murlan-design.md`.
+Murlan (the first game) is `2026-10-14-murlan-design.md`, accounts and stats
+`2026-10-30-accounts-and-stats-design.md`.
 
 ## Invariants (don't undo)
 
@@ -18,6 +19,11 @@ Murlan (the first game) is `2026-10-14-murlan-design.md`.
   many cards the others hold isn't sent either.
   `tests/test_murlan_views.py::test_no_view_ever_leaks_hidden_cards` guards this.
 - **Single uvicorn worker.** Live rooms are in memory; a restart drops them.
+- **Accounts and stats** live in a SQLite file (`DB_PATH`, `backend/app/db.py`,
+  numbered migrations; on the VM `~/apps/card-table/data/`). `rooms.py` never
+  does I/O: a finished game goes out as a `GameRecord` through `Room.record`,
+  and only when a winner is clear. Guests play without an account. Sessions are
+  bearer tokens, not cookies (the frontend is on another site).
 - **The Murlan game is pure Python** (`backend/app/murlan/game.py`): injected
   clock and RNG, no I/O. Timed events (reveals, the 2:00 pause) run off
   `game.deadline()` / `game.tick()`; `app/timers.py` wakes the room for them.
