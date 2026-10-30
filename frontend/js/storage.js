@@ -2,7 +2,7 @@ const KEY = 'card-table';
 export const THEMES = ['classic', 'qendisje', 'kafeneio', 'scoarta', 'kahvehane', 'julehjerte'];
 export const CARD_STYLES = ['traditional', 'vintage', 'atlas', 'modern'];
 
-/** Everything the device remembers: name, settings, seat tokens per room, the room you're in. */
+/** Everything the device remembers: name, settings, seat tokens per room, the room you're in, the sign-in. */
 export function createStore(storage = globalThis.localStorage) {
   const read = () => {
     try {
@@ -34,5 +34,12 @@ export function createStore(storage = globalThis.localStorage) {
     },
     getCurrentRoom: () => read().room ?? null,
     setCurrentRoom: (code) => update({ room: code }),
+    getSession() {
+      const { session } = read();
+      const ok = session && typeof session.token === 'string' && typeof session.username === 'string';
+      return ok ? { token: session.token, username: session.username } : null;
+    },
+    setSession: ({ token, username }) => update({ session: { token, username } }),
+    clearSession: () => update({ session: null }),
   };
 }

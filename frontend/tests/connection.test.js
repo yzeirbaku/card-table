@@ -222,3 +222,27 @@ test('send goes out only while the socket is open', () => {
   assert.equal(conn.send({ type: 'sit', seat: 1 }), true);
   assert.deepEqual(socket().sent.at(-1), { type: 'sit', seat: 1 });
 });
+
+test('the session token goes into the socket URL', () => {
+  FakeSocket.all = [];
+  const store = createStore(memoryStorage());
+  store.setSession({ token: 'sess', username: 'Ana' });
+  const urls = [];
+  const conn = new RoomConnection({
+    code: 'ABCD', store, WebSocketImpl: FakeSocket,
+    urlFor: (...args) => { urls.push(args); return 'ws://test'; },
+    onWelcome() {}, onState() {}, onError() {}, onReconnecting() {}, onClosed() {},
+  });
+  conn.connect();
+  assert.deepEqual(urls[0], ['ABCD', '', null, 'sess']);
+});
+
+test('4401 signs out and does not retry', () => {
+  const { store, events, socket } = setup();
+  store.setSession({ token: 'sess', username: 'Ana' });
+  socket().open();
+  socket().drop(4401, 'Signed out');
+  assert.equal(store.getSession(), null);
+  assert.deepEqual(events.filter((e) => e[0] === 'closed'), [['closed', 'You were signed out. Sign in again']]);
+  assert.equal(FakeSocket.all.length, 1);
+});

@@ -6,6 +6,7 @@ const FINAL = {
   4400: { message: null, forget: true },
   4409: { message: null, forget: true },
   4000: { message: 'This seat was opened somewhere else', forget: false },
+  4401: { message: 'You were signed out. Sign in again', forget: false, signedOut: true },
 };
 const RETRY_MS = [500, 1000, 2000, 4000, 8000];
 
@@ -22,7 +23,7 @@ export class RoomConnection {
   }
 
   connect() {
-    const ws = new this.WebSocketImpl(this.urlFor(this.code, this.store.getName(), this.store.getToken(this.code)));
+    const ws = new this.WebSocketImpl(this.url(this.store.getToken(this.code)));
     this.ws = ws;
     ws.onopen = () => {
       if (this.stopped || ws !== this.ws) return;
@@ -37,6 +38,7 @@ export class RoomConnection {
     ws.onclose = (event) => {
       if (this.stopped || ws !== this.ws) return;
       const final = FINAL[event.code];
+      if (final?.signedOut) this.store.clearSession();
       if (final) return this.finish(final.message ?? (event.reason || 'Disconnected'), final.forget);
       if (!this.opened) return this.finish("Can't reach the server", false);
       this.onReconnecting(true);
@@ -92,12 +94,16 @@ export class RoomConnection {
       ws.onopen = () => sendLeave(ws);
     } else if (token) {
       // Closed, retry pending: open one last socket just to leave.
-      const last = new this.WebSocketImpl(this.urlFor(this.code, this.store.getName(), token));
+      const last = new this.WebSocketImpl(this.url(token));
       last.onopen = () => sendLeave(last);
       last.onmessage = () => {};
       last.onclose = () => {};
     }
     this.forget();
+  }
+
+  url(token) {
+    return this.urlFor(this.code, this.store.getName(), token, this.store.getSession()?.token ?? null);
   }
 
   close() {

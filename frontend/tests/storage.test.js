@@ -62,3 +62,20 @@ test('current room can be set and cleared', () => {
   store.setCurrentRoom(null);
   assert.equal(store.getCurrentRoom(), null);
 });
+
+test('the session round-trips and clears', () => {
+  const storage = memoryStorage();
+  const store = createStore(storage);
+  assert.equal(store.getSession(), null);
+  store.setSession({ token: 't0k', username: 'Sebi' });
+  assert.deepEqual(createStore(storage).getSession(), { token: 't0k', username: 'Sebi' });
+  store.clearSession();
+  assert.equal(store.getSession(), null);
+});
+
+test('a corrupted session reads as signed out', () => {
+  for (const session of ['nope', { token: 5 }, { username: 'Sebi' }, null]) {
+    const store = createStore(memoryStorage({ 'card-table': JSON.stringify({ session }) }));
+    assert.equal(store.getSession(), null);
+  }
+});
