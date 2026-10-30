@@ -103,10 +103,9 @@ class Room:
     def join(self, name: str, token: str | None, user: User | None = None) -> Player:
         """A seat token gets its player back. Otherwise someone new: a signed-in `user` plays
         under their username, and only once per room."""
-        if token:
-            for p in self.players:
-                if secrets.compare_digest(p.token.encode(), token.encode()):
-                    return p
+        known = self.holder(token)
+        if known is not None:
+            return known
         if user is not None:
             if any(p.user_id == user.id for p in self.players):
                 raise JoinRejected(4409, "You're already at this table")
@@ -129,6 +128,14 @@ class Room:
         if self.creator_id is None:
             self.creator_id = player.id
         return player
+
+    def holder(self, token: str | None) -> Player | None:
+        """Who this seat token belongs to, if anyone here."""
+        if token:
+            for p in self.players:
+                if secrets.compare_digest(p.token.encode(), token.encode()):
+                    return p
+        return None
 
     def seat_of(self, player_id: str) -> int | None:
         return self.seating.index(player_id) if player_id in self.seating else None

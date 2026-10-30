@@ -1,5 +1,7 @@
 """Accounts over HTTP, and signed-in players at a table (spec 2026-10-30-accounts-and-stats-design.md)."""
 
+from contextlib import contextmanager
+
 import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
@@ -34,9 +36,14 @@ def bearer(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
+@contextmanager
 def connect(client, code, name="whatever", session=None, token=None):
-    query = f"name={name}" + (f"&session={session}" if session else "") + (f"&token={token}" if token else "")
-    return client.websocket_connect(f"/rooms/{code}/ws?{query}")
+    """Signed in, the session goes as the first message, never in the URL (URLs end up in logs)."""
+    query = f"name={name}" + ("&signed_in=1" if session else "") + (f"&token={token}" if token else "")
+    with client.websocket_connect(f"/rooms/{code}/ws?{query}") as ws:
+        if session:
+            ws.send_json({"type": "session", "session": session})
+        yield ws
 
 
 def test_register_then_me(client):
@@ -143,3 +150,35 @@ def test_leaderboard_and_head_to_head_endpoints(client):
         "against": {"won": 0, "lost": 0}, "together": {"won": 0, "lost": 0}}
     res = client.get("/head-to-head/Sebi", params={"with": "nobody"})
     assert (res.status_code, res.json()["detail"]) == (404, "No such player")
+
+
+def test_a_session_in_the_url_is_ignored(client):
+    session = register(client)
+    code = new_room(client)
+    with client.websocket_connect(f"/rooms/{code}/ws?name=Guesty&session={session}") as ws:
+        _, first = join(ws)
+    assert [p["name"] for p in first["players"]] == ["Guesty"]
+
+
+def test_signed_in_without_a_session_message_closes_with_4401(client):
+    code = new_room(client)
+    with client.websocket_connect(f"/rooms/{code}/ws?name=x&signed_in=1") as ws:
+        ws.send_json({"type": "leave"})
+        with pytest.raises(WebSocketDisconnect) as e:
+            ws.receive_json()
+    assert (e.value.code, e.value.reason) == (4401, "Signed out")
+
+
+def test_guests_cannot_take_an_accounts_name(client):
+    register(client, "Sebi")
+    code = new_room(client)
+    with connect(client, code, name=" sEBi ") as ws:
+        with pytest.raises(WebSocketDisconnect) as e:
+            ws.receive_json()
+    assert (e.value.code, e.value.reason) == (4400, "Sebi has an account. Sign in to play as Sebi")
+
+
+def test_oversized_credentials_are_refused_up_front(client):
+    for body in ({"username": "x" * 21, "password": PW}, {"username": "Sebi", "password": "x" * 129}):
+        assert client.post("/auth/login", json=body).status_code == 422
+        assert client.post("/auth/register", json=body).status_code == 422

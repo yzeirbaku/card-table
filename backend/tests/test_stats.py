@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from app.accounts import Accounts
@@ -16,7 +18,7 @@ def conn(tmp_path):
 @pytest.fixture
 def ids(conn) -> dict[str, int]:
     accounts = Accounts(conn)
-    return {name: accounts.register(name, "password1")[0].id for name in ("Yzeir", "Sebi", "Arben")}
+    return {name: asyncio.run(accounts.register(name, "password1"))[0].id for name in ("Yzeir", "Sebi", "Arben")}
 
 
 def save(conn, ids, seats: list[str], winners: set[int], how="target") -> None:

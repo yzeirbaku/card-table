@@ -4,6 +4,7 @@ the same order. Timed game events (a reveal ending, the pause countdown running
 out, a computer player's move coming due) wake the room through its RoomTimer.
 Accounts, sign-ins and finished games live in the SQLite file (`app/db.py`)."""
 
+import asyncio
 import json
 import logging
 import os
@@ -15,9 +16,9 @@ from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from .accounts import AccountError, Accounts
+from .accounts import MAX_PASSWORD, AccountError, Accounts
 from .db import default_db_path, open_db
 from .games import GAMES
 from .murlan.game import Rejected
@@ -42,9 +43,12 @@ class CreateRoom(BaseModel):
     players: int
 
 
+SESSION_WAIT_SECONDS = 10.0  # a signed-in phone sends its session first thing after connecting
+
+
 class Credentials(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=20)  # oversized input never reaches the hashing
+    password: str = Field(max_length=MAX_PASSWORD)
 
 
 def bearer_token(authorization: str | None) -> str | None:
@@ -206,20 +210,30 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
         await broadcast(room)
         return False
 
-    def signed_in(credentials: Credentials, sign) -> dict[str, str]:
+    async def signed_in(credentials: Credentials, sign) -> dict[str, str]:
         try:
-            user, token = sign(credentials.username, credentials.password)
+            user, token = await sign(credentials.username, credentials.password)
         except AccountError as e:
             raise HTTPException(e.status, str(e)) from None
         return {"token": token, "username": user.username}
 
     @app.post("/auth/register")
     async def register(body: Credentials) -> dict[str, str]:
-        return signed_in(body, accounts.register)
+        return await signed_in(body, accounts.register)
 
     @app.post("/auth/login")
     async def login(body: Credentials) -> dict[str, str]:
-        return signed_in(body, accounts.login)
+        return await signed_in(body, accounts.login)
+
+    async def session_user(ws: WebSocket) -> Any:
+        """The first message of a signed-in socket is its session; not in the URL, which ends up in logs."""
+        try:
+            msg = await asyncio.wait_for(ws.receive_json(), SESSION_WAIT_SECONDS)
+        except (asyncio.TimeoutError, WebSocketDisconnect, ValueError, RuntimeError):
+            return None
+        if not isinstance(msg, dict) or msg.get("type") != "session" or not isinstance(msg.get("session"), str):
+            return None
+        return accounts.user_for(msg["session"])
 
     @app.post("/auth/logout")
     async def logout(authorization: str | None = Header(None)) -> dict[str, str]:
@@ -271,19 +285,24 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
 
     @app.websocket("/rooms/{code}/ws")
     async def room_socket(
-        ws: WebSocket, code: str, name: str = "", token: str | None = None, session: str | None = None
+        ws: WebSocket, code: str, name: str = "", token: str | None = None, signed_in: bool = False
     ) -> None:
         await ws.accept()
         await close_expired()
-        user = accounts.user_for(session) if session else None
-        if session and user is None:
-            await ws.close(4401, "Signed out")
+        user = await session_user(ws) if signed_in else None
+        if signed_in and user is None:
+            with suppress(Exception):
+                await ws.close(4401, "Signed out")
             return
         room = rooms.get(code)
         if room is None:
             await ws.close(4404, "Room not found")
             return
         async with room.lock:
+            owner = None if user or room.holder(token) else accounts.registered_name(name.strip())
+            if owner:  # a guest can't play under someone's account name
+                await ws.close(4400, f"{owner} has an account. Sign in to play as {owner}")
+                return
             try:
                 player = room.join(name, token, user)
             except JoinRejected as e:
