@@ -15,16 +15,17 @@ Kept simple on purpose: a username and a password, nothing else.
 
 - Sign up and sign in with a username and password (hashed).
 - Every finished Murlan game is recorded for the signed-in people at the table.
-- A stats screen with wins and losses, split into **vs people**, **vs computer**
-  and **total**.
+- A **Profile** page with wins and losses, split into **vs people**, **vs
+  computer** and **total**, built to take more later (coins).
+- Comparing with friends: a **leaderboard** and **head-to-head** records.
 - Accounts and stats survive restarts and redeploys.
 
 ## Non-goals
 
-- Email, password reset by email, social login, profiles or avatars.
+- Email, password reset by email, social login, avatars.
+- Coins, a shop or anything else on the profile beyond stats (the page leaves
+  room for them; they come later).
 - Per-round stats. Only whole games (first to the target score) count.
-- A leaderboard or other people's stats in the UI (the API allows it, the screen
-  can come later).
 - A hosted database. No Neon, nothing else to run.
 
 ## Anti-goals
@@ -142,9 +143,18 @@ Individual and team results are kept apart:
 - **Teams** (4-player games): a win counts for both partners. Your record as half
   of a team, whoever your partner was.
 
-Each has three columns. **vs computer** means any seat other than yours was a
-computer, including a computer partner. **vs people** means every other seat was
-a person (guests count as people). **Total** is both.
+Each has three columns, decided by your **opponents** (your partner in a
+4-player game is not an opponent):
+
+- **vs people:** at least one opponent was a person (guests count). Mixed tables
+  land here: you beat real people.
+- **vs computer:** every opponent was a computer (alone against computers, or you
+  and a partner against two).
+- **Total:** both.
+
+So you + a computer partner against Arben and Sebi is vs people; you and Arben
+against two computers is vs computer; you, Arben and a computer at a 3-player
+table is vs people.
 
 ```
 YOUR STATS                     vs people   vs computer   total
@@ -162,19 +172,49 @@ PARTNERS (4 players)            W–L    win %
   username, most games first; computer partners in one row, guest partners in
   one row.
 - `GET /stats/{username}` returns these numbers; the screen draws them. Counted
-  from `game_seats` on each request (small data, no caching).
+  from `game_seats` on each request (small data, no caching). Anyone's stats can
+  be viewed (that's how you look at a friend).
+
+### Leaderboard
+
+- Two lists, **Solo** and **Teams**, of every account with at least one game.
+- Counts **vs people games only** (by the opponents rule above): it's about how
+  you do against your friends, and beating computers on easy shouldn't climb it.
+- Ranked by **win %**, among players with **at least 5** such games; ties by more
+  wins, then name. Players with fewer games are listed after, unranked, by games
+  played.
+- `GET /leaderboard` → `{"solo": [...], "teams": [...]}`, each entry
+  `{username, won, lost, ranked}`.
+
+### Head-to-head
+
+Tapping a player (on the leaderboard or among your partners) shows them:
+
+- **You vs them:** games you both played on opposite sides that one of your
+  sides won. Your side won: a win for you; theirs: a loss. Games someone else
+  won don't count here.
+- **Together:** 4-player games as partners, wins and losses.
+- **Their record:** the same table as your own stats.
+- `GET /head-to-head/{username}?with={other}` → `{against: {won, lost},
+  together: {won, lost}}`, from `username`'s side.
 
 ## Frontend
 
-- **Main screen:** signed out, it looks as today plus a **Sign in** button.
-  Signed in, the name field shows the username (not editable) with a **Stats**
-  button and a way to sign out (in Settings).
-- **Sign in / Sign up:** one sheet with two modes, username and password fields.
-  Errors from the server shown as text.
-- **Stats:** a sheet with the table above.
-- The look of these is chosen from browser mockups with the user before it's
-  built, in the current themes' style. Nothing visual gets committed until the
-  user has tried it.
+Picked from mockups (option A, 2026-10-30):
+
+- **Main screen:** as today plus a chip in the top-right corner. Signed out it
+  says **Sign in**; signed in it shows your initial and username. The name field
+  becomes "Playing as <username>" (not editable).
+- **Sign in / New account:** one sheet with a two-way switch, username and
+  password fields, a note that guests can always play. Errors from the server
+  shown as text.
+- **Profile:** tapping the signed-in chip opens a full page (a view, like the
+  lobby), with a back arrow. Header: initial and username, room for coins later.
+  Tabs: **Stats** (your table and partners, Sign out at the bottom) and
+  **Players** (Solo / Teams switch, the leaderboard, you highlighted). Tapping a
+  player opens their page: head-to-head, together, their record.
+- The Profile page's exact look is picked from browser mockups. Nothing visual
+  gets committed until the user has tried it.
 - Everything from the server goes in with `textContent`.
 
 ## Delivery
