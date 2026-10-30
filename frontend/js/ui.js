@@ -1,4 +1,4 @@
-const VIEWS = ['main', 'lobby', 'table'];
+const VIEWS = ['main', 'lobby', 'table', 'profile'];
 let toastTimer;
 
 /** name = null hides every view (neutral state while resuming a saved room). */

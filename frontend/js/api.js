@@ -60,3 +60,10 @@ export const logout = (token) => request('/auth/logout', { method: 'POST', ...be
 export const me = (token) => request('/me', bearer(token));
 
 export const fetchStats = (username) => request(`/stats/${encodeURIComponent(username)}`);
+
+/** { solo: [...], teams: [...] }, each entry { username, won, lost, ranked }. */
+export const fetchLeaderboard = () => request('/leaderboard');
+
+/** From `username`'s side: { against: { won, lost }, together: { won, lost } }. */
+export const fetchHeadToHead = (username, other) =>
+  request(`/head-to-head/${encodeURIComponent(username)}?with=${encodeURIComponent(other)}`);

@@ -150,6 +150,59 @@ input { font: inherit; }
 @keyframes start-in { from { opacity: 0; } }
 @keyframes start-tick { 0% { opacity: 0; scale: 1.7; } 18% { opacity: 1; scale: 1; } 80% { opacity: 1; } 100% { opacity: .35; scale: .92; } }
 
+/* ---------- accounts: the chip, the Sign in sheet, the Profile page ---------- */
+.account-chip { position: absolute; top: max(14px, calc(env(safe-area-inset-top) + 6px)); right: max(14px, env(safe-area-inset-right)); display: flex; align-items: center; gap: 7px;
+                max-width: 60vw; padding: 7px 14px; border-radius: 999px; background: rgba(0,0,0,.35); border: 1px solid rgba(243,230,196,.4); font-size: 14px; font-weight: 700; }
+.account-chip.signed-in { padding-left: 6px; }
+.chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip-initial { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; font-size: 13px; }
+.name-field.signed-in input { border-color: rgba(240,199,94,.6); font-weight: 700; cursor: default; }
+.field { width: 100%; padding: 12px 14px; border-radius: 10px; font-size: 16px; border: 1.5px solid #ddd2b8; background: #f6f1e4; color: #1a1a1a; }
+.account-form { display: flex; flex-direction: column; gap: 10px; }
+.account-error { color: #b3121f; font-size: 14px; font-weight: 600; }
+.account-note { text-align: center; }
+/* a two-way switch: Sign in / New account, Solo / Teams */
+.seg { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: #f0e9d8; }
+.seg button { flex: 1; padding: 7px; border-radius: 8px; font-size: 14px; font-weight: 700; color: #6b5f4a; }
+.seg button.on { background: #fffdf7; color: #1a1a1a; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+
+/* The Profile page: your card on the felt, a cream page of numbers under it. */
+#view-profile { display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
+.profile-bar { display: flex; padding: 10px 12px 0; }
+.profile-back { padding: 4px 12px; font-size: 30px; line-height: 1; color: #f0c75e; }
+.profile-hero { display: flex; align-items: center; gap: 18px; padding: 6px 22px 16px; }
+.profile-card { position: relative; flex: none; width: 84px; aspect-ratio: 320 / 466; border-radius: 7px; background: #fffdf7; color: #b3121f; rotate: -5deg;
+                box-shadow: 0 4px 12px rgba(0,0,0,.45); font-family: Georgia, serif; font-weight: 700; }
+.profile-card.black { color: #1a1a1a; }
+.pc-corner { position: absolute; top: 6px; left: 7px; display: flex; flex-direction: column; align-items: center; font-size: 16px; line-height: 1; }
+.pc-corner.pc-bottom { top: auto; left: auto; bottom: 6px; right: 7px; rotate: 180deg; }
+.pc-mid { position: absolute; inset: 0; display: grid; place-items: center; font-size: 38px; color: #1a1a1a; }
+.profile-who { min-width: 0; }
+.profile-name { overflow-wrap: anywhere; font-family: Georgia, serif; font-size: 26px; color: #f0c75e; }
+.profile-tag { margin-top: 3px; font-size: 13px; opacity: .8; }
+.profile-tabs { display: flex; gap: 8px; padding: 0 16px 12px; }
+.profile-tabs button { padding: 8px 16px; border-radius: 999px; background: rgba(0,0,0,.28); font-size: 14px; font-weight: 700; }
+.profile-tabs button.on { background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; }
+.profile-page { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 560px; margin: 0 auto; padding: 16px 16px max(20px, env(safe-area-inset-bottom));
+                background: #fffdf7; color: #1a1a1a; border-radius: 18px 18px 0 0; box-shadow: 0 -4px 18px rgba(0,0,0,.3); }
+.profile-pane { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.profile-pane h3 { margin-top: 6px; font-family: Georgia, serif; font-size: 16px; }
+.profile-pane .seg { margin-bottom: 4px; }
+.stat-table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.stat-table th { padding: 0 4px 6px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #6b5f4a; text-align: right; }
+.stat-table td { padding: 9px 4px; border-top: 1px solid #ece4d0; text-align: right; }
+.stat-table th:first-child, .stat-table td:first-child { text-align: left; font-weight: 700; }
+.stat-table.board th:nth-child(2), .stat-table.board td:nth-child(2) { text-align: left; font-weight: 700; }
+.stat-table td.rank { width: 26px; font-weight: 800; }
+.stat-table td.muted { width: 52px; color: #8a7d64; font-size: 12px; }
+.stat-table tr.me td { color: #1d5a37; font-weight: 800; }
+.stat-table tr.link { cursor: pointer; }
+.stat-table tr.link:active td { background: #f6f1e4; }
+.stat-empty, .stat-note { font-size: 13px; color: #6b5f4a; }
+.stat-note { margin-top: auto; padding-top: 12px; text-align: center; font-size: 12px; }
+.inline-link { padding: 0; font-weight: 700; color: #1d5a37; text-decoration: underline; text-underline-offset: 2px; }
+.sign-out { margin-top: auto; padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; font-size: 15px; font-weight: 700; color: #6b5f4a; }
+
 /* ---------- desktop: same layout, sized for a big screen ---------- */
 @media (min-width: 900px) and (min-height: 600px) {
   #view-main { gap: 40px; }
@@ -164,6 +217,14 @@ input { font: inherit; }
 
   #view-lobby { justify-content: safe center; }
   #view-lobby .btn { max-width: 240px; margin-top: 16px; }
+
+  .account-chip { top: 22px; right: 26px; padding: 9px 18px; font-size: 17px; }
+  .chip-initial { width: 30px; height: 30px; font-size: 16px; }
+  .profile-bar, .profile-hero, .profile-tabs { width: 100%; max-width: 560px; margin: 0 auto; }
+  .profile-card { width: 110px; }
+  .pc-mid { font-size: 50px; }
+  .profile-name { font-size: 34px; }
+  .profile-page { flex: none; min-height: 60vh; border-radius: 18px; margin-bottom: 30px; }
 }
 
 /* The lobby at full desktop size needs a tall window; a shorter one keeps the phone sizes, centred. */
