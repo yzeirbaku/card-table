@@ -101,6 +101,7 @@ class Game:
         self.last_result: RoundResult | None = None
         self.winner_side: int | None = None
         self.clinched = False  # won before the target: the other team could no longer catch up
+        self.ended_by: Literal["target", "table"] | None = None  # how the game reached game_over
         self.disconnected: list[str] = []
         self.pause: Pause | None = None  # set while someone is disconnected
         self.reveal: Reveal | None = None  # cards everyone may see for a few seconds
@@ -313,6 +314,7 @@ class Game:
         elif choice == "end_game":
             self.pause = None
             self.phase = "game_over"
+            self.ended_by = "table"
             best = max(self.scores)
             self.winner_side = self.scores.index(best) if self.scores.count(best) == 1 else None
         else:
@@ -532,6 +534,7 @@ class Game:
         if (best >= self.target and self.scores.count(best) == 1) or self.clinched:
             self._clear_round()
             self.phase = "game_over"
+            self.ended_by = "target"
             self.winner_side = self.scores.index(best)
         else:
             self._start_round()  # also a tie for the lead at the target: one more round
