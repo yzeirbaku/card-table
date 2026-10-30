@@ -19,6 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from .accounts import User
 from .murlan.bot import LEVELS, Bot
 from .murlan.combos import classify
 from .murlan.game import Game, Rejected
@@ -99,11 +100,17 @@ class Room:
     def status(self) -> RoomStatus:
         return "lobby" if self.game is None else "playing"
 
-    def join(self, name: str, token: str | None) -> Player:
+    def join(self, name: str, token: str | None, user: User | None = None) -> Player:
+        """A seat token gets its player back. Otherwise someone new: a signed-in `user` plays
+        under their username, and only once per room."""
         if token:
             for p in self.players:
                 if secrets.compare_digest(p.token.encode(), token.encode()):
                     return p
+        if user is not None:
+            if any(p.user_id == user.id for p in self.players):
+                raise JoinRejected(4409, "You're already at this table")
+            name = user.username
         name = name.strip()
         if not 1 <= len(name) <= MAX_NAME_LENGTH:
             raise JoinRejected(4400, f"Name must be 1-{MAX_NAME_LENGTH} characters")
@@ -116,7 +123,8 @@ class Room:
             if stale is None:
                 raise JoinRejected(4409, "This table is full")
             self.leave(stale.id)
-        player = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16))
+        player = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16),
+                        user_id=None if user is None else user.id)
         self.players.append(player)
         if self.creator_id is None:
             self.creator_id = player.id

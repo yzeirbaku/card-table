@@ -1,22 +1,28 @@
 """HTTP to create rooms, one WebSocket per player to play. Every message and
 broadcast for a room runs under that room's lock, so all players see changes in
 the same order. Timed game events (a reveal ending, the pause countdown running
-out, a computer player's move coming due) wake the room through its RoomTimer."""
+out, a computer player's move coming due) wake the room through its RoomTimer.
+Accounts, sign-ins and finished games live in the SQLite file (`app/db.py`)."""
 
 import json
 import logging
 import os
+import sqlite3
+import time
 from contextlib import suppress
 from dataclasses import asdict
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from .accounts import AccountError, Accounts
+from .db import default_db_path, open_db
 from .games import GAMES
 from .murlan.game import Rejected
 from .rooms import JoinRejected, Player, Room, RoomManager
+from .stats import save_game, stats_for
 from .timers import RoomTimer
 
 log = logging.getLogger(__name__)
@@ -36,15 +42,29 @@ class CreateRoom(BaseModel):
     players: int
 
 
-def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -> FastAPI:
+class Credentials(BaseModel):
+    username: str
+    password: str
+
+
+def bearer_token(authorization: str | None) -> str | None:
+    scheme, _, token = (authorization or "").partition(" ")
+    return token.strip() if scheme.lower() == "bearer" and token.strip() else None
+
+
+def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
+               db: sqlite3.Connection | None = None) -> FastAPI:
     rooms = manager or RoomManager()
+    db = db if db is not None else open_db(default_db_path())
+    accounts = Accounts(db)
+    rooms.record = lambda record: save_game(db, record, time.time())
     timers: dict[int, RoomTimer] = {}  # by id(room): a purged room's timer can't be reused
     app = FastAPI(title="Card Table")
     app.add_middleware(
         CORSMiddleware,
         allow_origin_regex=os.environ.get("CORS_ORIGIN_REGEX", DEV_ORIGINS),
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "Authorization"],
     )
 
     async def send_state(room: Room, player: Player) -> bool:
@@ -186,6 +206,42 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
         await broadcast(room)
         return False
 
+    def signed_in(credentials: Credentials, sign) -> dict[str, str]:
+        try:
+            user, token = sign(credentials.username, credentials.password)
+        except AccountError as e:
+            raise HTTPException(e.status, str(e)) from None
+        return {"token": token, "username": user.username}
+
+    @app.post("/auth/register")
+    async def register(body: Credentials) -> dict[str, str]:
+        return signed_in(body, accounts.register)
+
+    @app.post("/auth/login")
+    async def login(body: Credentials) -> dict[str, str]:
+        return signed_in(body, accounts.login)
+
+    @app.post("/auth/logout")
+    async def logout(authorization: str | None = Header(None)) -> dict[str, str]:
+        token = bearer_token(authorization)
+        if token:
+            accounts.logout(token)
+        return {}
+
+    @app.get("/me")
+    async def me(authorization: str | None = Header(None)) -> dict[str, str]:
+        user = accounts.user_for(bearer_token(authorization))
+        if user is None:
+            raise HTTPException(401, "Signed out")
+        return {"username": user.username}
+
+    @app.get("/stats/{username}")
+    async def stats(username: str) -> dict[str, Any]:
+        found = stats_for(db, username)
+        if found is None:
+            raise HTTPException(404, "No such player")
+        return found
+
     @app.get("/games")
     async def list_games() -> list[dict[str, Any]]:
         return [asdict(g) for g in GAMES.values()]
@@ -204,17 +260,21 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True) -
 
     @app.websocket("/rooms/{code}/ws")
     async def room_socket(
-        ws: WebSocket, code: str, name: str = "", token: str | None = None
+        ws: WebSocket, code: str, name: str = "", token: str | None = None, session: str | None = None
     ) -> None:
         await ws.accept()
         await close_expired()
+        user = accounts.user_for(session) if session else None
+        if session and user is None:
+            await ws.close(4401, "Signed out")
+            return
         room = rooms.get(code)
         if room is None:
             await ws.close(4404, "Room not found")
             return
         async with room.lock:
             try:
-                player = room.join(name, token)
+                player = room.join(name, token, user)
             except JoinRejected as e:
                 await ws.close(e.code, e.message)
                 return
