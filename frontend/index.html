@@ -19,9 +19,10 @@
 <body class="theme-classic cards-traditional">
   <script src="/js/boot.js"></script>
   <main id="view-main" class="view felt">
+    <button id="btn-account" class="account-chip" type="button"><span class="chip-initial" hidden></span><span class="chip-name">Sign in</span></button>
     <h1 class="title">Card Table</h1>
     <label class="name-field">
-      <span class="label">Your name</span>
+      <span class="label" id="name-label">Your name</span>
       <input id="name-input" maxlength="20" autocomplete="nickname" placeholder="Your name" />
     </label>
     <div class="menu-cards">
@@ -148,6 +149,49 @@
     </div>
   </section>
 
+  <section id="view-profile" class="view felt" hidden>
+    <div class="profile-bar"><button id="btn-profile-back" class="profile-back" type="button" aria-label="Back">‹</button></div>
+    <div class="profile-hero">
+      <div class="profile-card" aria-hidden="true">
+        <span class="pc-corner"><span class="pc-initial"></span><span class="pc-suit"></span></span>
+        <span class="pc-mid pc-initial"></span>
+        <span class="pc-corner pc-bottom"><span class="pc-initial"></span><span class="pc-suit"></span></span>
+      </div>
+      <div class="profile-who"><h2 class="profile-name"></h2><p class="profile-tag"></p></div>
+    </div>
+    <div class="profile-tabs" role="tablist">
+      <button type="button" role="tab" data-tab="stats">Stats</button>
+      <button type="button" role="tab" data-tab="players">Players</button>
+    </div>
+    <div class="profile-page">
+      <div class="profile-pane" data-pane="stats">
+        <h3>Record</h3>
+        <table class="stat-table record-mine"></table>
+        <h3>Partners</h3>
+        <table class="stat-table partners"></table>
+        <p class="stat-empty partners-empty" hidden>No 4-player games yet</p>
+        <button id="btn-sign-out" class="sign-out" type="button">Sign out</button>
+      </div>
+      <div class="profile-pane" data-pane="players" hidden>
+        <div class="seg" role="group" aria-label="Which games">
+          <button type="button" data-board="solo">Solo</button>
+          <button type="button" data-board="teams">Teams</button>
+        </div>
+        <table class="stat-table board"></table>
+        <p class="stat-empty board-unranked" hidden></p>
+        <p class="stat-note">Games against people only · ranked from 5 games · tap a player</p>
+      </div>
+      <div class="profile-pane" data-pane="player" hidden>
+        <h3 class="vs-title"></h3>
+        <table class="stat-table versus"></table>
+        <h3>Together</h3>
+        <table class="stat-table together"></table>
+        <h3 class="their-title"></h3>
+        <table class="stat-table record-theirs"></table>
+      </div>
+    </div>
+  </section>
+
   <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
 
   <section id="sheet-new" class="sheet" hidden>
@@ -165,6 +209,21 @@
       <button id="btn-paste" class="small-btn" type="button" hidden>Paste</button>
       <button class="btn primary" type="submit">Join</button>
     </form>
+  </section>
+
+  <section id="sheet-account" class="sheet" hidden>
+    <h2 class="sheet-title">Sign in</h2>
+    <div class="seg seg-light" role="group" aria-label="Sign in or make an account">
+      <button type="button" data-mode="login">Sign in</button>
+      <button type="button" data-mode="register">New account</button>
+    </div>
+    <form id="account-form" class="account-form">
+      <input id="account-username" class="field" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="Username" />
+      <input id="account-password" class="field" type="password" maxlength="128" autocomplete="current-password" placeholder="Password" />
+      <p class="account-error" role="alert" hidden></p>
+      <button class="btn primary" type="submit">Sign in</button>
+    </form>
+    <p class="sheet-sub account-note">You can always play as a guest without one.</p>
   </section>
 
   <section id="sheet-settings" class="sheet" hidden>

@@ -19,12 +19,14 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from .accounts import User
 from .murlan.bot import LEVELS, Bot
 from .murlan.combos import classify
 from .murlan.game import Game, Rejected
 from .murlan.moves import legal_plays
 from .murlan.protocol import apply_action
 from .murlan.views import view_for
+from .results import GameRecord, SeatResult
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +59,7 @@ class Player:
     socket: Any = None  # the live WebSocket, or None while disconnected
     reacted_at: float = float("-inf")  # their last reaction, to keep a fast tapper from flooding the table
     computer: bool = False  # a computer player: always here, never has a socket
+    user_id: int | None = None  # the account they're signed in with; None for guests (never sent to phones)
 
 
 @dataclass
@@ -81,6 +84,7 @@ class Room:
     bot_reactions: list[tuple[str, str]] = field(default_factory=list)  # (who, reaction) computer emojis still to send
     _quiet_until: float = float("-inf")  # no computer moves before this (the deal, the round's end)
     _bots_saw: tuple[int, str] | None = None  # rounds played and phase at the last update
+    record: Callable[[GameRecord], None] | None = None  # where finished games go for the stats
 
     def __post_init__(self) -> None:
         if not self.seating:
@@ -96,11 +100,16 @@ class Room:
     def status(self) -> RoomStatus:
         return "lobby" if self.game is None else "playing"
 
-    def join(self, name: str, token: str | None) -> Player:
-        if token:
-            for p in self.players:
-                if secrets.compare_digest(p.token.encode(), token.encode()):
-                    return p
+    def join(self, name: str, token: str | None, user: User | None = None) -> Player:
+        """A seat token gets its player back. Otherwise someone new: a signed-in `user` plays
+        under their username, and only once per room."""
+        known = self.holder(token)
+        if known is not None and (user is None or known.user_id == user.id):  # never someone else's account
+            return known
+        if user is not None:
+            if any(p.user_id == user.id for p in self.players):
+                raise JoinRejected(4409, "You're already at this table")
+            name = user.username
         name = name.strip()
         if not 1 <= len(name) <= MAX_NAME_LENGTH:
             raise JoinRejected(4400, f"Name must be 1-{MAX_NAME_LENGTH} characters")
@@ -113,11 +122,20 @@ class Room:
             if stale is None:
                 raise JoinRejected(4409, "This table is full")
             self.leave(stale.id)
-        player = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16))
+        player = Player(id=secrets.token_hex(4), name=name, token=secrets.token_urlsafe(16),
+                        user_id=None if user is None else user.id)
         self.players.append(player)
         if self.creator_id is None:
             self.creator_id = player.id
         return player
+
+    def holder(self, token: str | None) -> Player | None:
+        """Who this seat token belongs to, if anyone here."""
+        if token:
+            for p in self.players:
+                if secrets.compare_digest(p.token.encode(), token.encode()):
+                    return p
+        return None
 
     def seat_of(self, player_id: str) -> int | None:
         return self.seating.index(player_id) if player_id in self.seating else None
@@ -186,6 +204,7 @@ class Room:
         seat = self.seat_of(player_id)
         if self.game is not None and seat is not None:  # the others are told why their game ended
             self.ended_by = next(p.name for p in self.players if p.id == player_id)
+            self._record_leave(player_id)
         self.players = [p for p in self.players if p.id != player_id]
         self._unseat(player_id)
         self.game = None  # a game can't go on with an empty seat
@@ -214,7 +233,40 @@ class Room:
     def act(self, player_id: str, action: object) -> None:
         if self.game is None:
             raise Rejected("The game hasn't started yet")
-        apply_action(self.game, player_id, action)
+        game = self.game
+        was_over = game.phase == "game_over"
+        apply_action(game, player_id, action)
+        if not was_over and game.phase == "game_over" and game.ended_by == "target":
+            self._record("target", {game.winner_side})
+
+    # ---- results for the stats: only when a winner is clear (spec 2026-10-30-accounts-and-stats) ----
+
+    def _record_leave(self, leaver: str) -> None:
+        """Leaving ends the game: the leaver's side loses and the top of the others wins, if
+        everyone is still here, someone has scored and that top isn't tied."""
+        game = self.game
+        if (game.phase == "game_over" or game.disconnected or game.pause is not None
+                or max(game.scores) == 0 or leaver in self.bots):
+            return
+        others = [s for s in range(game.side_count) if s != game.side_of(leaver)]
+        best = max(game.scores[s] for s in others)
+        top = [s for s in others if game.scores[s] == best]
+        if len(top) == 1:
+            self._record("leave", set(top))
+
+    def _record(self, how: str, winners: set[int | None]) -> None:
+        if self.record is None:
+            return
+        game = self.game
+        people = {p.id: p for p in self.players}
+        seats = tuple(
+            SeatResult(seat=i, user_id=people[p].user_id if p in people else None, computer=p in self.bots,
+                       side=game.side_of(p), score=game.scores[game.side_of(p)], won=game.side_of(p) in winners)
+            for i, p in enumerate(game.seats))
+        try:
+            self.record(GameRecord(self.game_id, len(game.seats), game.target, how, seats))
+        except Exception:  # the stats must never take the table down
+            log.exception("recording a game in room %s failed", self.code)
 
     def after_game(self, player_id: str, choice: object) -> None:
         game = self.game
@@ -376,9 +428,11 @@ class Room:
 
 
 class RoomManager:
-    def __init__(self, clock: Callable[[], float] = time.monotonic, start_seconds: float | None = None) -> None:
+    def __init__(self, clock: Callable[[], float] = time.monotonic, start_seconds: float | None = None,
+                 record: Callable[[GameRecord], None] | None = None) -> None:
         self.clock = clock
         self.start_seconds = START_SECONDS if start_seconds is None else start_seconds
+        self.record = record  # handed to every room: where finished games go
         self.rooms: dict[str, Room] = {}
 
     def create(self, game_id: str, seats: int) -> Room:
@@ -387,7 +441,7 @@ class RoomManager:
             if code not in self.rooms:
                 break
         room = Room(code=code, last_activity=self.clock(), game_id=game_id, seats=seats,
-                    clock=self.clock, start_seconds=self.start_seconds)
+                    clock=self.clock, start_seconds=self.start_seconds, record=self.record)
         self.rooms[code] = room
         return room
 

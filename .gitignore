@@ -4,3 +4,4 @@ __pycache__/
 .superpowers/
 .dev/
 .claude/skills/deploy/deploy.env.local
+backend/data/

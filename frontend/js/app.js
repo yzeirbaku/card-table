@@ -1,3 +1,4 @@
+import { initAccount } from './account.js';
 import { fetchGames, socketUrl } from './api.js';
 import { RoomConnection } from './connection.js';
 import { stopDeal } from './deal.js';
@@ -16,6 +17,7 @@ const gameNames = {};
 let connection = null;
 let meId = null;
 let heldLobby = null; // the lobby state waiting behind the "X left the table" popup
+let account = null;
 
 function applySettings({ theme, cardStyle }) {
   // classList, not className: keep other body classes such as table-rotated.
@@ -89,6 +91,7 @@ function enterRoom(code, { resume = false, game = null } = {}) {
       resetTable();
       setReconnecting(false);
       closeSheets(); // How to play, opened in the lobby
+      account.sync(); // a 4401 close has just signed this phone out
       showView('main');
       toast(message);
     },
@@ -124,6 +127,7 @@ document.getElementById('view-table').addEventListener('contextmenu', (event) =>
 
 applySettings(store.getSettings());
 initMain({ store, enterRoom, applySettings });
+account = initAccount({ store });
 initLobby({ onLeave: leaveRoom, send });
 initTable({ onLeave: leaveRoom, send });
 document.getElementById('sheet-backdrop').addEventListener('click', closeSheets);

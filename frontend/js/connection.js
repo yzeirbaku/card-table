@@ -6,6 +6,7 @@ const FINAL = {
   4400: { message: null, forget: true },
   4409: { message: null, forget: true },
   4000: { message: 'This seat was opened somewhere else', forget: false },
+  4401: { message: 'You were signed out. Sign in again', forget: false, signedOut: true },
 };
 const RETRY_MS = [500, 1000, 2000, 4000, 8000];
 
@@ -22,10 +23,13 @@ export class RoomConnection {
   }
 
   connect() {
-    const ws = new this.WebSocketImpl(this.urlFor(this.code, this.store.getName(), this.store.getToken(this.code)));
+    const session = this.store.getSession();
+    const ws = new this.WebSocketImpl(this.url(this.store.getToken(this.code), Boolean(session)));
     this.ws = ws;
     ws.onopen = () => {
       if (this.stopped || ws !== this.ws) return;
+      // The session goes first, as a message: a URL ends up in the server's logs.
+      if (session) ws.send(JSON.stringify({ type: 'session', session: session.token }));
       this.opened = true;
       this.attempt = 0;
       this.onReconnecting(false);
@@ -37,6 +41,7 @@ export class RoomConnection {
     ws.onclose = (event) => {
       if (this.stopped || ws !== this.ws) return;
       const final = FINAL[event.code];
+      if (final?.signedOut) this.store.clearSession();
       if (final) return this.finish(final.message ?? (event.reason || 'Disconnected'), final.forget);
       if (!this.opened) return this.finish("Can't reach the server", false);
       this.onReconnecting(true);
@@ -92,12 +97,16 @@ export class RoomConnection {
       ws.onopen = () => sendLeave(ws);
     } else if (token) {
       // Closed, retry pending: open one last socket just to leave.
-      const last = new this.WebSocketImpl(this.urlFor(this.code, this.store.getName(), token));
+      const last = new this.WebSocketImpl(this.url(token, false)); // the seat token is enough to leave
       last.onopen = () => sendLeave(last);
       last.onmessage = () => {};
       last.onclose = () => {};
     }
     this.forget();
+  }
+
+  url(token, signedIn) {
+    return this.urlFor(this.code, this.store.getName(), token, signedIn);
   }
 
   close() {

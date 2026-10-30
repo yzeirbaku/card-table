@@ -8,7 +8,11 @@ async function request(path, options) {
     throw new Error("Can't reach the server");
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Something went wrong');
+  if (!res.ok) {
+    const err = new Error(typeof data.detail === 'string' ? data.detail : 'Something went wrong');
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -32,10 +36,35 @@ export async function createRoom(game, players) {
   return code;
 }
 
-export function socketUrl(code, name, token) {
+/** signedIn: the socket's first message will be the session (never in the URL: URLs end up in logs). */
+export function socketUrl(code, name, token, signedIn) {
   const url = new URL(`${base()}/rooms/${code}/ws`);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   url.searchParams.set('name', name);
   if (token) url.searchParams.set('token', token);
+  if (signedIn) url.searchParams.set('signed_in', '1');
   return url.toString();
 }
+
+// ---- accounts: the session token goes as a bearer header (not a cookie: the backend is another site) ----
+
+const json = (body) => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const bearer = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
+
+/** Both return { token, username }: signing up also signs you in. */
+export const register = (username, password) => request('/auth/register', json({ username, password }));
+export const login = (username, password) => request('/auth/login', json({ username, password }));
+
+export const logout = (token) => request('/auth/logout', { method: 'POST', ...bearer(token) });
+
+/** { username } for a live session; an error with status 401 once it's gone. */
+export const me = (token) => request('/me', bearer(token));
+
+export const fetchStats = (username) => request(`/stats/${encodeURIComponent(username)}`);
+
+/** { solo: [...], teams: [...] }, each entry { username, won, lost, ranked }. */
+export const fetchLeaderboard = () => request('/leaderboard');
+
+/** From `username`'s side: { against: { won, lost }, together: { won, lost } }. */
+export const fetchHeadToHead = (username, other) =>
+  request(`/head-to-head/${encodeURIComponent(username)}?with=${encodeURIComponent(other)}`);
