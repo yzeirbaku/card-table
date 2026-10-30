@@ -134,3 +134,12 @@ def test_a_finished_game_shows_in_stats(client, manager):
         finish_round(room, NEAR[2])
     assert client.get("/stats/Sebi").json()["solo"]["people"] == {"won": 1, "lost": 0}
     assert client.get("/stats/Arben").json()["solo"]["people"] == {"won": 0, "lost": 1}
+
+
+def test_leaderboard_and_head_to_head_endpoints(client):
+    register(client, "Sebi"), register(client, "Arben")
+    assert client.get("/leaderboard").json() == {"solo": [], "teams": []}
+    assert client.get("/head-to-head/Sebi", params={"with": "arben"}).json() == {
+        "against": {"won": 0, "lost": 0}, "together": {"won": 0, "lost": 0}}
+    res = client.get("/head-to-head/Sebi", params={"with": "nobody"})
+    assert (res.status_code, res.json()["detail"]) == (404, "No such player")

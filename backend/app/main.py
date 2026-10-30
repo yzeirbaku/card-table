@@ -13,7 +13,7 @@ from contextlib import suppress
 from dataclasses import asdict
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -22,7 +22,7 @@ from .db import default_db_path, open_db
 from .games import GAMES
 from .murlan.game import Rejected
 from .rooms import JoinRejected, Player, Room, RoomManager
-from .stats import save_game, stats_for
+from .stats import head_to_head, leaderboard, save_game, stats_for
 from .timers import RoomTimer
 
 log = logging.getLogger(__name__)
@@ -238,6 +238,17 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
     @app.get("/stats/{username}")
     async def stats(username: str) -> dict[str, Any]:
         found = stats_for(db, username)
+        if found is None:
+            raise HTTPException(404, "No such player")
+        return found
+
+    @app.get("/leaderboard")
+    async def players() -> dict[str, Any]:
+        return leaderboard(db)
+
+    @app.get("/head-to-head/{username}")
+    async def versus(username: str, other: str = Query(alias="with")) -> dict[str, Any]:
+        found = head_to_head(db, username, other)
         if found is None:
             raise HTTPException(404, "No such player")
         return found
