@@ -104,7 +104,7 @@ class Room:
         """A seat token gets its player back. Otherwise someone new: a signed-in `user` plays
         under their username, and only once per room."""
         known = self.holder(token)
-        if known is not None:
+        if known is not None and (user is None or known.user_id == user.id):  # never someone else's account
             return known
         if user is not None:
             if any(p.user_id == user.id for p in self.players):

@@ -223,7 +223,7 @@ test('send goes out only while the socket is open', () => {
   assert.deepEqual(socket().sent.at(-1), { type: 'sit', seat: 1 });
 });
 
-test('the session token goes into the socket URL', () => {
+test('signed in, the URL only says so and the session goes as the first message', () => {
   FakeSocket.all = [];
   const store = createStore(memoryStorage());
   store.setSession({ token: 'sess', username: 'Ana' });
@@ -234,7 +234,31 @@ test('the session token goes into the socket URL', () => {
     onWelcome() {}, onState() {}, onError() {}, onReconnecting() {}, onClosed() {},
   });
   conn.connect();
-  assert.deepEqual(urls[0], ['ABCD', '', null, 'sess']);
+  assert.deepEqual(urls[0], ['ABCD', '', null, true]);
+  assert.ok(!JSON.stringify(urls).includes('sess')); // URLs end up in logs
+  FakeSocket.all[0].open();
+  assert.deepEqual(FakeSocket.all[0].sent[0], { type: 'session', session: 'sess' });
+});
+
+test('the leave-only socket goes without the session', () => {
+  FakeSocket.all = [];
+  const store = createStore(memoryStorage());
+  store.setSession({ token: 'sess', username: 'Ana' });
+  store.setToken('ABCD', 'seat');
+  const urls = [];
+  const conn = new RoomConnection({
+    code: 'ABCD', store, WebSocketImpl: FakeSocket, wait: () => {},
+    urlFor: (...args) => { urls.push(args); return 'ws://test'; },
+    onWelcome() {}, onState() {}, onError() {}, onReconnecting() {}, onClosed() {},
+  });
+  conn.connect();
+  FakeSocket.all[0].open();
+  FakeSocket.all[0].drop(1006); // dropped: a retry is pending
+  conn.leave();
+  const last = FakeSocket.all.at(-1);
+  assert.deepEqual(urls.at(-1), ['ABCD', '', 'seat', false]);
+  last.open();
+  assert.deepEqual(last.sent, [{ type: 'leave' }]);
 });
 
 test('4401 signs out and does not retry', () => {

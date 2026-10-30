@@ -36,12 +36,13 @@ export async function createRoom(game, players) {
   return code;
 }
 
-export function socketUrl(code, name, token, session) {
+/** signedIn: the socket's first message will be the session (never in the URL: URLs end up in logs). */
+export function socketUrl(code, name, token, signedIn) {
   const url = new URL(`${base()}/rooms/${code}/ws`);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   url.searchParams.set('name', name);
   if (token) url.searchParams.set('token', token);
-  if (session) url.searchParams.set('session', session);
+  if (signedIn) url.searchParams.set('signed_in', '1');
   return url.toString();
 }
 

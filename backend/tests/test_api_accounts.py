@@ -182,3 +182,26 @@ def test_oversized_credentials_are_refused_up_front(client):
     for body in ({"username": "x" * 21, "password": PW}, {"username": "Sebi", "password": "x" * 129}):
         assert client.post("/auth/login", json=body).status_code == 422
         assert client.post("/auth/register", json=body).status_code == 422
+
+
+def test_a_dead_session_still_gets_its_seat_back(client):
+    session = register(client)
+    code = new_room(client)
+    with connect(client, code, session=session) as ws:
+        welcome, _ = join(ws)
+    client.post("/auth/logout", headers=bearer(session))  # e.g. a password reset mid-game
+    with connect(client, code, session=session, token=welcome["token"]) as ws:
+        again = ws.receive_json()
+    assert (again["type"], again["player_id"]) == ("welcome", welcome["player_id"])
+
+
+def test_a_seat_token_never_moves_a_seat_to_another_account(client, manager):
+    sebi, arben = register(client, "Sebi"), register(client, "Arben")
+    code = new_room(client)
+    with connect(client, code, session=sebi) as ws:
+        welcome, _ = join(ws)
+    with connect(client, code, session=arben, token=welcome["token"]) as ws:
+        again, first = join(ws)
+    assert again["player_id"] != welcome["player_id"]
+    room = manager.get(code)
+    assert sorted(p.name for p in room.players) == ["Arben", "Sebi"]

@@ -48,12 +48,14 @@ services:
 ```bash
 mkdir -p ~/apps/card-table/data/backups
 sudo apt-get install -y sqlite3   # for the backup job
-crontab -e   # add:
-# 30 4 * * * sqlite3 ~/apps/card-table/data/cards.db ".backup '$HOME/apps/card-table/data/backups/cards-$(date +\%F).db'" && find ~/apps/card-table/data/backups -name 'cards-*.db' -mtime +14 -delete
+sudo crontab -e   # root's crontab (the database is root's, in WAL mode: a reader needs write access to cards.db-shm); add:
+# 30 4 * * * D=/home/<user>/apps/card-table/data; sqlite3 $D/cards.db ".backup '$D/backups/cards-$(date +\%F).db'" && find $D/backups -name 'cards-*.db' -mtime +14 -delete
 ```
 
-The container runs as root, so `cards.db` is root-owned; the backup job reads
-it fine. The app creates the tables and applies new migrations on startup.
+Put the real home path in `D` (root's `~` is `/root`). Run the line once by hand
+with `sudo sh -c '...'` and check a backup file appears. The app creates the
+tables and applies new migrations on startup. Sessions are stored hashed, so a
+backup can't sign anyone in.
 
 **Forgotten password** (there's no email):
 `sudo docker exec -it card-table-backend python -m app.accounts reset-password <username>`.

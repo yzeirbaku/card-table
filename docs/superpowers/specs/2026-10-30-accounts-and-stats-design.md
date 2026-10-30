@@ -81,7 +81,8 @@ complete, but only rows with a user_id show up in anyone's stats.
 - **Session:** a random token, stored in the database, kept by the phone in
   localStorage (key `session` in the `card-table` store). Sent as
   `Authorization: Bearer <token>` (add `Authorization` to the CORS
-  `allow_headers`) and as `?session=` on the WebSocket. **Not a cookie:** the
+  `allow_headers`) and, on the WebSocket, as its first message (never in the
+  URL: URLs end up in the server's logs). Stored hashed (SHA-256). **Not a cookie:** the
   frontend and backend are on different sites, and Safari and the iOS home-screen
   app block cross-site cookies. Sessions don't expire; signing out deletes it.
 - **Login rate limit:** in memory, 5 failed attempts per username in 10
@@ -94,8 +95,15 @@ complete, but only rows with a user_id show up in anyone's stats.
 
 ## Joining a table signed in
 
-- The WebSocket takes `?session=`. A valid session makes the player that account:
-  their name is the username, and the `name` parameter is ignored.
+- A signed-in phone connects with `?signed_in=1` and sends
+  `{"type": "session", "session": <token>}` first. A valid session makes the
+  player that account: their name is the username, and the `name` parameter is
+  ignored.
+- A seat token only ever gets back its own player: never a seat that belongs to
+  another account. A dead session with a valid seat token still gets its seat
+  back (the token proves it).
+- A guest can't play under a name that belongs to an account (closes with 4400,
+  "<name> has an account. Sign in to play as <name>").
 - An unknown or deleted session: the socket closes with a new code (4401,
   "Signed out"), and the phone forgets the session and shows the main screen
   signed out.
@@ -177,7 +185,8 @@ PARTNERS (4 players)            W–L    win %
 
 ### Leaderboard
 
-- Two lists, **Solo** and **Teams**, of every account with at least one game.
+- Two lists, **Solo** and **Teams**, of every account with at least one game
+  against people (an account with only computer games isn't on them).
 - Counts **vs people games only** (by the opponents rule above): it's about how
   you do against your friends, and beating computers on easy shouldn't climb it.
 - Ranked by **win %**, among players with **at least 5** such games; ties by more

@@ -290,11 +290,12 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
         await ws.accept()
         await close_expired()
         user = await session_user(ws) if signed_in else None
-        if signed_in and user is None:
+        room = rooms.get(code)
+        # A dead session still gets its own seat back (the seat token proves it); only a new join needs one.
+        if signed_in and user is None and (room is None or room.holder(token) is None):
             with suppress(Exception):
                 await ws.close(4401, "Signed out")
             return
-        room = rooms.get(code)
         if room is None:
             await ws.close(4404, "Room not found")
             return

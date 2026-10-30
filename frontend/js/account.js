@@ -93,6 +93,7 @@ export function initAccount({ store }) {
   let tab = 'stats';
   let board = 'solo';
   let leaderboard = null;
+  let shownFor = null; // whose numbers the Stats and Players tabs hold
   let opened = 0; // the newest page opened; an older one's answer is dropped
 
   function showPane(name) {
@@ -117,6 +118,11 @@ export function initAccount({ store }) {
     if (!session) return;
     const mine = ++opened;
     tab = nextTab;
+    if (shownFor !== session.username) { // someone else's numbers must not show under this name
+      for (const sel of ['.record-mine', '.partners', '.board']) profile.querySelector(sel).replaceChildren();
+      profile.querySelector('.board-unranked').hidden = true;
+      leaderboard = null;
+    }
     setHero(session.username, true, '');
     showPane(tab);
     closeSheets();
@@ -126,6 +132,7 @@ export function initAccount({ store }) {
       const [stats, boards] = await Promise.all([fetchStats(session.username), fetchLeaderboard()]);
       if (mine !== opened) return;
       leaderboard = boards;
+      shownFor = session.username;
       setHero(stats.username, true, tagLine(stats));
       fillRecord(profile.querySelector('.record-mine'), stats);
       fillPartners(stats.partners);
@@ -262,11 +269,12 @@ export function initAccount({ store }) {
   async function check() {
     const session = store.getSession();
     if (!session) return;
+    const still = () => store.getSession()?.token === session.token; // not signed out or in again meanwhile
     try {
       const { username } = await me(session.token);
-      if (username !== session.username) store.setSession({ ...session, username });
+      if (still() && username !== session.username) store.setSession({ ...session, username });
     } catch (err) {
-      if (err.status === 401) store.clearSession();
+      if (still() && err.status === 401) store.clearSession();
     }
     sync();
   }

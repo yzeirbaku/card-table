@@ -23,10 +23,13 @@ export class RoomConnection {
   }
 
   connect() {
-    const ws = new this.WebSocketImpl(this.url(this.store.getToken(this.code)));
+    const session = this.store.getSession();
+    const ws = new this.WebSocketImpl(this.url(this.store.getToken(this.code), Boolean(session)));
     this.ws = ws;
     ws.onopen = () => {
       if (this.stopped || ws !== this.ws) return;
+      // The session goes first, as a message: a URL ends up in the server's logs.
+      if (session) ws.send(JSON.stringify({ type: 'session', session: session.token }));
       this.opened = true;
       this.attempt = 0;
       this.onReconnecting(false);
@@ -94,7 +97,7 @@ export class RoomConnection {
       ws.onopen = () => sendLeave(ws);
     } else if (token) {
       // Closed, retry pending: open one last socket just to leave.
-      const last = new this.WebSocketImpl(this.url(token));
+      const last = new this.WebSocketImpl(this.url(token, false)); // the seat token is enough to leave
       last.onopen = () => sendLeave(last);
       last.onmessage = () => {};
       last.onclose = () => {};
@@ -102,8 +105,8 @@ export class RoomConnection {
     this.forget();
   }
 
-  url(token) {
-    return this.urlFor(this.code, this.store.getName(), token, this.store.getSession()?.token ?? null);
+  url(token, signedIn) {
+    return this.urlFor(this.code, this.store.getName(), token, signedIn);
   }
 
   close() {
