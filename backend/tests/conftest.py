@@ -1,6 +1,12 @@
-import pytest
+import os
+import tempfile
 
-import app.rooms
+# Before anything imports app.main (whose module-level app opens the default database).
+os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(prefix="card-table-tests-"), "cards.db")
+
+import pytest  # noqa: E402
+
+import app.rooms  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
