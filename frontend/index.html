@@ -40,10 +40,9 @@
   </main>
 
   <section id="view-lobby" class="view felt" hidden>
-    <div class="lobby-top">
-      <p class="lobby-game"></p>
-      <button id="btn-lobby-rules" class="lobby-rules" type="button" aria-label="How to play">?</button>
-    </div>
+    <button id="btn-lobby-leave" class="lobby-corner lobby-leave" type="button" aria-label="Leave"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.5 2.5H3.5V13.5H6.5"/><path d="M7 8H13.5M11 5.5L13.5 8L11 10.5"/></svg></button>
+    <div class="lobby-top"><p class="lobby-game"></p></div>
+    <button id="btn-lobby-rules" class="lobby-corner lobby-rules" type="button" aria-label="How to play">?</button>
     <div id="btn-copy" class="lobby-plaque" role="button" tabindex="0" aria-label="Copy the table code">
       <span class="plaque-label">Table code</span>
       <span class="lobby-code"></span>
@@ -64,7 +63,6 @@
         <button type="button" data-level="hard">Hard</button>
       </div>
     </div>
-    <button id="btn-lobby-leave" class="btn ghost" type="button">Leave</button>
     <div class="lobby-start" hidden aria-live="assertive"><span class="lobby-start-num"></span><span class="lobby-start-text">Game starting…</span></div>
   </section>
 

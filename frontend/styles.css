@@ -86,9 +86,13 @@ input { font: inherit; }
 /* The lobby is the table seen from above: the chairs where everyone will sit, you at the bottom. */
 #view-lobby { --tw: min(270px, 68vw); --ring: 56px; --sw: 120px; /* table width, chair size, chair + name width */
               display: flex; flex-direction: column; align-items: center; gap: 8px; padding: max(24px, calc(env(safe-area-inset-top) + 8px)) 26px max(16px, env(safe-area-inset-bottom)); text-align: center; }
-.lobby-top { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 340px; }
+.lobby-top { display: flex; align-items: center; justify-content: center; min-height: 34px; width: 100%; max-width: 340px; } /* as tall as the corner buttons beside it */
 .lobby-game { min-height: 1.2em; line-height: 1.2; font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: #f0c75e; } /* keeps its line until the name comes */
-.lobby-rules { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid rgba(243,230,196,.6); font-family: Georgia, serif; font-size: 17px; font-weight: 800; }
+/* Leave (top-left) and How to play (top-right), level with the game's name */
+.lobby-corner { position: absolute; top: max(24px, calc(env(safe-area-inset-top) + 8px)); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid rgba(243,230,196,.6); }
+.lobby-leave { left: max(16px, calc(env(safe-area-inset-left) + 8px)); }
+.lobby-leave svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.lobby-rules { right: max(16px, calc(env(safe-area-inset-right) + 8px)); font-family: Georgia, serif; font-size: 17px; font-weight: 800; }
 /* The code on a brass plaque; tapping it copies the code. */
 .lobby-plaque { display: grid; justify-items: center; gap: 1px; width: 100%; max-width: 300px; padding: 10px 16px 12px; border-radius: 14px; cursor: pointer;
                 background: linear-gradient(#e8c56a, #b88a2c); color: #3a2a08; box-shadow: inset 0 0 0 2px rgba(255,240,190,.6), 0 4px 10px rgba(0,0,0,.35); }
@@ -143,7 +147,6 @@ input { font: inherit; }
             background: linear-gradient(#f3d27a, #e2b24a); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 3px rgba(0,0,0,.35);
             transition: transform 320ms cubic-bezier(.4, 0, .2, 1), width 320ms cubic-bezier(.4, 0, .2, 1); }
 .pill-ind.ready { opacity: 1; }
-#view-lobby .btn { max-width: 340px; margin-top: auto; }
 /* Every seat taken: 3 · 2 · 1 over the lobby, then the table. Taps go through (Leave, ✕ on a computer call it off). */
 .lobby-start { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
                background: rgba(0,0,0,.62); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); pointer-events: none; animation: start-in .25s ease-out; }
@@ -260,7 +263,9 @@ input { font: inherit; }
   .menu-card .tag { font-size: 25px; }
 
   #view-lobby { justify-content: safe center; }
-  #view-lobby .btn { max-width: 240px; margin-top: 16px; }
+  .lobby-corner { top: 24px; }
+  .lobby-leave { left: 26px; }
+  .lobby-rules { right: 26px; }
 
   .account-chip { top: 22px; right: 26px; padding: 9px 18px; font-size: 17px; }
   .env-btn { top: 22px; left: 26px; padding: 9px 18px; font-size: 17px; }
@@ -276,9 +281,11 @@ input { font: inherit; }
 @media (min-width: 900px) and (min-height: 950px) {
   #view-lobby { --tw: 400px; --ring: 72px; --sw: 170px; justify-content: safe center; gap: 12px;
                 padding-top: max(40px, env(safe-area-inset-top)); padding-bottom: max(30px, env(safe-area-inset-bottom)); }
-  .lobby-top { max-width: 560px; }
+  .lobby-top { min-height: 44px; max-width: 560px; }
   .lobby-game { font-size: 34px; }
-  .lobby-rules { width: 44px; height: 44px; font-size: 22px; }
+  .lobby-corner { top: max(40px, env(safe-area-inset-top)); width: 44px; height: 44px; }
+  .lobby-leave svg { width: 20px; height: 20px; }
+  .lobby-rules { font-size: 22px; }
   .lobby-plaque { max-width: 460px; padding: 14px 24px 16px; border-radius: 18px; }
   .plaque-label { font-size: 13px; }
   .lobby-code { font-size: 72px; }
@@ -296,7 +303,6 @@ input { font: inherit; }
   .lobby-level { gap: 8px; }
   .lobby-level-label { font-size: 16px; }
   .pills button { padding: 11px 30px; font-size: 18px; }
-  #view-lobby .btn { max-width: 240px; margin-top: 16px; padding: 13px; font-size: 18px; }
 }
 
 /* ---------- table ---------- */
