@@ -205,6 +205,8 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
             return False
         if kind == "leave":
             room.leave(player.id)
+            if player.user_id is not None:
+                invites.drop_from(room.code, player.name)
             player.socket = None
             with suppress(Exception):
                 await ws.close(1000, "Left the room")

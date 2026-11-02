@@ -345,7 +345,7 @@ export function initAccount({ store, onSessionChange = () => {} }) {
 
   sync();
   check();
-  return { sync, openProfile };
+  return { sync, openProfile, refreshFriends: () => { if (store.getSession()) friends.load(); } };
 }
 
 function row(cells, tag = 'td') {

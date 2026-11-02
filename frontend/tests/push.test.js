@@ -30,6 +30,17 @@ test('pushSupport: an iPhone Safari tab must be added to the home screen first',
   assert.equal(pushSupport(env({ ua: IPHONE, push: false, standalone: false })), 'ios-browser');
 });
 
+const IPAD = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.5 Safari/605.1.15';
+
+test('pushSupport: iPadOS Safari (a Mac user agent with a touch screen) gets the home screen hint', () => {
+  const tab = env({ ua: IPAD, push: false, standalone: false });
+  tab.navigator.maxTouchPoints = 5;
+  assert.equal(pushSupport(tab), 'ios-browser');
+  const mac = env({ ua: IPAD, push: false });
+  mac.navigator.maxTouchPoints = 0;
+  assert.equal(pushSupport(mac), 'unsupported');
+});
+
 test('pushSupport: the iPhone home-screen app is ok', () => {
   assert.equal(pushSupport(env({ ua: IPHONE, standalone: true })), 'ok');
 });

@@ -106,6 +106,24 @@ def test_invite_disappears_when_the_friend_joins(client, pair):
         assert invites_of(client, b) == []  # and stays gone after they leave
 
 
+def test_invite_goes_when_the_inviter_leaves(client, pair):
+    a, b = pair
+    c, d = register(client, "Cem"), register(client, "Dan")
+    befriend(client, c, b, "Ben")
+    befriend(client, a, d, "Dan")
+    code = new_table(client)
+    with connect(client, code, session=c) as ws_c:
+        join(ws_c)
+        invite(client, code, c, "Ben")
+        with connect(client, code, session=a) as ws:
+            join(ws)
+            invite(client, code, a, "Dan")
+            assert len(invites_of(client, d)) == 1
+            send(ws, type="leave")
+            assert invites_of(client, d) == []
+            assert [i["from"] for i in invites_of(client, b)] == ["Cem"]
+
+
 def test_invite_disappears_when_the_game_starts(client, pair):
     a, b = pair
     code = new_table(client, 2)

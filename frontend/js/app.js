@@ -176,7 +176,7 @@ initMain({ store, enterRoom, applySettings });
 account = initAccount({ store, onSessionChange: () => invites?.refresh() });
 invites = initInvites({ store, onJoin: goToInvite });
 onViewShown((name) => { if (name === 'main') invites.refresh(); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') invites.refresh(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { invites.refresh(); account.refreshFriends(); } });
 const invite = initInviteFriends({ store, gameName });
 initLobby({ onLeave: leaveRoom, send, signedIn: () => Boolean(store.getSession()), onInvite: (state) => state && invite.open(state) });
 initTable({ onLeave: leaveRoom, send });
@@ -196,6 +196,7 @@ if ('serviceWorker' in navigator) {
       launch(readLaunch(new URL(msg.url, location.origin).search));
     } else if (msg?.type === 'push') {
       invites.refresh();
+      if (msg.tag?.startsWith('request-')) account.refreshFriends();
       const onMain = !document.getElementById('view-main').hidden && document.visibilityState === 'visible';
       // the envelope shows an invite; a friend request has no sign on this screen yet, so its notification stays
       if (onMain && msg.tag?.startsWith('invite-')) closeNotifications(msg.tag);

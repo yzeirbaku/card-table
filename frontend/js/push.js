@@ -7,7 +7,9 @@ import { fetchPushKey, pushStatus, pushSubscribe, pushUnsubscribe } from './api.
 export function pushSupport(env = globalThis) {
   const nav = env.navigator ?? {};
   const hasPush = Boolean(env.PushManager);
-  if (/iPhone|iPad/.test(nav.userAgent ?? '') && !hasPush) {
+  const ua = nav.userAgent ?? '';
+  const ipad = /Macintosh/.test(ua) && nav.maxTouchPoints > 1;
+  if ((/iPhone|iPad/.test(ua) || ipad) && !hasPush) {
     const standalone = nav.standalone === true || Boolean(env.matchMedia?.('(display-mode: standalone)').matches);
     if (!standalone) return 'ios-browser';
   }

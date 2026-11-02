@@ -42,6 +42,12 @@ class Invites:
     def dismiss(self, user_id: int, code: str) -> None:
         self.sent.pop((code, user_id), None)
 
+    def drop_from(self, code: str, from_name: str) -> None:
+        """Drop the invites to this room that this person sent (they left the table)."""
+        for key, inv in list(self.sent.items()):
+            if inv.code == code and inv.from_name.casefold() == from_name.casefold():
+                del self.sent[key]
+
     def prune(self, code: str, keep: Callable[[int], bool]) -> None:
         """Drop the invites to this room whose friend `keep` refuses."""
         for key, inv in list(self.sent.items()):

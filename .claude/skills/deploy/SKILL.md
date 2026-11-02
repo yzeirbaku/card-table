@@ -67,17 +67,23 @@ Invites and friend requests go out as web pushes, signed with a VAPID key pair
 that lives only in the VM's `.env`. `pywebpush` is a new dependency; the image
 rebuild installs it.
 
-1. Deploy as usual first, so the image has the new code.
-2. Generate the keys: `sudo docker exec card-table-backend python -m app.push generate-keys`
-   (prints `VAPID_PUBLIC_KEY=...` and `VAPID_PRIVATE_KEY=...`).
-3. Add both lines plus `VAPID_SUBJECT=mailto:yzeirbaku@hotmail.com` to
-   `~/apps/card-table/.env`.
-4. Check that the container actually receives `.env`. If the compose file only
+Do this in one go, so the backend restarts only once and the frontend never
+runs ahead of it (the frontend goes live on merge; until the backend follows,
+the Friends tab, Invite friends and Turn on all fail with "Not Found").
+
+1. **Before merging**, generate the keys on any machine with the backend venv:
+   `cd backend && .venv/Scripts/python -m app.push generate-keys` (prints
+   `VAPID_PUBLIC_KEY=...` and `VAPID_PRIVATE_KEY=...`). Keep a copy of both
+   somewhere safe, never in git.
+2. Still before merging, add both lines plus
+   `VAPID_SUBJECT=mailto:yzeirbaku@hotmail.com` to `~/apps/card-table/.env` on the VM.
+3. Check that the container actually receives `.env`. If the compose file only
    interpolates it (`${...}` in `environment:`), add `env_file: .env` under
-   `backend:`. Verify with
-   `sudo docker exec card-table-backend printenv VAPID_SUBJECT` after step 5.
-5. Restart so it picks them up: `sudo docker compose up -d --force-recreate backend`,
-   then restart Caddy as in the procedure below.
+   `backend:`.
+4. Merge the PR and deploy the backend right after (see Procedure). A deploy
+   ends live games, so pick a quiet time.
+5. Verify: `sudo docker exec card-table-backend printenv | grep -c VAPID` prints
+   `3`, and `GET https://yzeir-cards.duckdns.org/push/key` returns a non-null key.
 
 **Never change the keys afterwards:** every phone's subscription was made
 against the public key, and a new pair makes them all silently stop working
