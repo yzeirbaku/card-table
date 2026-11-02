@@ -61,6 +61,30 @@ backup can't sign anyone in.
 `sudo docker exec -it card-table-backend python -m app.accounts reset-password <username>`.
 It signs that account out on every phone.
 
+### Push notifications (one-time setup, with the first deploy of friends and invites)
+
+Invites and friend requests go out as web pushes, signed with a VAPID key pair
+that lives only in the VM's `.env`. `pywebpush` is a new dependency; the image
+rebuild installs it.
+
+1. Deploy as usual first, so the image has the new code.
+2. Generate the keys: `sudo docker exec card-table-backend python -m app.push generate-keys`
+   (prints `VAPID_PUBLIC_KEY=...` and `VAPID_PRIVATE_KEY=...`).
+3. Add both lines plus `VAPID_SUBJECT=mailto:yzeirbaku@hotmail.com` to
+   `~/apps/card-table/.env`.
+4. Check that the container actually receives `.env`. If the compose file only
+   interpolates it (`${...}` in `environment:`), add `env_file: .env` under
+   `backend:`. Verify with
+   `sudo docker exec card-table-backend printenv VAPID_SUBJECT` after step 5.
+5. Restart so it picks them up: `sudo docker compose up -d --force-recreate backend`,
+   then restart Caddy as in the procedure below.
+
+**Never change the keys afterwards:** every phone's subscription was made
+against the public key, and a new pair makes them all silently stop working
+(people would have to turn notifications off and on again). Keep a copy of the
+three lines somewhere safe. Without the keys the app still runs; it just sends
+no pushes.
+
 Caddy lives in `~/apps/net-tracker/` (root-owned Caddyfile, edit with sudo):
 `yzeir-cards.duckdns.org { reverse_proxy card-table-backend:8000; encode gzip }`.
 VM deploy key: `~/.ssh/github_card_table`, registered at

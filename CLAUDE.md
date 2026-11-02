@@ -24,6 +24,10 @@ Murlan (the first game) is `2026-10-14-murlan-design.md`, accounts and stats
   does I/O: a finished game goes out as a `GameRecord` through `Room.record`,
   and only when a winner is clear. Guests play without an account. Sessions are
   bearer tokens, not cookies (the frontend is on another site).
+- **Friends and invites** (spec `2026-11-02-friends-and-invites-design.md`):
+  friends and push subscriptions are in SQLite (migration 2); invites live in
+  memory next to the rooms; a push carries only the invite (`from`, game,
+  players, code).
 - **The Murlan game is pure Python** (`backend/app/murlan/game.py`): injected
   clock and RNG, no I/O. Timed events (reveals, the 2:00 pause) run off
   `game.deadline()` / `game.tick()`; `app/timers.py` wakes the room for them.
