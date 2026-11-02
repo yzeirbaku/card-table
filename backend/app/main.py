@@ -18,7 +18,8 @@ from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, WebSocketD
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from .accounts import MAX_PASSWORD, AccountError, Accounts
+from .accounts import MAX_PASSWORD, AccountError, Accounts, User
+from .friends import Friends
 from .db import default_db_path, open_db
 from .games import GAMES
 from .murlan.game import Rejected
@@ -46,6 +47,10 @@ class CreateRoom(BaseModel):
 SESSION_WAIT_SECONDS = 10.0  # a signed-in phone sends its session first thing after connecting
 
 
+class Username(BaseModel):
+    username: str = Field(max_length=20)
+
+
 class Credentials(BaseModel):
     username: str = Field(max_length=20)  # oversized input never reaches the hashing
     password: str = Field(max_length=MAX_PASSWORD)
@@ -61,13 +66,14 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
     rooms = manager or RoomManager()
     db = db if db is not None else open_db(default_db_path())
     accounts = Accounts(db)
+    friends = Friends(db)
     rooms.record = lambda record: save_game(db, record, time.time())
     timers: dict[int, RoomTimer] = {}  # by id(room): a purged room's timer can't be reused
     app = FastAPI(title="Card Table")
     app.add_middleware(
         CORSMiddleware,
         allow_origin_regex=os.environ.get("CORS_ORIGIN_REGEX", DEV_ORIGINS),
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Content-Type", "Authorization"],
     )
 
@@ -248,6 +254,47 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
         if user is None:
             raise HTTPException(401, "Signed out")
         return {"username": user.username}
+
+    def current_user(authorization: str | None) -> User:
+        user = accounts.user_for(bearer_token(authorization))
+        if user is None:
+            raise HTTPException(401, "Signed out")
+        return user
+
+    def friend_action(authorization: str | None, act) -> dict[str, Any]:
+        user = current_user(authorization)
+        try:
+            return act(user)
+        except AccountError as e:
+            raise HTTPException(e.status, str(e)) from None
+
+    @app.get("/friends")
+    async def friends_overview(authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, friends.overview)
+
+    @app.post("/friends/requests")
+    async def friend_request(body: Username, authorization: str | None = Header(None)) -> dict[str, Any]:
+        def act(user: User) -> dict[str, Any]:
+            result, _ = friends.request(user, body.username)
+            return {"result": result, **friends.overview(user)}
+
+        return friend_action(authorization, act)
+
+    @app.post("/friends/requests/{username}/accept")
+    async def friend_accept(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, lambda u: (friends.accept(u, username), friends.overview(u))[1])
+
+    @app.post("/friends/requests/{username}/decline")
+    async def friend_decline(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, lambda u: (friends.decline(u, username), friends.overview(u))[1])
+
+    @app.delete("/friends/requests/{username}")
+    async def friend_cancel(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, lambda u: (friends.cancel(u, username), friends.overview(u))[1])
+
+    @app.delete("/friends/{username}")
+    async def friend_remove(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, lambda u: (friends.remove(u, username), friends.overview(u))[1])
 
     @app.get("/stats/{username}")
     async def stats(username: str) -> dict[str, Any]:
