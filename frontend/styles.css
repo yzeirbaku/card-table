@@ -174,7 +174,9 @@ input { font: inherit; }
 
 /* The Profile page: your card on the felt, a cream page of numbers under it. */
 #view-profile { display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
-.profile-bar { display: flex; padding: 10px 12px 0; }
+.profile-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 0 12px; }
+/* Sign out, opposite the back arrow: the same pill as the name chip on the main screen */
+.profile-signout { padding: 7px 14px; border-radius: 999px; background: rgba(0,0,0,.35); border: 1px solid rgba(243,230,196,.4); font-size: 14px; font-weight: 700; }
 .profile-back { padding: 4px 12px; font-size: 30px; line-height: 1; color: #f0c75e; }
 .profile-hero { display: flex; align-items: center; gap: 18px; padding: 6px 22px 16px; }
 .profile-card { position: relative; flex: none; width: 84px; aspect-ratio: 320 / 466; border-radius: 7px; background: #fffdf7; color: #b3121f; rotate: -5deg;
@@ -185,9 +187,14 @@ input { font: inherit; }
 .pc-mid { position: absolute; inset: 0; display: grid; place-items: center; font-size: 38px; color: #1a1a1a; }
 .profile-who { min-width: 0; }
 .profile-name { overflow-wrap: anywhere; font-family: Georgia, serif; font-size: 26px; color: #f0c75e; }
-.profile-tag { margin-top: 3px; font-size: 13px; opacity: .8; }
-.profile-tabs { display: flex; gap: 8px; padding: 0 16px 12px; }
-.profile-tabs button { padding: 8px 16px; border-radius: 999px; background: rgba(0,0,0,.28); font-size: 14px; font-weight: 700; }
+.profile-tag { min-height: 1.3em; margin-top: 3px; font-size: 13px; line-height: 1.3; opacity: .8; } /* holds its line while the numbers load */
+.profile-tag.arrive { animation: tag-in .25s ease-out; }
+@keyframes tag-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .profile-tag.arrive { animation: none; } }
+.profile-row { padding: 0 16px 12px; }
+.profile-tabs { display: flex; gap: 8px; }
+.profile-row .friend-state { height: 34px; margin-top: 0; padding: 0 16px; font-size: 14px; } /* as tall as a tab, so the white panel starts at the same height */
+.profile-tabs button { height: 34px; padding: 0 16px; border-radius: 999px; background: rgba(0,0,0,.28); font-size: 14px; font-weight: 700; }
 .profile-tabs button.on { background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; }
 .profile-page { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 560px; margin: 0 auto; padding: 16px 16px max(20px, env(safe-area-inset-bottom));
                 background: #fffdf7; color: #1a1a1a; border-radius: 18px 18px 0 0; box-shadow: 0 -4px 18px rgba(0,0,0,.3); }
@@ -248,7 +255,6 @@ input { font: inherit; }
 .stat-empty, .stat-note { font-size: 13px; color: #6b5f4a; }
 .stat-note { margin-top: auto; padding-top: 12px; text-align: center; font-size: 12px; }
 .inline-link { padding: 0; font-weight: 700; color: #1d5a37; text-decoration: underline; text-underline-offset: 2px; }
-.sign-out { margin-top: auto; padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; font-size: 15px; font-weight: 700; color: #6b5f4a; }
 
 /* ---------- desktop: same layout, sized for a big screen ---------- */
 @media (min-width: 900px) and (min-height: 600px) {
@@ -270,7 +276,7 @@ input { font: inherit; }
   .account-chip { top: 22px; right: 26px; padding: 9px 18px; font-size: 17px; }
   .env-btn { top: 22px; left: 26px; padding: 9px 18px; font-size: 17px; }
   .chip-initial { width: 30px; height: 30px; font-size: 16px; }
-  .profile-bar, .profile-hero, .profile-tabs { width: 100%; max-width: 560px; margin: 0 auto; }
+  .profile-bar, .profile-hero, .profile-row { width: 100%; max-width: 560px; margin: 0 auto; }
   .profile-card { width: 110px; }
   .pc-mid { font-size: 50px; }
   .profile-name { font-size: 34px; }
@@ -333,9 +339,14 @@ input { font: inherit; }
 /* Three columns with equal sides, so the scores sit on the table's centre line, above the top player and the hand. */
 .table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 14px;
              background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); color: var(--plate-fg); font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
-.table-menu-btn { justify-self: start; width: 34px; height: 100%; font-size: 18px; }
+/* Over the bar's left end; out at the screen's edge when the frame is inset for a notch (16px clears the rounded corner). */
+.table-menu-btn { position: absolute; top: 0; left: min(14px, calc(16px - var(--bleed-l))); z-index: 6; width: 34px; height: var(--bar); font-size: 18px; color: var(--plate-fg); }
 @container (max-height: 500px) { .table-menu-btn { width: 44px; font-size: 26px; line-height: 1; } } /* phones: a bigger target for a thumb */
-.table-menu { position: absolute; top: calc(var(--bar) + 4px); left: 14px; z-index: 10; overflow: hidden; border-radius: 10px; background: #fffdf7; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+/* Turned for an upright phone, the frame's left is the screen's top: stay clear of the status bar there. */
+#view-table.rotated :is(.table-menu-btn, .table-menu) { left: 14px; }
+/* Under a table popup it dims with the bar (the popup's shade can't reach it out here). */
+.table-frame:has(> .table > .confirm:not([hidden])) > .table-menu-btn { filter: brightness(.55); }
+.table-menu { position: absolute; top: calc(var(--bar) + 4px); left: min(14px, calc(16px - var(--bleed-l))); z-index: 10; overflow: hidden; border-radius: 10px; background: #fffdf7; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 .table-menu button { display: block; padding: 12px 18px; color: #1a1a1a; font-weight: 700; }
 .seat { position: absolute; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .seat-top { top: calc(var(--bar) + 10px); left: 50%; transform: translateX(-50%); }
@@ -371,7 +382,7 @@ input { font: inherit; }
 .stamp.landing { animation: stamp .3s cubic-bezier(.3, 1.4, .5, 1); }
 @keyframes stamp { from { opacity: 0; scale: 1.8; } }
 /* Names shrink (ellipsis) so the scores always show; no overflow clip, so the +N under a score shows too. */
-.scoreboard { display: flex; justify-content: center; align-items: center; gap: 6px; min-width: 0; max-width: 50cqw; white-space: nowrap; }
+.scoreboard { grid-column: 2; display: flex; justify-content: center; align-items: center; gap: 6px; min-width: 0; max-width: 50cqw; white-space: nowrap; }
 .scoreboard span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .scoreboard .sep { flex: none; }
 .scoreboard b { flex: none; font-size: 15px; color: var(--plate-count); }

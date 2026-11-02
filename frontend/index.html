@@ -74,16 +74,17 @@
         <div class="prop cup"></div><div class="prop glass"></div><div class="prop cay"></div><div class="prop candle"></div><div class="prop aeble"></div>
       </div>
       <div class="bar-bleed"></div>
+      <!-- Outside .table, which clips to the safe area: in landscape the menu sits out by the screen's edge, past the notch strip. -->
+      <button id="btn-table-menu" class="table-menu-btn" type="button" aria-label="Menu">☰</button>
+      <div id="table-menu" class="table-menu" hidden>
+        <button id="btn-fullscreen" type="button" hidden>Full screen</button>
+        <button id="btn-table-rules" type="button">How to play</button>
+        <button id="btn-table-leave" type="button">Leave table</button>
+      </div>
       <div class="table">
         <div class="table-bar">
-          <button id="btn-table-menu" class="table-menu-btn" type="button" aria-label="Menu">☰</button>
           <p class="scoreboard"></p>
           <span class="score-round"></span>
-        </div>
-        <div id="table-menu" class="table-menu" hidden>
-          <button id="btn-fullscreen" type="button" hidden>Full screen</button>
-          <button id="btn-table-rules" type="button">How to play</button>
-          <button id="btn-table-leave" type="button">Leave table</button>
         </div>
         <div class="thrown-layer"></div>
         <div class="seats"></div>
@@ -150,19 +151,22 @@
   </section>
 
   <section id="view-profile" class="view felt" hidden>
-    <div class="profile-bar"><button id="btn-profile-back" class="profile-back" type="button" aria-label="Back">‹</button></div>
+    <div class="profile-bar"><button id="btn-profile-back" class="profile-back" type="button" aria-label="Back">‹</button><button id="btn-sign-out" class="profile-signout" type="button">Sign out</button></div>
     <div class="profile-hero">
       <div class="profile-card" aria-hidden="true">
         <span class="pc-corner"><span class="pc-initial"></span><span class="pc-suit"></span></span>
         <span class="pc-mid pc-initial"></span>
         <span class="pc-corner pc-bottom"><span class="pc-initial"></span><span class="pc-suit"></span></span>
       </div>
-      <div class="profile-who"><h2 class="profile-name"></h2><p class="profile-tag"></p><div class="friend-slot"></div></div>
+      <div class="profile-who"><h2 class="profile-name"></h2><p class="profile-tag"></p></div>
     </div>
-    <div class="profile-tabs" role="tablist">
-      <button type="button" role="tab" data-tab="stats">Stats</button>
-      <button type="button" role="tab" data-tab="players">Players</button>
-      <button type="button" role="tab" data-tab="friends">Friends<span class="count-badge" hidden></span></button>
+    <div class="profile-row"><!-- your tabs, or on someone else's page the friend button, at the same height -->
+      <div class="profile-tabs" role="tablist">
+        <button type="button" role="tab" data-tab="stats">Stats</button>
+        <button type="button" role="tab" data-tab="players">Players</button>
+        <button type="button" role="tab" data-tab="friends">Friends<span class="count-badge" hidden></span></button>
+      </div>
+      <div class="friend-slot" hidden></div>
     </div>
     <div class="profile-page">
       <div class="profile-pane" data-pane="stats">
@@ -171,7 +175,6 @@
         <h3>Partners</h3>
         <table class="stat-table partners"></table>
         <p class="stat-empty partners-empty" hidden>No 4-player games yet</p>
-        <button id="btn-sign-out" class="sign-out" type="button">Sign out</button>
       </div>
       <div class="profile-pane" data-pane="players" hidden>
         <div class="seg" role="group" aria-label="Which games">

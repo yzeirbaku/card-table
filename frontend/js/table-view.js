@@ -270,6 +270,11 @@ function showModal(dialog, open) {
   dialog.hidden = !open;
   const up = document.querySelector('.table > .confirm:not([hidden])');
   for (const el of document.querySelector('.table').children) el.inert = up !== null && el !== up;
+  // the menu sits outside .table (out by the screen's edge in landscape) but goes quiet with the rest
+  const menu = document.getElementById('table-menu');
+  const menuButton = document.getElementById('btn-table-menu');
+  menuButton.inert = menu.inert = up !== null;
+  if (up) menu.hidden = true;
 }
 
 function showLeaveConfirm(open) {
