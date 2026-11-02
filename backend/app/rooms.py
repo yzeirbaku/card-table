@@ -129,6 +129,11 @@ class Room:
             self.creator_id = player.id
         return player
 
+    def open_to(self, user_id: int) -> bool:
+        """Could this account still join: a lobby with a free place, and they're not here already."""
+        return (self.game is None and len(self.players) < self.seats
+                and not any(p.user_id == user_id for p in self.players))
+
     def holder(self, token: str | None) -> Player | None:
         """Who this seat token belongs to, if anyone here."""
         if token:

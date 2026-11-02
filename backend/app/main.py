@@ -12,16 +12,20 @@ import sqlite3
 import time
 from contextlib import suppress
 from dataclasses import asdict
+from types import EllipsisType
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from .accounts import MAX_PASSWORD, AccountError, Accounts
+from .accounts import MAX_PASSWORD, AccountError, Accounts, User
+from .friends import Friends
 from .db import default_db_path, open_db
 from .games import GAMES
+from .invites import Invite, Invites
 from .murlan.game import Rejected
+from .push import Push, PushKeys, Sender, keys_from_env
 from .rooms import JoinRejected, Player, Room, RoomManager
 from .stats import head_to_head, leaderboard, save_game, stats_for
 from .timers import RoomTimer
@@ -46,6 +50,18 @@ class CreateRoom(BaseModel):
 SESSION_WAIT_SECONDS = 10.0  # a signed-in phone sends its session first thing after connecting
 
 
+class Username(BaseModel):
+    username: str = Field(max_length=20)
+
+
+class Endpoint(BaseModel):
+    endpoint: str = Field(max_length=1000)
+
+
+class Subscription(BaseModel):
+    subscription: dict
+
+
 class Credentials(BaseModel):
     username: str = Field(max_length=20)  # oversized input never reaches the hashing
     password: str = Field(max_length=MAX_PASSWORD)
@@ -57,17 +73,23 @@ def bearer_token(authorization: str | None) -> str | None:
 
 
 def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
-               db: sqlite3.Connection | None = None) -> FastAPI:
+               db: sqlite3.Connection | None = None,
+               push_keys: PushKeys | None | EllipsisType = ...,
+               push_send: Sender | None = None) -> FastAPI:
     rooms = manager or RoomManager()
     db = db if db is not None else open_db(default_db_path())
     accounts = Accounts(db)
+    friends = Friends(db)
+    invites = Invites(rooms.clock)
+    push_args = {"send": push_send} if push_send else {}
+    push = Push(db, keys_from_env() if push_keys is ... else push_keys, **push_args)
     rooms.record = lambda record: save_game(db, record, time.time())
     timers: dict[int, RoomTimer] = {}  # by id(room): a purged room's timer can't be reused
     app = FastAPI(title="Card Table")
     app.add_middleware(
         CORSMiddleware,
         allow_origin_regex=os.environ.get("CORS_ORIGIN_REGEX", DEV_ORIGINS),
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Content-Type", "Authorization"],
     )
 
@@ -107,6 +129,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
         reactions, room.bot_reactions = room.bot_reactions, []
         for player_id, reaction in reactions:  # a computer's emoji, at what everyone has just seen
             await send_reaction(room, player_id, reaction)
+        invites.prune(room.code, room.open_to)  # a table that filled or started takes its invites with it
         if use_timers:
             schedule(room)
 
@@ -151,6 +174,7 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
 
     async def close_expired() -> None:
         for room in rooms.purge_expired():
+            invites.prune(room.code, lambda _: False)
             timer = timers.pop(id(room), None)
             if timer is not None:
                 timer.cancel()
@@ -181,6 +205,8 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
             return False
         if kind == "leave":
             room.leave(player.id)
+            if player.user_id is not None:
+                invites.drop_from(room.code, player.name)
             player.socket = None
             with suppress(Exception):
                 await ws.close(1000, "Left the room")
@@ -248,6 +274,118 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
         if user is None:
             raise HTTPException(401, "Signed out")
         return {"username": user.username}
+
+    def current_user(authorization: str | None) -> User:
+        user = accounts.user_for(bearer_token(authorization))
+        if user is None:
+            raise HTTPException(401, "Signed out")
+        return user
+
+    def friend_action(authorization: str | None, act) -> dict[str, Any]:
+        user = current_user(authorization)
+        try:
+            return act(user)
+        except AccountError as e:
+            raise HTTPException(e.status, str(e)) from None
+
+    @app.get("/friends")
+    async def friends_overview(authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, friends.overview)
+
+    @app.post("/friends/requests")
+    async def friend_request(body: Username, background: BackgroundTasks,
+                             authorization: str | None = Header(None)) -> dict[str, Any]:
+        def act(user: User) -> dict[str, Any]:
+            result, target = friends.request(user, body.username)
+            sent[:] = [(user, target)] if result == "sent" else []
+            return {"result": result, **friends.overview(user)}
+
+        sent: list[tuple[User, User]] = []
+        response = friend_action(authorization, act)
+        if sent and push.allow_once(("request", sent[0][0].id, sent[0][1].id), 86400):
+            background.add_task(push.notify, sent[0][1].id, {"type": "request", "from": sent[0][0].username})
+        return response
+
+    @app.post("/rooms/{code}/invite")
+    async def invite_friend(code: str, body: Username, background: BackgroundTasks,
+                            authorization: str | None = Header(None)) -> dict[str, Any]:
+        user = current_user(authorization)
+        room = rooms.get(code)
+        if room is None:
+            raise HTTPException(404, "Table not found")
+        if not any(p.user_id == user.id for p in room.players):
+            raise HTTPException(403, "You're not at this table")
+        target = friends.user_named(body.username)
+        if target is None:
+            raise HTTPException(404, "No such player")
+        if not friends.are_friends(user.id, target.id):
+            raise HTTPException(403, "Only friends can be invited")
+        if room.game is not None:
+            raise HTTPException(409, "The game has started")
+        if any(p.user_id == target.id for p in room.players):
+            raise HTTPException(409, f"{target.username} is already here")
+        if len(room.players) >= room.seats:
+            raise HTTPException(409, "The table is full")
+        name = GAMES[room.game_id].name
+        if not invites.add(Invite(room.code, user.username, target.id, name, room.seats, rooms.clock())):
+            raise HTTPException(429, "Invited just now, wait a moment")
+        background.add_task(push.notify, target.id, {
+            "type": "invite", "from": user.username, "game": name, "players": room.seats, "code": room.code})
+        return {}
+
+    def table_is_open(code: str, user_id: int) -> bool:
+        room = rooms.get(code)
+        return room is not None and room.open_to(user_id)
+
+    @app.get("/invites")
+    async def my_invites(authorization: str | None = Header(None)) -> list[dict[str, Any]]:
+        user = current_user(authorization)
+        return [{"from": i.from_name, "game": i.game, "players": i.players, "code": i.code}
+                for i in invites.pending(user.id, table_is_open)]
+
+    @app.post("/invites/{code}/dismiss")
+    async def dismiss_invite(code: str, authorization: str | None = Header(None)) -> dict[str, Any]:
+        invites.dismiss(current_user(authorization).id, code.upper())
+        return {}
+
+    @app.post("/friends/requests/{username}/accept")
+    async def friend_accept(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, lambda u: (friends.accept(u, username), friends.overview(u))[1])
+
+    @app.post("/friends/requests/{username}/decline")
+    async def friend_decline(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, lambda u: (friends.decline(u, username), friends.overview(u))[1])
+
+    @app.delete("/friends/requests/{username}")
+    async def friend_cancel(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, lambda u: (friends.cancel(u, username), friends.overview(u))[1])
+
+    @app.delete("/friends/{username}")
+    async def friend_remove(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
+        return friend_action(authorization, lambda u: (friends.remove(u, username), friends.overview(u))[1])
+
+    @app.get("/push/key")
+    async def push_key() -> dict[str, Any]:
+        return {"key": push.keys.public if push.keys else None}
+
+    @app.post("/push/subscribe")
+    async def push_subscribe(body: Subscription, authorization: str | None = Header(None)) -> dict[str, Any]:
+        user = current_user(authorization)
+        try:
+            push.subscribe(user, bearer_token(authorization) or "", body.subscription)
+        except AccountError as e:
+            raise HTTPException(e.status, str(e)) from None
+        return {}
+
+    @app.post("/push/unsubscribe")
+    async def push_unsubscribe(body: Endpoint) -> dict[str, Any]:
+        push.unsubscribe(body.endpoint)
+        return {}
+
+    @app.post("/push/status")
+    async def push_status(body: Endpoint, authorization: str | None = Header(None)) -> dict[str, Any]:
+        current_user(authorization)
+        return {"on": push.is_on(bearer_token(authorization) or "", body.endpoint)}
 
     @app.get("/stats/{username}")
     async def stats(username: str) -> dict[str, Any]:

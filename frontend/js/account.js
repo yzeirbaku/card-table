@@ -1,18 +1,21 @@
 import { fetchHeadToHead, fetchLeaderboard, fetchStats, login, logout, me, register } from './api.js';
+import { initFriends } from './friends.js';
+import { turnPushOff } from './push.js';
 import { openSheet, closeSheets } from './sheets.js';
+import { relationOf } from './social.js';
 import { initial, partnerLabel, rate, record, tagLine } from './stats-format.js';
-import { showView, toast } from './ui.js';
+import { askConfirm, showView, toast } from './ui.js';
 
 // Accounts on the phone: the chip on the main screen, the Sign in sheet and the Profile page
 // (your stats, the leaderboard, a friend's head-to-head). Guests never need any of it.
 
-export function initAccount({ store }) {
+export function initAccount({ store, onSessionChange = () => {} }) {
   const chip = document.getElementById('btn-account');
   const nameInput = document.getElementById('name-input');
   const nameLabel = document.getElementById('name-label');
   const profile = document.getElementById('view-profile');
 
-  /** The main screen as signed in or out: the chip, and the name you play under. */
+  /** The main screen as signed in or out: the chip, and the name you play under. Runs on every sign-in and sign-out. */
   function sync() {
     const session = store.getSession();
     chip.querySelector('.chip-initial').hidden = !session;
@@ -23,6 +26,7 @@ export function initAccount({ store }) {
     nameInput.closest('.name-field').classList.toggle('signed-in', Boolean(session));
     nameLabel.textContent = session ? 'Playing as' : 'Your name';
     nameInput.value = session ? session.username : store.getName();
+    onSessionChange();
   }
 
   chip.addEventListener('click', () => {
@@ -79,6 +83,7 @@ export function initAccount({ store }) {
       store.setSession(session);
       closeSheets();
       sync();
+      friends.load();
       toast(mode === 'login' ? `Signed in as ${session.username}` : `Welcome, ${session.username}`);
     } catch (err) {
       error.textContent = err.message;
@@ -90,11 +95,21 @@ export function initAccount({ store }) {
 
   // ---- the Profile page ----
 
+  const friends = initFriends({
+    store,
+    openPlayer: (name) => openPlayer(name),
+    onChange: () => {
+      chip.querySelector('.chip-dot').hidden = friends.overview().incoming.length === 0;
+      renderFriendState();
+    },
+  });
+
   let tab = 'stats';
   let board = 'solo';
   let leaderboard = null;
   let shownFor = null; // whose numbers the Stats and Players tabs hold
   let opened = 0; // the newest page opened; an older one's answer is dropped
+  let playerName = null; // whose page is up, for the friend button
 
   function showPane(name) {
     for (const pane of profile.querySelectorAll('.profile-pane')) pane.hidden = pane.dataset.pane !== name;
@@ -103,6 +118,8 @@ export function initAccount({ store }) {
       b.classList.toggle('on', b.dataset.tab === name);
       b.setAttribute('aria-selected', String(b.dataset.tab === name));
     }
+    if (name !== 'player') playerName = null;
+    if (name === 'friends') friends.render();
   }
 
   function setHero(name, mine, tag) {
@@ -125,6 +142,7 @@ export function initAccount({ store }) {
     }
     setHero(session.username, true, '');
     showPane(tab);
+    friends.load();
     closeSheets();
     showView('profile');
     profile.scrollTop = 0;
@@ -148,6 +166,8 @@ export function initAccount({ store }) {
     const mine = ++opened;
     setHero(name, false, '');
     showPane('player');
+    playerName = name;
+    renderFriendState();
     profile.scrollTop = 0;
     for (const sel of ['.versus', '.together', '.record-theirs']) profile.querySelector(sel).replaceChildren();
     try {
@@ -168,6 +188,42 @@ export function initAccount({ store }) {
       if (mine === opened) toast(err.message);
     }
   }
+
+  /** The friend button under a player's name, and Remove friend at the bottom, from how they stand with you. */
+  function renderFriendState() {
+    const slot = profile.querySelector('.friend-slot');
+    const remove = document.getElementById('btn-remove-friend');
+    slot.replaceChildren();
+    remove.hidden = true;
+    if (!playerName || !store.getSession()) return;
+    const name = playerName;
+    const relation = relationOf(friends.overview(), name);
+    const state = document.createElement(relation === 'friends' ? 'span' : 'button');
+    if (relation === 'friends') {
+      state.className = 'friend-state is';
+      state.textContent = '✓ Friends';
+      remove.hidden = false;
+    } else {
+      state.type = 'button';
+      state.className = 'friend-state add';
+      state.textContent = { none: '＋ Add friend', sent: 'Request sent', incoming: 'Accept request' }[relation];
+      state.disabled = relation === 'sent';
+      state.addEventListener('click', () => friends.act(relation === 'incoming' ? 'accept' : 'request', name));
+    }
+    slot.append(state);
+  }
+
+  document.getElementById('btn-remove-friend').addEventListener('click', async () => {
+    const name = playerName;
+    if (!name) return;
+    const sure = await askConfirm({
+      title: `Remove ${name}?`,
+      text: "You'll stop being friends. They aren't told.",
+      stay: 'Keep',
+      go: 'Remove',
+    });
+    if (sure) friends.act('remove', name);
+  });
 
   function fillRecord(table, stats) {
     const head = row(['', 'People', 'Computer', 'Total'], 'th');
@@ -255,12 +311,19 @@ export function initAccount({ store }) {
     }
   });
 
-  document.getElementById('btn-sign-out').addEventListener('click', () => {
+  let signingOut = false;
+  document.getElementById('btn-sign-out').addEventListener('click', async () => {
+    if (signingOut) return;
+    signingOut = true;
+    // this phone stops getting pushes for the account first, but never waits long for it
+    await Promise.race([turnPushOff(), new Promise((resolve) => setTimeout(resolve, 3000))]).catch(() => {});
+    signingOut = false;
     const session = store.getSession();
     store.clearSession();
     if (session) logout(session.token).catch(() => {}); // signed out here even if the server can't hear it
     opened += 1;
     sync();
+    friends.load();
     showView('main');
     toast('Signed out');
   });
@@ -277,11 +340,12 @@ export function initAccount({ store }) {
       if (still() && err.status === 401) store.clearSession();
     }
     sync();
+    friends.load();
   }
 
   sync();
   check();
-  return { sync };
+  return { sync, openProfile, refreshFriends: () => { if (store.getSession()) friends.load(); } };
 }
 
 function row(cells, tag = 'td') {

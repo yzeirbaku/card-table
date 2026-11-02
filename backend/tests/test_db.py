@@ -18,8 +18,9 @@ def add_user(conn) -> None:
 
 def test_a_new_database_gets_every_table(tmp_path):
     conn = open_db(tmp_path / "x.db")
-    assert version(conn) == len(MIGRATIONS)
+    assert version(conn) == len(MIGRATIONS) == 2
     assert {"users", "sessions", "games", "game_seats"} <= tables(conn)
+    assert {"friendships", "friend_requests", "push_subscriptions"} <= tables(conn)
 
 
 def test_migrate_only_applies_newer_migrations(tmp_path, monkeypatch):

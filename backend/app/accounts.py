@@ -103,14 +103,14 @@ class Accounts:
         return user, self._new_session(user)
 
     def logout(self, token: str) -> None:
-        self.conn.execute("DELETE FROM sessions WHERE token = ?", (_digest(token),))
+        self.conn.execute("DELETE FROM sessions WHERE token = ?", (session_key(token),))
 
     def user_for(self, token: str | None) -> User | None:
         if not token:
             return None
         row = self.conn.execute(
             "SELECT users.id, users.username FROM sessions JOIN users ON users.id = sessions.user_id"
-            " WHERE sessions.token = ?", (_digest(token),)).fetchone()
+            " WHERE sessions.token = ?", (session_key(token),)).fetchone()
         return User(row["id"], row["username"]) if row else None
 
     def registered_name(self, username: str) -> str | None:
@@ -160,7 +160,7 @@ class Accounts:
     def _new_session(self, user: User) -> str:
         token = secrets.token_urlsafe(32)
         self.conn.execute("INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",
-                          (_digest(token), user.id, self.clock()))
+                          (session_key(token), user.id, self.clock()))
         return token
 
 
@@ -169,7 +169,7 @@ def _check_length(password: str) -> None:
         raise AccountError(400, f"Passwords are {MIN_PASSWORD}-{MAX_PASSWORD} characters")
 
 
-def _digest(token: str) -> str:
+def session_key(token: str) -> str:
     """Sessions are stored hashed: the database file (and its backups) can't sign anyone in."""
     return hashlib.sha256(token.encode()).hexdigest()
 

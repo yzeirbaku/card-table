@@ -1,10 +1,17 @@
 const VIEWS = ['main', 'lobby', 'table', 'profile'];
 let toastTimer;
+const viewShown = [];
 
 /** name = null hides every view (neutral state while resuming a saved room). */
 export function showView(name) {
   for (const view of VIEWS) document.getElementById(`view-${view}`).hidden = view !== name;
   syncTableRotated();
+  for (const fn of viewShown) fn(name);
+}
+
+/** fn(name) runs each time showView puts a view up (or hides them all, name = null). */
+export function onViewShown(fn) {
+  viewShown.push(fn);
 }
 
 /** Body class so toasts and the banner can turn with the rotated table. */
@@ -37,4 +44,32 @@ export function toast(message) {
 
 export function setReconnecting(on) {
   document.getElementById('banner').hidden = !on;
+}
+
+/** A question over whatever page is up. Resolves true only when `go` is tapped; `stay` is the gold default. */
+export function askConfirm({ title, text, stay, go }) {
+  const box = document.getElementById('page-confirm');
+  const stayBtn = document.getElementById('btn-page-confirm-stay');
+  const goBtn = document.getElementById('btn-page-confirm-go');
+  document.getElementById('page-confirm-title').textContent = title;
+  document.getElementById('page-confirm-text').textContent = text;
+  stayBtn.textContent = stay;
+  goBtn.textContent = go;
+  box.hidden = false;
+  stayBtn.focus();
+  return new Promise((resolve) => {
+    const finish = (answer) => {
+      box.hidden = true;
+      stayBtn.removeEventListener('click', onStay);
+      goBtn.removeEventListener('click', onGo);
+      box.removeEventListener('click', onBackdrop);
+      resolve(answer);
+    };
+    const onStay = () => finish(false);
+    const onGo = () => finish(true);
+    const onBackdrop = (event) => { if (event.target === box) finish(false); };
+    stayBtn.addEventListener('click', onStay);
+    goBtn.addEventListener('click', onGo);
+    box.addEventListener('click', onBackdrop);
+  });
 }

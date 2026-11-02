@@ -61,6 +61,36 @@ backup can't sign anyone in.
 `sudo docker exec -it card-table-backend python -m app.accounts reset-password <username>`.
 It signs that account out on every phone.
 
+### Push notifications (one-time setup, with the first deploy of friends and invites)
+
+Invites and friend requests go out as web pushes, signed with a VAPID key pair
+that lives only in the VM's `.env`. `pywebpush` is a new dependency; the image
+rebuild installs it.
+
+Do this in one go, so the backend restarts only once and the frontend never
+runs ahead of it (the frontend goes live on merge; until the backend follows,
+the Friends tab, Invite friends and Turn on all fail with "Not Found").
+
+1. **Before merging**, generate the keys on any machine with the backend venv:
+   `cd backend && .venv/Scripts/python -m app.push generate-keys` (prints
+   `VAPID_PUBLIC_KEY=...` and `VAPID_PRIVATE_KEY=...`). Keep a copy of both
+   somewhere safe, never in git.
+2. Still before merging, add both lines plus
+   `VAPID_SUBJECT=mailto:yzeirbaku@hotmail.com` to `~/apps/card-table/.env` on the VM.
+3. Check that the container actually receives `.env`. If the compose file only
+   interpolates it (`${...}` in `environment:`), add `env_file: .env` under
+   `backend:`.
+4. Merge the PR and deploy the backend right after (see Procedure). A deploy
+   ends live games, so pick a quiet time.
+5. Verify: `sudo docker exec card-table-backend printenv | grep -c VAPID` prints
+   `3`, and `GET https://yzeir-cards.duckdns.org/push/key` returns a non-null key.
+
+**Never change the keys afterwards:** every phone's subscription was made
+against the public key, and a new pair makes them all silently stop working
+(people would have to turn notifications off and on again). Keep a copy of the
+three lines somewhere safe. Without the keys the app still runs; it just sends
+no pushes.
+
 Caddy lives in `~/apps/net-tracker/` (root-owned Caddyfile, edit with sudo):
 `yzeir-cards.duckdns.org { reverse_proxy card-table-backend:8000; encode gzip }`.
 VM deploy key: `~/.ssh/github_card_table`, registered at

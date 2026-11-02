@@ -6,6 +6,13 @@ import { toast } from './ui.js';
 
 const MAX_NAME = 20;
 
+let joinOpener = null;
+
+/** The Join sheet, opened with `code` already in the box (an invite tapped before signing in). */
+export function openJoin(code) {
+  joinOpener?.(code);
+}
+
 export function initMain({ store, enterRoom, applySettings }) {
   const nameInput = document.getElementById('name-input');
   nameInput.value = store.getName();
@@ -69,12 +76,14 @@ export function initMain({ store, enterRoom, applySettings }) {
 
   // Join: one code box, optional Paste button.
   const codeInput = document.getElementById('join-code');
-  document.getElementById('btn-join').addEventListener('click', () => {
-    if (!hasName()) return;
-    codeInput.value = '';
+  joinOpener = (code) => {
+    codeInput.value = code;
     document.getElementById('btn-paste').hidden = !canReadClipboard();
     openSheet('sheet-join');
     codeInput.focus();
+  };
+  document.getElementById('btn-join').addEventListener('click', () => {
+    if (hasName()) joinOpener('');
   });
   codeInput.addEventListener('input', () => { codeInput.value = cleanCode(codeInput.value); });
   document.getElementById('btn-paste').addEventListener('click', async () => {
@@ -92,6 +101,7 @@ export function initMain({ store, enterRoom, applySettings }) {
       return;
     }
     closeSheets();
+    if (!hasName()) return; // opened from an invite, before a name was typed
     enterRoom(code);
   });
 
