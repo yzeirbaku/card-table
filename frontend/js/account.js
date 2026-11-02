@@ -9,13 +9,13 @@ import { askConfirm, showView, toast } from './ui.js';
 // Accounts on the phone: the chip on the main screen, the Sign in sheet and the Profile page
 // (your stats, the leaderboard, a friend's head-to-head). Guests never need any of it.
 
-export function initAccount({ store }) {
+export function initAccount({ store, onSessionChange = () => {} }) {
   const chip = document.getElementById('btn-account');
   const nameInput = document.getElementById('name-input');
   const nameLabel = document.getElementById('name-label');
   const profile = document.getElementById('view-profile');
 
-  /** The main screen as signed in or out: the chip, and the name you play under. */
+  /** The main screen as signed in or out: the chip, and the name you play under. Runs on every sign-in and sign-out. */
   function sync() {
     const session = store.getSession();
     chip.querySelector('.chip-initial').hidden = !session;
@@ -26,6 +26,7 @@ export function initAccount({ store }) {
     nameInput.closest('.name-field').classList.toggle('signed-in', Boolean(session));
     nameLabel.textContent = session ? 'Playing as' : 'Your name';
     nameInput.value = session ? session.username : store.getName();
+    onSessionChange();
   }
 
   chip.addEventListener('click', () => {

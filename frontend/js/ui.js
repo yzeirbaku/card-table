@@ -1,10 +1,17 @@
 const VIEWS = ['main', 'lobby', 'table', 'profile'];
 let toastTimer;
+const viewShown = [];
 
 /** name = null hides every view (neutral state while resuming a saved room). */
 export function showView(name) {
   for (const view of VIEWS) document.getElementById(`view-${view}`).hidden = view !== name;
   syncTableRotated();
+  for (const fn of viewShown) fn(name);
+}
+
+/** fn(name) runs each time showView puts a view up (or hides them all, name = null). */
+export function onViewShown(fn) {
+  viewShown.push(fn);
 }
 
 /** Body class so toasts and the banner can turn with the rotated table. */

@@ -39,3 +39,13 @@ export function readLaunch(search) {
     friends: params.has('friends'),
   };
 }
+
+/** The question before leaving one table for an invite. `playing`: a game is on where you are now. */
+export function joinQuestion({ from, playing, game }) {
+  return {
+    title: from ? `Join ${from}'s table?` : 'Join the other table?',
+    text: playing ? `You're in a game of ${game}. Leaving ends it for everyone at this table.` : "You'll leave the table you're at.",
+    stay: 'Stay',
+    go: 'Leave and join',
+  };
+}

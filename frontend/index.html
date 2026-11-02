@@ -20,6 +20,7 @@
   <script src="/js/boot.js"></script>
   <main id="view-main" class="view felt">
     <button id="btn-account" class="account-chip" type="button"><span class="chip-initial" hidden></span><span class="chip-name">Sign in</span><span class="chip-dot" hidden></span></button>
+    <button id="btn-invites" class="env-btn has" type="button" hidden><span class="env-icon">✉</span> Invites <span class="badge"></span></button>
     <h1 class="title">Card Table</h1>
     <label class="name-field">
       <span class="label" id="name-label">Your name</span>
@@ -276,6 +277,11 @@
   <section id="sheet-invite" class="sheet" hidden>
     <h2 class="sheet-title">Invite friends</h2>
     <p class="sheet-sub invite-sub"></p>
+    <div class="friend-list"></div>
+  </section>
+
+  <section id="sheet-invites" class="sheet" hidden>
+    <h2 class="sheet-title">Invites</h2>
     <div class="friend-list"></div>
   </section>
 

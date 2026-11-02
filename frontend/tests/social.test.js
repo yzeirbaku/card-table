@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canInvite, inviteAction, inviteRows, readLaunch, relationOf } from '../js/social.js';
+import { canInvite, inviteAction, inviteRows, joinQuestion, readLaunch, relationOf } from '../js/social.js';
 
 const overview = {
   friends: [{ username: 'Sebi' }],
@@ -47,4 +47,16 @@ test('readLaunch reads a join link, the friends link, and drops a bad code', () 
   assert.deepEqual(readLaunch('?friends'), { join: null, from: null, friends: true });
   assert.deepEqual(readLaunch('?join=12'), { join: null, from: null, friends: false });
   assert.deepEqual(readLaunch(''), { join: null, from: null, friends: false });
+});
+
+test('joinQuestion: who invited, and whether a game is on', () => {
+  assert.deepEqual(joinQuestion({ from: 'Arben', playing: true, game: 'Murlan' }), {
+    title: "Join Arben's table?",
+    text: "You're in a game of Murlan. Leaving ends it for everyone at this table.",
+    stay: 'Stay',
+    go: 'Leave and join',
+  });
+  const lobbyAsk = joinQuestion({ from: null, playing: false, game: 'Murlan' });
+  assert.equal(lobbyAsk.title, 'Join the other table?');
+  assert.equal(lobbyAsk.text, "You'll leave the table you're at.");
 });
