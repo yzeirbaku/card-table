@@ -114,6 +114,8 @@ export function initAccount({ store, onSessionChange = () => {} }) {
   function showPane(name) {
     for (const pane of profile.querySelectorAll('.profile-pane')) pane.hidden = pane.dataset.pane !== name;
     profile.querySelector('.profile-tabs').hidden = name === 'player';
+    profile.querySelector('.friend-slot').hidden = name !== 'player';
+    document.getElementById('btn-sign-out').hidden = name === 'player'; // on your own pages only
     for (const b of profile.querySelectorAll('[data-tab]')) {
       b.classList.toggle('on', b.dataset.tab === name);
       b.setAttribute('aria-selected', String(b.dataset.tab === name));
@@ -122,12 +124,25 @@ export function initAccount({ store, onSessionChange = () => {} }) {
     if (name === 'friends') friends.render();
   }
 
+  const tags = new Map(); // the last wins · losses line seen for each player, shown at once when their page opens again
+
+  /** The card and name at the top. With no `tag`, the last one seen for them (or a blank line, held at its height). */
   function setHero(name, mine, tag) {
     for (const el of profile.querySelectorAll('.pc-initial')) el.textContent = initial(name);
     for (const el of profile.querySelectorAll('.pc-suit')) el.textContent = mine ? '♥' : '♠';
     profile.querySelector('.profile-card').classList.toggle('black', !mine);
     profile.querySelector('.profile-name').textContent = name;
-    profile.querySelector('.profile-tag').textContent = tag;
+    const key = name.toLowerCase();
+    if (tag === undefined) tag = tags.get(key) ?? '';
+    else tags.set(key, tag);
+    const line = profile.querySelector('.profile-tag');
+    const arriving = !line.textContent && tag;
+    line.textContent = tag;
+    if (arriving) { // fades in rather than popping into place
+      line.classList.remove('arrive');
+      void line.offsetWidth;
+      line.classList.add('arrive');
+    }
   }
 
   async function openProfile(nextTab = 'stats') {
@@ -140,7 +155,7 @@ export function initAccount({ store, onSessionChange = () => {} }) {
       profile.querySelector('.board-unranked').hidden = true;
       leaderboard = null;
     }
-    setHero(session.username, true, '');
+    setHero(session.username, true);
     showPane(tab);
     friends.load();
     closeSheets();
@@ -164,7 +179,7 @@ export function initAccount({ store, onSessionChange = () => {} }) {
     const session = store.getSession();
     if (!session) return;
     const mine = ++opened;
-    setHero(name, false, '');
+    setHero(name, false);
     showPane('player');
     playerName = name;
     renderFriendState();
