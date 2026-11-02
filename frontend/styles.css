@@ -128,6 +128,9 @@ input { font: inherit; }
 .seat-remove { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-right: -6px; border-radius: 50%; background: rgba(243,230,196,.2); font-size: 11px; }
 .seat-add { padding: 3px 10px; border: 1px solid rgba(243,230,196,.5); border-radius: 999px; background: rgba(0,0,0,.4); font-size: 12px; font-weight: 800; white-space: nowrap; }
 .seat-add:hover, .seat-remove:hover { background: rgba(243,230,196,.25); }
+.lobby-invite { display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 999px; border: 1.5px solid rgba(240,199,94,.8); color: #f0c75e;
+                background: rgba(0,0,0,.3); font-size: 15px; font-weight: 800; }
+.lobby-invite[hidden] { display: none; }
 .lobby-unseated { min-height: 1.4em; font-size: 14px; line-height: 1.4; opacity: .75; } /* keeps its line when empty, so nothing moves */
 /* Computer difficulty: one gold pill slides to the chosen level (placed by placePill in lobby-view.js). */
 .lobby-level { display: grid; justify-items: center; gap: 6px; }

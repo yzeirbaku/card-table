@@ -3,19 +3,24 @@ import { button, div, span } from './dom.js';
 import { fillRules, hasRules } from './rules.js';
 import { lobbySpots } from './seats.js';
 import { openSheet } from './sheets.js';
+import { canInvite } from './social.js';
 
 let send = () => {};
 let lobbyGame = null; // the room's game id, for How to play
 let startTimer = null; // ticks the 3 · 2 · 1 while every seat is taken
 let startShown = null; // the number on screen
+let signedInNow = () => false;
+let lobbyState = null; // the latest lobby state, for the invite sheet
 
 /** The number to show with `ms` left before the game: 3, 2, 1, and 1 until it starts. */
 export function startNumber(ms) {
   return Math.max(1, Math.ceil(ms / 1000));
 }
 
-export function initLobby({ onLeave, send: sendMessage }) {
+export function initLobby({ onLeave, send: sendMessage, signedIn, onInvite }) {
   send = sendMessage;
+  signedInNow = signedIn;
+  document.getElementById('btn-lobby-invite').addEventListener('click', () => onInvite(lobbyState));
   const copyButton = document.getElementById('btn-copy');
   const copy = async () => {
     getSelection()?.removeAllRanges(); // the click selected the code (user-select: all): it needn't stay blue
@@ -47,6 +52,8 @@ export function initLobby({ onLeave, send: sendMessage }) {
  *  (`{ id, name }`) if we know it already (we just created the table). */
 export function showLobbyLoading(code, game = null) {
   lobbyGame = game?.id ?? null;
+  lobbyState = null;
+  document.getElementById('btn-lobby-invite').hidden = true;
   document.querySelector('.lobby-game').textContent = game?.name ?? '';
   document.getElementById('btn-lobby-rules').style.visibility = game && hasRules(game.id) ? '' : 'hidden'; // keeps its place: nothing jumps when it shows
   document.querySelector('.lobby-code').textContent = code;
@@ -63,6 +70,8 @@ export function renderLobby(state, meId, gameName) {
   for (const p of state.players) if (p.seat !== null) bySeat[p.seat] = p;
   document.querySelector('.lobby-game').textContent = gameName;
   lobbyGame = state.room.game;
+  lobbyState = state;
+  document.getElementById('btn-lobby-invite').hidden = !canInvite(state, signedInNow());
   document.getElementById('btn-lobby-rules').style.visibility = hasRules(lobbyGame) ? '' : 'hidden';
   document.querySelector('.lobby-code').textContent = state.code;
   document.querySelector('.lobby-count').textContent = `${bySeat.filter(Boolean).length} / ${seats}`;

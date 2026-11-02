@@ -3,6 +3,7 @@ import { fetchGames, socketUrl } from './api.js';
 import { RoomConnection } from './connection.js';
 import { stopDeal } from './deal.js';
 import { useCardStyle } from './dom.js';
+import { initInviteFriends } from './invite-friends.js';
 import { initLobby, renderLobby, showLobbyLoading, stopStart } from './lobby-view.js';
 import { initMain } from './main-view.js';
 import { shouldRotate } from './orientation.js';
@@ -41,7 +42,7 @@ function render(state) {
     if (heldLobby) resetTable(); // a new game started behind the "X left" popup
     heldLobby = null;
     stopStart();
-    if (!document.getElementById('sheet-rules').hidden) closeSheets(); // read in the lobby; the game has started
+    if (!document.getElementById('sheet-rules').hidden || !document.getElementById('sheet-invite').hidden) closeSheets(); // read or invited in the lobby; the game has started
     showView('table');
     renderTable(state, meId);
     return;
@@ -62,6 +63,7 @@ function showLobby(state) {
   resetTable();
   showView('lobby');
   renderLobby(state, meId, gameName(state.room.game));
+  invite.update(state);
 }
 
 function enterRoom(code, { resume = false, game = null } = {}) {
@@ -128,7 +130,8 @@ document.getElementById('view-table').addEventListener('contextmenu', (event) =>
 applySettings(store.getSettings());
 initMain({ store, enterRoom, applySettings });
 account = initAccount({ store });
-initLobby({ onLeave: leaveRoom, send });
+const invite = initInviteFriends({ store, gameName });
+initLobby({ onLeave: leaveRoom, send, signedIn: () => Boolean(store.getSession()), onInvite: (state) => state && invite.open(state) });
 initTable({ onLeave: leaveRoom, send });
 document.getElementById('sheet-backdrop').addEventListener('click', closeSheets);
 addEventListener('resize', updateRotation);
