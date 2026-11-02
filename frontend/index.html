@@ -19,7 +19,7 @@
 <body class="theme-classic cards-traditional">
   <script src="/js/boot.js"></script>
   <main id="view-main" class="view felt">
-    <button id="btn-account" class="account-chip" type="button"><span class="chip-initial" hidden></span><span class="chip-name">Sign in</span></button>
+    <button id="btn-account" class="account-chip" type="button"><span class="chip-initial" hidden></span><span class="chip-name">Sign in</span><span class="chip-dot" hidden></span></button>
     <h1 class="title">Card Table</h1>
     <label class="name-field">
       <span class="label" id="name-label">Your name</span>
@@ -157,11 +157,12 @@
         <span class="pc-mid pc-initial"></span>
         <span class="pc-corner pc-bottom"><span class="pc-initial"></span><span class="pc-suit"></span></span>
       </div>
-      <div class="profile-who"><h2 class="profile-name"></h2><p class="profile-tag"></p></div>
+      <div class="profile-who"><h2 class="profile-name"></h2><p class="profile-tag"></p><div class="friend-slot"></div></div>
     </div>
     <div class="profile-tabs" role="tablist">
       <button type="button" role="tab" data-tab="stats">Stats</button>
       <button type="button" role="tab" data-tab="players">Players</button>
+      <button type="button" role="tab" data-tab="friends">Friends<span class="count-badge" hidden></span></button>
     </div>
     <div class="profile-page">
       <div class="profile-pane" data-pane="stats">
@@ -181,6 +182,19 @@
         <p class="stat-empty board-unranked" hidden></p>
         <p class="stat-note">Games against people only · ranked from 5 games · tap a player</p>
       </div>
+      <div class="profile-pane" data-pane="friends" hidden>
+        <div class="notif-box"><span class="bell"></span><span class="txt"><b>Invites as notifications</b><span class="notif-text"></span></span><button class="row-btn" type="button" hidden></button></div>
+        <form class="add-friend">
+          <input class="field" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Add a friend by username" aria-label="Username to add" />
+          <button class="row-btn" type="submit">Add</button>
+        </form>
+        <h3 data-list-title="incoming">Requests</h3>
+        <div class="friend-list" data-list="incoming"></div>
+        <h3 data-list-title="friends">Friends</h3>
+        <div class="friend-list" data-list="friends"></div>
+        <h3 data-list-title="outgoing">Sent</h3>
+        <div class="friend-list" data-list="outgoing"></div>
+      </div>
       <div class="profile-pane" data-pane="player" hidden>
         <h3 class="vs-title"></h3>
         <table class="stat-table versus"></table>
@@ -188,9 +202,21 @@
         <table class="stat-table together"></table>
         <h3 class="their-title"></h3>
         <table class="stat-table record-theirs"></table>
+        <button id="btn-remove-friend" class="remove-friend" type="button" hidden>Remove friend</button>
       </div>
     </div>
   </section>
+
+  <div class="confirm" id="page-confirm" role="dialog" aria-modal="true" aria-labelledby="page-confirm-title" aria-describedby="page-confirm-text" hidden>
+    <div class="confirm-box">
+      <h2 id="page-confirm-title"></h2>
+      <p id="page-confirm-text"></p>
+      <div class="overlay-buttons">
+        <button id="btn-page-confirm-stay" class="go" type="button"></button>
+        <button id="btn-page-confirm-go" class="danger" type="button"></button>
+      </div>
+    </div>
+  </div>
 
   <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
 

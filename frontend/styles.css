@@ -198,6 +198,40 @@ input { font: inherit; }
 .stat-table tr.me td { color: #1d5a37; font-weight: 800; }
 .stat-table tr.link { cursor: pointer; }
 .stat-table tr.link:active td { background: #f6f1e4; }
+
+/* Friends: the Profile tab, the friend button on a player's page, the chip's dot. */
+.friend-list { display: flex; flex-direction: column; }
+.friend-row { display: flex; align-items: center; gap: 12px; padding: 9px 2px; border-top: 1px solid #ece4d0; }
+.friend-row:first-child { border-top: none; }
+.friend-row.link { cursor: pointer; }
+.friend-row .ring { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #1d5a37; color: #f0c75e;
+                    font-family: Georgia, serif; font-size: 16px; font-weight: 700; }
+.friend-row .who { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 700; font-size: 15px; }
+.friend-row .who small { display: block; font-weight: 500; font-size: 12px; color: #8a7d64; }
+.row-btn { flex: none; padding: 7px 14px; border-radius: 9px; font-size: 13px; font-weight: 800; border: 1.5px solid #ddd2b8; background: #f6f1e4; color: #1a1a1a; }
+.row-btn.go { background: linear-gradient(#f3d27a, #d4a640); border-color: #d4a640; color: #3a2a08; }
+.row-btn.done { background: none; border-color: transparent; color: #1d5a37; }
+.row-btn.quiet { background: none; color: #6b5f4a; }
+.row-tag { flex: none; font-size: 12px; font-weight: 700; color: #8a7d64; padding-right: 4px; }
+.chev { flex: none; color: #b5a988; font-size: 20px; padding-right: 2px; }
+.notif-box { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 12px; background: #f6f1e4; border: 1.5px solid #e4dac2; }
+.notif-box .bell { font-size: 20px; }
+.notif-box .txt { flex: 1; font-size: 13px; line-height: 1.3; color: #4a4030; }
+.notif-box .txt b { display: block; font-size: 14px; color: #1a1a1a; }
+.notif-box.on .row-btn { color: #1d5a37; }
+.add-friend { display: flex; gap: 8px; }
+.add-friend .field { padding: 9px 12px; font-size: 15px; }
+.add-friend .row-btn { padding: 0 16px; }
+.count-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: #b3121f; color: #fff; font-size: 11px; font-weight: 800; vertical-align: 1px; }
+.chip-dot { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; background: #b3121f; box-shadow: 0 0 0 2px #1d5a37; }
+.friend-state { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 800; }
+.friend-state.add { background: linear-gradient(#f3d27a, #d4a640); color: #3a2a08; }
+.friend-state.is { background: rgba(0,0,0,.3); border: 1px solid rgba(243,230,196,.35); }
+.friend-state:disabled { opacity: .7; }
+.remove-friend { margin-top: auto; padding: 12px; border-radius: 12px; border: 1.5px solid #ddd2b8; font-size: 15px; font-weight: 700; color: #b3121f; }
+/* a dialog over any page (the table's own .confirm sits inside the table) */
+#page-confirm { position: fixed; z-index: 30; }
+.overlay-buttons button.go { background: linear-gradient(#f3d27a, #d4a640); border-color: #d4a640; color: #3a2a08; }
 .stat-empty, .stat-note { font-size: 13px; color: #6b5f4a; }
 .stat-note { margin-top: auto; padding-top: 12px; text-align: center; font-size: 12px; }
 .inline-link { padding: 0; font-weight: 700; color: #1d5a37; text-decoration: underline; text-underline-offset: 2px; }
