@@ -42,6 +42,31 @@ MIGRATIONS = [
     );
     CREATE INDEX game_seats_user ON game_seats (user_id);
     """,
+    """
+    CREATE TABLE friendships (
+        user_a INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_b INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        since REAL NOT NULL,
+        PRIMARY KEY (user_a, user_b),
+        CHECK (user_a < user_b)
+    );
+    CREATE INDEX friendships_b ON friendships (user_b);
+    CREATE TABLE friend_requests (
+        from_user INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        to_user INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at REAL NOT NULL,
+        PRIMARY KEY (from_user, to_user)
+    );
+    CREATE INDEX friend_requests_to ON friend_requests (to_user);
+    CREATE TABLE push_subscriptions (
+        endpoint TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        session TEXT NOT NULL REFERENCES sessions(token) ON DELETE CASCADE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        created_at REAL NOT NULL
+    );
+    """,
 ]
 
 
