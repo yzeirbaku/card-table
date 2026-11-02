@@ -182,6 +182,22 @@ initLobby({ onLeave: leaveRoom, send, signedIn: () => Boolean(store.getSession()
 initTable({ onLeave: leaveRoom, send });
 document.getElementById('sheet-backdrop').addEventListener('click', closeSheets);
 addEventListener('resize', updateRotation);
+// iOS, turning the phone back upright: a page scrolled in landscape keeps a stale offset for taps even once it fits,
+// so buttons such as the account chip stop answering. Writing the scroll back makes it re-measure. Only on a turn
+// (the width changes; a keyboard only changes the height), and again once the turned layout has settled.
+let lastWidth = innerWidth;
+function resetScroll() {
+  if (scrollX || scrollY) scrollTo(0, 0);
+  for (const view of document.querySelectorAll('.view:not([hidden])')) {
+    if (view.scrollHeight <= view.clientHeight) view.scrollTop = 0;
+  }
+}
+addEventListener('resize', () => {
+  if (innerWidth === lastWidth) return;
+  lastWidth = innerWidth;
+  resetScroll();
+  setTimeout(resetScroll, 300);
+});
 updateRotation();
 
 fetchGames()
