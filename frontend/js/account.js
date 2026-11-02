@@ -115,7 +115,8 @@ export function initAccount({ store, onSessionChange = () => {} }) {
     for (const pane of profile.querySelectorAll('.profile-pane')) pane.hidden = pane.dataset.pane !== name;
     profile.querySelector('.profile-tabs').hidden = name === 'player';
     profile.querySelector('.friend-slot').hidden = name !== 'player';
-    document.getElementById('btn-sign-out').hidden = name === 'player'; // on your own pages only
+    // on your own pages only; kept in place on a player's page so the bar, and the white panel, stay at the same height
+    document.getElementById('btn-sign-out').style.visibility = name === 'player' ? 'hidden' : '';
     for (const b of profile.querySelectorAll('[data-tab]')) {
       b.classList.toggle('on', b.dataset.tab === name);
       b.setAttribute('aria-selected', String(b.dataset.tab === name));
