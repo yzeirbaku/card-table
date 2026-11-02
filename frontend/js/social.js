@@ -2,9 +2,9 @@ import { cleanCode, isCompleteCode } from './code.js';
 
 const same = (a, b) => a.toLowerCase() === b.toLowerCase();
 
-/** How `name` stands with you, from an overview { friends, incoming, outgoing } of { username } entries. */
+/** How `name` stands with you, from an overview { friends, incoming, outgoing } of plain usernames. */
 export function relationOf(overview, name) {
-  const has = (list) => list.some((entry) => same(entry.username, name));
+  const has = (list) => list.some((entry) => same(entry, name));
   if (has(overview.friends)) return 'friends';
   if (has(overview.outgoing)) return 'sent';
   if (has(overview.incoming)) return 'incoming';
@@ -19,7 +19,7 @@ export function canInvite(state, signedIn) {
 /** One row per friend; `here` when a person (not a computer) of that name is at the table. */
 export function inviteRows(friends, state) {
   const people = state.players.filter((p) => !p.computer);
-  return friends.map(({ username }) => ({ name: username, here: people.some((p) => same(p.name, username)) }));
+  return friends.map((name) => ({ name, here: people.some((p) => same(p.name, name)) }));
 }
 
 /** What tapping an invite does: sign in first, nothing (already there), join, or ask before leaving a table. */

@@ -78,15 +78,15 @@ export function initFriends({ store, openPlayer, onChange }) {
     badge.textContent = String(incoming.length);
     badge.hidden = incoming.length === 0;
     fillList('incoming', incoming, (entry) => [
-      button('Decline', 'row-btn quiet', () => act('decline', entry.username)),
-      button('Accept', 'row-btn go', () => act('accept', entry.username)),
+      button('Decline', 'row-btn quiet', () => act('decline', entry)),
+      button('Accept', 'row-btn go', () => act('accept', entry)),
     ]);
     fillList('friends', friends, (entry, _who, rowEl) => {
       rowEl.classList.add('link');
       rowEl.tabIndex = 0;
       rowEl.setAttribute('role', 'button');
-      rowEl.addEventListener('click', () => openPlayer(entry.username));
-      rowEl.addEventListener('keydown', (event) => { if (event.key === 'Enter') openPlayer(entry.username); });
+      rowEl.addEventListener('click', () => openPlayer(entry));
+      rowEl.addEventListener('keydown', (event) => { if (event.key === 'Enter') openPlayer(entry); });
       const chev = document.createElement('span');
       chev.className = 'chev';
       chev.textContent = '›';
@@ -96,7 +96,7 @@ export function initFriends({ store, openPlayer, onChange }) {
       const small = document.createElement('small');
       small.textContent = 'Waiting for an answer';
       who.append(small);
-      return [button('Cancel', 'row-btn quiet', () => act('cancel', entry.username))];
+      return [button('Cancel', 'row-btn quiet', () => act('cancel', entry))];
     });
     renderNotif();
   }
@@ -110,10 +110,10 @@ export function initFriends({ store, openPlayer, onChange }) {
       rowEl.className = 'friend-row';
       const ring = document.createElement('span');
       ring.className = 'ring';
-      ring.textContent = initial(entry.username);
+      ring.textContent = initial(entry);
       const who = document.createElement('span');
       who.className = 'who';
-      who.append(entry.username);
+      who.append(entry);
       rowEl.append(ring, who, ...extras(entry, who, rowEl));
       return rowEl;
     }));

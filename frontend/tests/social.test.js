@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { canInvite, inviteAction, inviteRows, joinQuestion, readLaunch, relationOf } from '../js/social.js';
 
 const overview = {
-  friends: [{ username: 'Sebi' }],
-  incoming: [{ username: 'Arben' }],
-  outgoing: [{ username: 'Lira' }],
+  friends: ['Sebi'],
+  incoming: ['Arben'],
+  outgoing: ['Lira'],
 };
 
 test('relationOf names the four states, in any case', () => {
@@ -26,7 +26,7 @@ test('canInvite: only a signed-in player at a lobby with a free seat', () => {
 });
 
 test('inviteRows marks friends already at the table, in any case, but not computers', () => {
-  const friends = [{ username: 'Sebi' }, { username: 'Arben' }];
+  const friends = ['Sebi', 'Arben'];
   const state = lobby([{ name: 'sebi' }, { name: 'Arben', computer: true }]);
   assert.deepEqual(inviteRows(friends, state), [
     { name: 'Sebi', here: true },
