@@ -65,6 +65,39 @@ export const fetchStats = (username) => request(`/stats/${encodeURIComponent(use
 /** { solo: [...], teams: [...] }, each entry { username, won, lost, ranked }. */
 export const fetchLeaderboard = () => request('/leaderboard');
 
+const part = encodeURIComponent;
+const send = (method, token, body) => ({
+  method,
+  headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+  ...(body ? { body: JSON.stringify(body) } : {}),
+});
+
+// ---- friends: each call resolves to the overview { friends, incoming, outgoing } ----
+
+export const fetchFriends = (token) => request('/friends', bearer(token));
+/** The overview plus `result` (what the request turned into). */
+export const requestFriend = (token, username) => request('/friends/requests', send('POST', token, { username }));
+export const acceptFriend = (token, username) => request(`/friends/requests/${part(username)}/accept`, send('POST', token));
+export const declineFriend = (token, username) => request(`/friends/requests/${part(username)}/decline`, send('POST', token));
+export const cancelRequest = (token, username) => request(`/friends/requests/${part(username)}`, send('DELETE', token));
+export const removeFriend = (token, username) => request(`/friends/${part(username)}`, send('DELETE', token));
+
+// ---- invites ----
+
+export const inviteFriend = (token, code, username) => request(`/rooms/${part(code)}/invite`, send('POST', token, { username }));
+/** [{ from, game, players, code }] */
+export const fetchInvites = (token) => request('/invites', bearer(token));
+export const dismissInvite = (token, code) => request(`/invites/${part(code)}/dismiss`, send('POST', token));
+
+// ---- push ----
+
+/** { key } (base64url), or { key: null } when the server can't push. */
+export const fetchPushKey = () => request('/push/key');
+export const pushSubscribe = (token, subscription) => request('/push/subscribe', send('POST', token, { subscription }));
+export const pushUnsubscribe = (endpoint) => request('/push/unsubscribe', json({ endpoint }));
+/** { on } */
+export const pushStatus = (token, endpoint) => request('/push/status', send('POST', token, { endpoint }));
+
 /** From `username`'s side: { against: { won, lost }, together: { won, lost } }. */
 export const fetchHeadToHead = (username, other) =>
   request(`/head-to-head/${encodeURIComponent(username)}?with=${encodeURIComponent(other)}`);
