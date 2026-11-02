@@ -160,15 +160,14 @@ Google, Mozilla), no Firebase, no account with anyone.
   is the room code, so a re-invite replaces the old notification.
 - **Service worker** (`frontend/service-worker.js`) gets `push` and
   `notificationclick` handlers:
-  - `push`: if an app window is visible **on the main screen**, post the invite
-    to it (it shows the envelope) and show no notification; otherwise (closed,
-    in the background, or in a lobby or at the table) show the notification.
-    *My call:* no extra invite UI in the lobby or table views. *Note for
-    the builder:* iOS may revoke the subscription if a push shows nothing too
-    often; if testing shows that, always show the notification and let the open
-    app close it.
+  - `push`: always shows the notification (iOS revokes the push permission of
+    apps whose pushes show nothing), and posts the push to any open app
+    window. An app that is visible on the main screen closes that
+    notification again and shows the envelope; elsewhere (in a lobby, at the
+    table) it stays. *My call:* no extra invite UI in the lobby or table
+    views.
   - `notificationclick`: focus an open app window and tell it to join the
-    room, or open `/?join=<code>` (and `/?friends` for a friend request).
+    room, or open `/?join=<code>&from=<name>` (and `/?friends` for a friend request).
 - The app reads `?join=<code>` at start (after the session restore), joins that
   room signed in, then removes the parameter from the address bar. Signed out:
   just the main screen with the code filled into the Join sheet.
@@ -190,7 +189,7 @@ Google, Mozilla), no Firebase, no account with anyone.
   in the mockups approved 2026-11-02.
 - Mockups: `.superpowers/brainstorm/868-1793612296/content/`
   (`friends-invites.html`, `main-invites.html`; not committed). Nothing visual
-  is committed until the user has tried it in the app.
+  is pushed until the user has tried it in the app.
 - Everything from the server goes in with `textContent`.
 
 ## Delivery
