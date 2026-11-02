@@ -12,6 +12,7 @@ import sqlite3
 import time
 from contextlib import suppress
 from dataclasses import asdict
+from types import EllipsisType
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -23,6 +24,7 @@ from .friends import Friends
 from .db import default_db_path, open_db
 from .games import GAMES
 from .murlan.game import Rejected
+from .push import Push, PushKeys, Sender, keys_from_env
 from .rooms import JoinRejected, Player, Room, RoomManager
 from .stats import head_to_head, leaderboard, save_game, stats_for
 from .timers import RoomTimer
@@ -51,6 +53,14 @@ class Username(BaseModel):
     username: str = Field(max_length=20)
 
 
+class Endpoint(BaseModel):
+    endpoint: str = Field(max_length=1000)
+
+
+class Subscription(BaseModel):
+    subscription: dict
+
+
 class Credentials(BaseModel):
     username: str = Field(max_length=20)  # oversized input never reaches the hashing
     password: str = Field(max_length=MAX_PASSWORD)
@@ -62,11 +72,15 @@ def bearer_token(authorization: str | None) -> str | None:
 
 
 def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
-               db: sqlite3.Connection | None = None) -> FastAPI:
+               db: sqlite3.Connection | None = None,
+               push_keys: PushKeys | None | EllipsisType = ...,
+               push_send: Sender | None = None) -> FastAPI:
     rooms = manager or RoomManager()
     db = db if db is not None else open_db(default_db_path())
     accounts = Accounts(db)
     friends = Friends(db)
+    push_args = {"send": push_send} if push_send else {}
+    push = Push(db, keys_from_env() if push_keys is ... else push_keys, **push_args)
     rooms.record = lambda record: save_game(db, record, time.time())
     timers: dict[int, RoomTimer] = {}  # by id(room): a purged room's timer can't be reused
     app = FastAPI(title="Card Table")
@@ -275,10 +289,15 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
     @app.post("/friends/requests")
     async def friend_request(body: Username, authorization: str | None = Header(None)) -> dict[str, Any]:
         def act(user: User) -> dict[str, Any]:
-            result, _ = friends.request(user, body.username)
+            result, target = friends.request(user, body.username)
+            sent[:] = [(user, target)] if result == "sent" else []
             return {"result": result, **friends.overview(user)}
 
-        return friend_action(authorization, act)
+        sent: list[tuple[User, User]] = []
+        response = friend_action(authorization, act)
+        if sent and push.allow_once(("request", sent[0][0].id, sent[0][1].id), 86400):
+            await push.notify(sent[0][1].id, {"type": "request", "from": sent[0][0].username})
+        return response
 
     @app.post("/friends/requests/{username}/accept")
     async def friend_accept(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
@@ -295,6 +314,29 @@ def create_app(manager: RoomManager | None = None, *, use_timers: bool = True,
     @app.delete("/friends/{username}")
     async def friend_remove(username: str, authorization: str | None = Header(None)) -> dict[str, Any]:
         return friend_action(authorization, lambda u: (friends.remove(u, username), friends.overview(u))[1])
+
+    @app.get("/push/key")
+    async def push_key() -> dict[str, Any]:
+        return {"key": push.keys.public if push.keys else None}
+
+    @app.post("/push/subscribe")
+    async def push_subscribe(body: Subscription, authorization: str | None = Header(None)) -> dict[str, Any]:
+        user = current_user(authorization)
+        try:
+            push.subscribe(user, bearer_token(authorization) or "", body.subscription)
+        except AccountError as e:
+            raise HTTPException(e.status, str(e)) from None
+        return {}
+
+    @app.post("/push/unsubscribe")
+    async def push_unsubscribe(body: Endpoint) -> dict[str, Any]:
+        push.unsubscribe(body.endpoint)
+        return {}
+
+    @app.post("/push/status")
+    async def push_status(body: Endpoint, authorization: str | None = Header(None)) -> dict[str, Any]:
+        current_user(authorization)
+        return {"on": push.is_on(bearer_token(authorization) or "", body.endpoint)}
 
     @app.get("/stats/{username}")
     async def stats(username: str) -> dict[str, Any]:
