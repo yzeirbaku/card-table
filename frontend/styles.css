@@ -340,8 +340,9 @@ input { font: inherit; }
 /* Three columns with equal sides, so the scores sit on the table's centre line, above the top player and the hand. */
 .table-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 14px;
              background: var(--bar-bg); border-bottom: 3px solid var(--bar-edge); color: var(--plate-fg); font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
-/* Over the bar's left end; out at the screen's edge when the frame is inset for a notch (16px clears the rounded corner). */
-.table-menu-btn { position: absolute; top: 0; left: min(14px, calc(16px - var(--bleed-l))); z-index: 6; width: 34px; height: var(--bar); font-size: 18px; color: var(--plate-fg); }
+/* Over the bar's left end; out at the screen's edge when the frame is inset for a notch (16px clears the rounded corner).
+   z-index 7: it sits outside .table, and the bar inside it (z 6, later in the page) would paint over it. */
+.table-menu-btn { position: absolute; top: 0; left: min(14px, calc(16px - var(--bleed-l))); z-index: 7; width: 34px; height: var(--bar); font-size: 18px; color: var(--plate-fg); }
 @container (max-height: 500px) { .table-menu-btn { width: 44px; font-size: 26px; line-height: 1; } } /* phones: a bigger target for a thumb */
 /* Turned for an upright phone, the frame's left is the screen's top: stay clear of the status bar there. */
 #view-table.rotated :is(.table-menu-btn, .table-menu) { left: 14px; }
